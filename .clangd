@@ -1,0 +1,9 @@
+InlayHints:
+  Enabled: Yes
+  ParameterNames: Yes
+  DeducedTypes: Yes
+  FunctionTypes: Yes
+  Designators: Yes
+  DeprecationHints: Yes
+  SafetyHints: Yes
+  ParameterType: Yes
