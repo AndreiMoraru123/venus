@@ -10,6 +10,6 @@ auto main() -> int {
   constexpr auto vector3 = v1Add(vector2);
   constexpr auto X3 = std::get<0>(vector3);
   constexpr auto Y3 = std::get<1>(vector3);
-  std::println("{}", X3()); // 3
-  std::println("{}", Y3()); // 6
+  std::println("{}", X3());  // 3
+  std::println("{}", Y3());  // 6
 }
