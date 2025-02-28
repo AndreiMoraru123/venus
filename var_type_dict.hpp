@@ -1,6 +1,5 @@
 #include <cstddef>
 #include <memory>
-#include <type_traits>
 
 struct NullParameter;
 
