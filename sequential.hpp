@@ -33,7 +33,7 @@ template <typename T, typename... Rest> struct FindTypeIndex<T, T, Rest...> {
 
 // Set details =================================================
 template <typename TCon, int N, typename TValue, typename Processed,
-          typename Remain, typename = Helper::When<true>>
+          typename Remain>
 struct SetImpl;
 
 // Base case: Processed N elements and now I want to insert TValue
