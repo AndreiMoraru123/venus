@@ -1,6 +1,8 @@
 #pragma once
 
+#include "helpers.h"
 #include <cstddef>
+#include <type_traits>
 
 namespace venus::Sequential {
 
@@ -29,9 +31,32 @@ template <typename T, typename... Rest> struct FindTypeIndex<T, T, Rest...> {
 };
 // =============================================================
 
-} // namespace detail
+// Set details =================================================
+template <typename TCon, int N, typename TValue, typename Processed,
+          typename Remain, typename = Helper::When<true>>
+struct SetImpl;
 
+// Base case: Processed N elements and now I want to insert TValue
+template <template <typename...> typename TCon, typename TValue,
+          typename... Processed, typename Current, typename... Remaining>
+struct SetImpl<TCon<>, 0, TValue, TCon<Processed...>,
+               TCon<Current, Remaining...>> {
+  using type = TCon<Processed..., TValue, Remaining...>;
+};
+
+// Recursive case: Move elements from Remaining to Processed until I reach Nth
+template <template <typename...> typename TCon, std::size_t N, typename TValue,
+          typename... Processed, typename Current, typename... Remaining>
+  requires(N > 0)
+struct SetImpl<TCon<>, N, TValue, TCon<Processed...>,
+               TCon<Current, Remaining...>> {
+  using type =
+      typename SetImpl<TCon<>, N - 1, TValue, TCon<Processed..., Current>,
+                       TCon<Remaining...>>::type;
+};
 // =============================================================
+
+} // namespace detail
 
 // At ==========================================================
 template <typename TCon, int N> struct At_;
@@ -56,6 +81,21 @@ struct Order_<TCon<TParams...>, TReq> {
 
 template <typename TCon, typename TReq>
 constexpr static int Order = Order_<TCon, TReq>::value;
+// =============================================================
+
+// Set =========================================================
+template <typename TCon, std::size_t N, typename TValue> struct Set_;
+
+template <template <typename...> typename TCont, std::size_t N, typename TValue,
+          typename... TParams>
+struct Set_<TCont<TParams...>, N, TValue> {
+  static_assert(N < sizeof...(TParams), "index out of bounds");
+  using type = typename detail::SetImpl<TCont<>, N, TValue, TCont<>,
+                                        TCont<TParams...>>::type;
+};
+
+template <typename TCon, std::size_t N, typename TValue>
+using Set = typename Set_<TCon, N, TValue>::type;
 // =============================================================
 
 } // namespace venus::Sequential

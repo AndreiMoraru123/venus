@@ -44,4 +44,9 @@ template <typename TK, typename TV> struct KVBinder {
   using ValueType = TV;
   static TV apply(TK *);
 };
+
+// When ========================================================
+template <bool b> struct When;
+// =============================================================
+
 } // namespace venus::Helper
