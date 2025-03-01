@@ -1,5 +1,6 @@
 #pragma once
 
+#include "null_param.hpp"
 #include <cstddef>
 
 namespace venus::Sequential {
@@ -55,6 +56,21 @@ struct SetImpl<TCon<>, N, TValue, TCon<Processed...>,
 // =============================================================
 
 } // namespace detail
+
+// Create ======================================================
+template <std::size_t N, template <typename...> typename TCont, typename... T>
+struct Create_ {
+  using type = Create_<N - 1, TCont, NullParameter, T...>::type;
+};
+
+template <template <typename...> class TCont, typename... T>
+struct Create_<0, TCont, T...> {
+  using type = TCont<T...>;
+};
+
+template <std::size_t N, template <typename...> typename TCon, typename... T>
+using Create = typename Create_<N, TCon, T...>::type;
+// =============================================================
 
 // At ==========================================================
 template <typename TCon, std::size_t N> struct At_;

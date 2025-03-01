@@ -1,3 +1,4 @@
+#include "null_param.hpp"
 #include "sequential.hpp"
 #include "traits.hpp"
 #include <cstddef>
@@ -5,32 +6,7 @@
 #include <stdexcept>
 #include <type_traits>
 
-struct NullParameter;
-
 namespace venus {
-
-// TODO: Rename TTag to TKey
-
-namespace NSVarTypeDict {
-
-/**
- * @brief
- * @tparam N = number of elements to be created
- * @tparam TCont = array of types that stores the final results
- * @tparam T = sequence of types that have already been generated
- */
-template <size_t N, template <typename...> class TCont, typename... T>
-struct Create_ {
-  using type = Create_<N - 1, TCont, NullParameter, T...>::type;
-};
-
-// N = 0 base case => return the array of types directly
-template <template <typename...> class TCont, typename... T>
-struct Create_<0, TCont, T...> {
-  using type = TCont<T...>;
-};
-
-}; // namespace NSVarTypeDict
 
 template <typename... TParameters> struct VarTypeDict {
 
@@ -136,8 +112,7 @@ template <typename... TParameters> struct VarTypeDict {
   };
 
   static auto Create() {
-    using namespace NSVarTypeDict;
-    using type = typename Create_<sizeof...(TParameters), Values>::type;
+    using type = typename Sequential::Create<sizeof...(TParameters), Values>;
     return type{};
   }
 };
