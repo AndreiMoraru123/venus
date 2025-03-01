@@ -77,11 +77,11 @@ template <typename TCon, typename TReq> struct Order_ {};
 template <template <typename...> typename TCon, typename... TParams,
           typename TReq>
 struct Order_<TCon<TParams...>, TReq> {
-  constexpr static int value = detail::FindTypeIndex<TReq, TParams...>::value;
+  static constexpr int value = detail::FindTypeIndex<TReq, TParams...>::value;
 };
 
 template <typename TCon, typename TReq>
-constexpr static int Order = Order_<TCon, TReq>::value;
+static constexpr int Order = Order_<TCon, TReq>::value;
 // =============================================================
 
 // Set =========================================================
