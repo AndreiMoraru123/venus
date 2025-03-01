@@ -32,7 +32,7 @@ template <typename T, typename... Rest> struct FindTypeIndex<T, T, Rest...> {
 // =============================================================
 
 // Set details =================================================
-template <typename TCon, int N, typename TValue, typename Processed,
+template <typename TCon, std::size_t N, typename TValue, typename Processed,
           typename Remain>
 struct SetImpl;
 
@@ -59,15 +59,16 @@ struct SetImpl<TCon<>, N, TValue, TCon<Processed...>,
 } // namespace detail
 
 // At ==========================================================
-template <typename TCon, int N> struct At_;
+template <typename TCon, std::size_t N> struct At_;
 
-template <template <typename...> typename TCon, typename... TParams, int N>
+template <template <typename...> typename TCon, typename... TParams,
+          std::size_t N>
 struct At_<TCon<TParams...>, N> {
   static_assert(N < sizeof...(TParams), "index out of bounds");
   using type = typename detail::TypeAt<N, TParams...>::type;
 };
 
-template <typename TCon, int N> using At = typename At_<TCon, N>::type;
+template <typename TCon, std::size_t N> using At = typename At_<TCon, N>::type;
 
 template <typename TCon, typename TReq> struct Order_ {};
 // =============================================================
