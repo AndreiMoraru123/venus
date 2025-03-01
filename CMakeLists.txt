@@ -21,7 +21,7 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(flux Catch2)
 
-add_executable(tests test_sequential.cpp)
+add_executable(tests test_sequential.cpp test_var_type_dict.cpp)
 target_link_libraries(tests
     PRIVATE
     flux::flux

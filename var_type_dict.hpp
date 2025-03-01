@@ -1,11 +1,14 @@
+#include "sequential.hpp"
+#include "traits.hpp"
 #include <cstddef>
 #include <memory>
+#include <stdexcept>
+#include <type_traits>
 
 struct NullParameter;
 
 namespace venus {
 
-// TODO: Rename TParameters to TParams
 // TODO: Rename TTag to TKey
 
 namespace NSVarTypeDict {
@@ -27,63 +30,95 @@ struct Create_<0, TCont, T...> {
   using type = TCont<T...>;
 };
 
-/**
- * @brief
- *
- * @tparam TVal = target data for replacement
- * @tparam N = index of the target type in the array of types
- * @tparam M = number of types that have been scanned
- * @tparam TProcessedTypes = array containers for the scanned part
- * @tparam TRemainTypes = the part to be scanned and replaced
- */
-template <typename TVal, size_t N, size_t M, typename TProcessedTypes,
-          typename... TRemainTypes>
-struct NewTupleType_;
-
-template <typename TVal, size_t N, size_t M,
-          template <typename...> typename TCont, typename... TModifiedTypes,
-          typename TCurType, typename... TRemainTypes>
-struct NewTupleType_<TVal, N, M, TCont<TModifiedTypes...>, TCurType,
-                     TRemainTypes...> {
-  using type =
-      typename NewTupleType_<TVal, N, M + 1, TCont<TModifiedTypes..., TCurType>,
-                             TRemainTypes...>::type;
-};
-
 }; // namespace NSVarTypeDict
 
 template <typename... TParameters> struct VarTypeDict {
 
-  template <typename... TTypes> struct Values {
+  template <typename... Types> struct Values {
+
+    using Keys = VarTypeDict;
+
+    template <typename TKey>
+    using ValueType =
+        Sequential::At<Values, Sequential::Order<VarTypeDict, TKey>>;
+
+    template <typename TKey>
+    static constexpr bool IsValueEmpty =
+        std::is_same_v<ValueType<TKey>, NullParameter>;
 
     Values() = default;
 
-    Values(std::shared_ptr<void> (&&input)[sizeof...(TTypes)]) {
-      for (size_t i = 0; i < sizeof...(TTypes); ++i) {
+    Values(Values &&val) {
+      for (size_t i = 0; i < sizeof...(Types); ++i) {
+        m_tuple[i] = std::move(val.m_tuple[i]);
+      }
+    }
+
+    Values(const Values &) = default;
+    Values &operator=(const Values &) = default;
+    Values &operator=(Values &&) = default;
+
+    Values(std::shared_ptr<void> (&&input)[sizeof...(Types)]) {
+      for (size_t i = 0; i < sizeof...(Types); ++i) {
         m_tuple[i] = std::move(input[i]);
       }
     }
 
-    // template <typename TTag, typename TVal> auto Set(TVal &&val) && {
-    //   using namespace NSMultiTypeDict;
-    //   constexpr static size_t TagPos = Tag2ID<TTag, TParameters...>;
+    template <typename TTag, typename... TParams>
+    void Update(TParams &&...params) {
+      static constexpr auto TagPos = Sequential::Order<VarTypeDict, TTag>;
+      using rawType = Sequential::At<Values, TagPos>;
 
-    //   using rawVal = std::decay_t<TVal>;
-    //   auto tmp = new rawVal(std::forward<TVal>(val));
-    //   m_tuple[TagPos] = std::shared_ptr<void>(tmp, [](void *ptr) {
-    //     rawVal *nptr = static_cast<rawVal *>(ptr);
-    //     delete nptr;
-    //   });
+      rawType *tmp = new rawType(std::forward<TParams>(params)...);
+      m_tuple[TagPos] = std::shared_ptr<void>(tmp, [](void *ptr) {
+        rawType *nptr = static_cast<rawType *>(ptr);
+        delete nptr;
+      });
+    }
 
-    //   using new_type = NewTupleType<rawVal, TagPos, Values<>, TTypes...>;
-    //   return new_type(std::move(m_tuple));
-    // }
+    template <typename TTag, typename TVal> auto Set(TVal &&val) && {
+      static constexpr auto TagPos = Sequential::Order<VarTypeDict, TTag>;
+      using rawType = RemoveConstRef<TVal>;
 
-    template <typename TTag> const auto Get() const;
+      rawType *tmp = new rawType(std::forward<TVal>(val));
+      m_tuple[TagPos] = std::shared_ptr<void>(tmp, [](void *ptr) {
+        rawType *nptr = static_cast<rawType *>(ptr);
+        delete nptr;
+      });
+
+      if constexpr (std::is_same_v<rawType, Sequential::At<Values, TagPos>>) {
+        return *this;
+      } else {
+        using newType = Sequential::Set<Values, TagPos, rawType>;
+        return newType(std::move(m_tuple));
+      }
+    }
+
+    template <typename TTag> const auto &Get() const {
+      static constexpr auto TagPos = Sequential::Order<VarTypeDict, TTag>;
+      using AimType = Sequential::At<Values, TagPos>;
+
+      void *tmp = m_tuple[TagPos].get();
+      if (!tmp)
+        throw std::runtime_error("Empty Value.");
+      AimType *res = static_cast<AimType *>(tmp);
+      return *res;
+    }
+
+    template <typename TTag> auto &Get() {
+      static constexpr auto TagPos = Sequential::Order<VarTypeDict, TTag>;
+      using AimType = Sequential::At<Values, TagPos>;
+
+      void *tmp = m_tuple[TagPos].get();
+      if (!tmp)
+        throw std::runtime_error("Empty Value.");
+      AimType *res = static_cast<AimType *>(tmp);
+      return *res;
+    }
 
   private:
-    // data storage array
-    std::shared_ptr<void> m_tuple[sizeof...(TTypes)];
+    // TODO: Shared ptr get() cannot be constexpr because of ref count
+    std::shared_ptr<void> m_tuple[sizeof...(Types) == 0 ? 1 : sizeof...(Types)];
   };
 
   static auto Create() {
