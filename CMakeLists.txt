@@ -27,4 +27,4 @@ target_include_directories(venus INTERFACE
      $<INSTALL_INTERFACE:include>)
 
 target_link_libraries(venus INTERFACE flux::flux)
-add_subdirectory(tests)
+add_subdirectory(test)
