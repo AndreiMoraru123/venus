@@ -16,7 +16,7 @@ constexpr auto fn(const auto &in) -> float {
   return a * weight + b * (1 - weight);
 }
 
-TEST_CASE("VarTypeDict setter and getter", "tags_ [set-get]") {
+TEST_CASE("VarTypeDict setter and getter", "[set-get]") {
   using Params = VarTypeDict<A, B, Weight>;
   auto params = Params::Create().Set<A>(2.5f).Set<B>(1.5f).Set<Weight>(0.5f);
   REQUIRE(fn(params) == 2.0f);
