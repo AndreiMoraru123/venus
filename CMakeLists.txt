@@ -21,10 +21,10 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(flux Catch2)
 
-add_executable(tests test_sequential.cpp test_var_type_dict.cpp)
-target_link_libraries(tests
-    PRIVATE
-    flux::flux
-    Catch2::Catch2WithMain
-)
-target_include_directories(tests PUBLIC ${flux_SOURCE_DIR}/include)
+add_library(venus INTERFACE)
+target_include_directories(venus INTERFACE
+     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+     $<INSTALL_INTERFACE:include>)
+
+target_link_libraries(venus INTERFACE flux::flux)
+add_subdirectory(tests)
