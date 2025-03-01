@@ -8,7 +8,7 @@ struct A;
 struct B;
 struct Weight;
 
-template <typename TIn> constexpr auto fn(const TIn &in) -> float {
+constexpr auto fn(const auto &in) -> float {
   auto a = in.template Get<A>();
   auto b = in.template Get<B>();
   auto weight = in.template Get<Weight>();
