@@ -117,7 +117,6 @@ template <typename... TParameters> struct VarTypeDict {
     }
 
   private:
-    // TODO: Shared ptr get() cannot be constexpr because of ref count
     std::shared_ptr<void> m_tuple[sizeof...(Types) == 0 ? 1 : sizeof...(Types)];
   };
 

@@ -16,8 +16,20 @@ constexpr auto fn(const auto &in) -> float {
   return a * weight + b * (1 - weight);
 }
 
-TEST_CASE("VarTypeDict setter and getter", "[set-get]") {
+TEST_CASE("VarTypeDict ops") {
   using Params = VarTypeDict<A, B, Weight>;
   auto params = Params::Create().Set<A>(2.5f).Set<B>(1.5f).Set<Weight>(0.5f);
-  REQUIRE(fn(params) == 2.0f);
+
+  SECTION("Initial values") { REQUIRE(fn(params) == 2.0f); }
+
+  SECTION("After update") {
+    params.Update<A>(3.5f);
+    REQUIRE(fn(params) == 2.5f);
+  }
+
+  SECTION("After two updates") {
+    params.Update<A>(3.5f);
+    params.Update<B>(2.0f);
+    REQUIRE(fn(params) == 2.75f);
+  }
 }
