@@ -76,6 +76,21 @@ template <typename... TParameters> struct VarTypeDict {
       });
     }
 
+    // chained update alternative
+    template <typename TTag, typename... TParams>
+    Values &ChainUpdate(TParams &&...params) {
+      static constexpr auto TagPos = Sequential::Order<VarTypeDict, TTag>;
+      using rawType = Sequential::At<Values, TagPos>;
+
+      rawType *tmp = new rawType(std::forward<TParams>(params)...);
+      m_tuple[TagPos] = std::shared_ptr<void>(tmp, [](void *ptr) {
+        rawType *nptr = static_cast<rawType *>(ptr);
+        delete nptr;
+      });
+
+      return *this;
+    }
+
     template <typename TTag, typename TVal> auto Set(TVal &&val) && {
       static constexpr auto TagPos = Sequential::Order<VarTypeDict, TTag>;
       using rawType = RemoveConstRef<TVal>;

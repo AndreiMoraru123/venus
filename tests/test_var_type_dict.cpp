@@ -32,4 +32,9 @@ TEST_CASE("VarTypeDict ops") {
     params.Update<B>(2.0f);
     REQUIRE(fn(params) == 2.75f);
   }
+
+  SECTION("After chained update") {
+    params.ChainUpdate<A>(4.0f).ChainUpdate<B>(3.0f).ChainUpdate<Weight>(0.25f);
+    REQUIRE(fn(params) == 3.25f);
+  }
 }
