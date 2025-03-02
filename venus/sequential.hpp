@@ -114,4 +114,17 @@ template <typename TCon, std::size_t N, typename TValue>
 using Set = typename Set_<TCon, N, TValue>::type;
 // =============================================================
 
+// PushBack ====================================================
+template <typename TCon, typename... TValue> struct PushBack_;
+
+template <template <typename...> typename TCon, typename... TParams,
+          typename... TValue>
+struct PushBack_<TCon<TParams...>, TValue...> {
+  using type = TCon<TParams..., TValue...>;
+};
+
+template <typename TCon, typename... TValue>
+using PushBack = PushBack_<TCon, TValue...>::type;
+// =============================================================
+
 } // namespace venus::Sequential
