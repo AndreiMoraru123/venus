@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <core/sequential.hpp>
 #include <type_traits>
-#include <venus/sequential.hpp>
 
 using namespace venus;
 
