@@ -55,6 +55,21 @@ struct SetImpl<TCon<>, N, TValue, TCon<Processed...>,
 };
 // =============================================================
 
+// Fold details ================================================
+template <typename TState, template <typename, typename> typename Fn,
+          typename... TRemain>
+struct FoldImpl {
+  using type = TState;
+};
+
+template <typename TState, template <typename, typename> typename Fn,
+          typename T0, typename... TRemain>
+struct FoldImpl<TState, Fn, T0, TRemain...> {
+  using type =
+      typename FoldImpl<typename Fn<TState, T0>::type, Fn, TRemain...>::type;
+};
+// =============================================================
+
 } // namespace detail
 
 // Create ======================================================
@@ -127,4 +142,20 @@ template <typename TCon, typename... TValue>
 using PushBack = PushBack_<TCon, TValue...>::type;
 // =============================================================
 
+// Fold ========================================================
+template <typename TInitState, typename TInputCont,
+          template <typename, typename> typename Fn>
+struct Fold_;
+
+template <typename TInitState, template <typename...> typename TCont,
+          typename... TParams, template <typename, typename> typename Fn>
+struct Fold_<TInitState, TCont<TParams...>, Fn> {
+  template <typename S, typename I> using Fun = typename Fn<S, I>::type;
+  using type = typename detail::FoldImpl<TInitState, Fun, TParams...>::type;
+};
+
+template <typename TInitState, typename TInputCont,
+          template <typename, typename> typename Fn>
+using Fold = typename Fold_<TInitState, TInputCont, Fn>::type;
+// =============================================================
 } // namespace venus::Sequential
