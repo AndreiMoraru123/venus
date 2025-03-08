@@ -7,14 +7,17 @@ using namespace venus;
 
 template <typename... Params> struct Vector;
 
-template <typename T1, typename T2> struct IntSum {
-  using type = std::integral_constant<int, T1::value + T2::value>;
+template <typename T1, typename T2> struct Sum {
+  using value_type = decltype(T1::value);
+  static constexpr value_type value = T1::value + T2::value;
+  using type = std::integral_constant<value_type, value>;
 };
 
-template <typename CurrMax, typename Curr> struct IntMax {
-  using type = std::integral_constant<
-      int,
-      std::conditional_t<(CurrMax::value > Curr::value), CurrMax, Curr>::value>;
+template <typename CurrMax, typename Curr> struct Max {
+  using value_type = decltype(CurrMax::value);
+  static constexpr value_type value =
+      (CurrMax::value > Curr::value) ? CurrMax::value : Curr::value;
+  using type = std::integral_constant<value_type, value>;
 };
 
 TEST_CASE("Sequential::At type selection", "[sequential]") {
@@ -67,12 +70,12 @@ TEST_CASE("Sequential::Fold type reduction", "[sequential]") {
   using ZeroInit = std::integral_constant<int, 0>;
 
   SECTION("Sum Reduce") {
-    using SumReduce = Sequential::Fold<ZeroInit, ConstVector, IntSum>;
+    using SumReduce = Sequential::Fold<ZeroInit, ConstVector, Sum>;
     STATIC_REQUIRE(SumReduce::value == 6);
   }
 
   SECTION("Max Reduce") {
-    using MaxReduce = Sequential::Fold<ZeroInit, ConstVector, IntMax>;
+    using MaxReduce = Sequential::Fold<ZeroInit, ConstVector, Max>;
     STATIC_REQUIRE(MaxReduce::value == 3);
   }
 }
