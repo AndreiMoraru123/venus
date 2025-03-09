@@ -173,15 +173,7 @@ static constexpr size_t Size = Size_<RemoveConstRef<T>>::value;
 // =============================================================
 
 // Head ========================================================
-template <typename TCont> struct Head_;
-
-template <template <typename...> typename TCont, typename H,
-          typename... TRemain>
-struct Head_<TCont<H, TRemain...>> {
-  using type = H;
-};
-
-template <typename TCont> using Head = Head_<TCont>::type;
+template <typename TCont> using Head = At<TCont, 0>;
 // =============================================================
 
 // Tail ========================================================
