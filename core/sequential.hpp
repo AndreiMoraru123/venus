@@ -1,6 +1,7 @@
 #pragma once
 
 #include "null_param.hpp"
+#include "traits.hpp"
 #include <cstddef>
 
 namespace venus::Sequential {
@@ -158,4 +159,17 @@ template <typename TInitState, typename TInputCont,
           template <typename, typename> typename Fn>
 using Fold = typename Fold_<TInitState, TInputCont, Fn>::type;
 // =============================================================
+
+// Size ========================================================
+template <typename T> struct Size_;
+
+template <template <typename...> typename TCont, typename... T>
+struct Size_<TCont<T...>> {
+  static constexpr size_t value = sizeof...(T);
+};
+
+template <typename T>
+static constexpr size_t Size = Size_<RemoveConstRef<T>>::value;
+// =============================================================
+
 } // namespace venus::Sequential

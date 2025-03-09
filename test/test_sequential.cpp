@@ -79,3 +79,11 @@ TEST_CASE("Sequential::Fold type reduction", "[sequential]") {
     STATIC_REQUIRE(MaxReduce::value == 3);
   }
 }
+
+TEST_CASE("Sequential::Size type length", "[sequential]") {
+  using Vec = Vector<int, int, int>;
+  STATIC_REQUIRE(Sequential::Size<Vec> == 3);
+
+  using VecExtend = Sequential::PushBack<Vec, int>;
+  STATIC_REQUIRE(Sequential::Size<VecExtend> == 4);
+}
