@@ -100,11 +100,11 @@ struct At_<TCon<TParams...>, N> {
 };
 
 template <typename TCon, std::size_t N> using At = typename At_<TCon, N>::type;
-
-template <typename TCon, typename TReq> struct Order_ {};
 // =============================================================
 
 // Order =======================================================
+template <typename TCon, typename TReq> struct Order_ {};
+
 template <template <typename...> typename TCon, typename... TParams,
           typename TReq>
 struct Order_<TCon<TParams...>, TReq> {
@@ -170,6 +170,34 @@ struct Size_<TCont<T...>> {
 
 template <typename T>
 static constexpr size_t Size = Size_<RemoveConstRef<T>>::value;
+// =============================================================
+
+// Head ========================================================
+template <typename TCont> struct Head_;
+
+template <template <typename...> typename TCont, typename H,
+          typename... TRemain>
+struct Head_<TCont<H, TRemain...>> {
+  using type = H;
+};
+
+template <typename TCont> using Head = Head_<TCont>::type;
+// =============================================================
+
+// Tail ========================================================
+template <typename TCont> struct Tail_;
+
+template <template <typename...> typename TCont, typename H,
+          typename... TRemain>
+struct Tail_<TCont<H, TRemain...>> {
+  using type = TCont<TRemain...>;
+};
+
+template <typename TCont> using Tail = Tail_<TCont>::type;
+// =============================================================
+
+// Last ========================================================
+template <typename TCont> using Last = At<TCont, Size<TCont> - 1>;
 // =============================================================
 
 } // namespace venus::Sequential

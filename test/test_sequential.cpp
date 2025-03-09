@@ -87,3 +87,23 @@ TEST_CASE("Sequential::Size type length", "[sequential]") {
   using VecExtend = Sequential::PushBack<Vec, int>;
   STATIC_REQUIRE(Sequential::Size<VecExtend> == 4);
 }
+
+TEST_CASE("Sequential::Head type extraction", "[sequential]") {
+  using Check = Vector<int, short, double>;
+  STATIC_REQUIRE(std::is_same_v<Sequential::Head<Check>, int>);
+  STATIC_REQUIRE(not std::is_same_v<Sequential::Head<Check>, short>);
+  STATIC_REQUIRE(not std::is_same_v<Sequential::Head<Check>, double>);
+}
+
+TEST_CASE("Sequential::Tail type extraction", "[sequential]") {
+  using Check = Vector<int, short, double>;
+  using Res = Vector<short, double>;
+  STATIC_REQUIRE(std::is_same_v<Sequential::Tail<Check>, Res>);
+}
+
+TEST_CASE("Sequential::Last type extraction", "[sequential]") {
+  using Check = Vector<int, short, double>;
+  STATIC_REQUIRE(std::is_same_v<Sequential::Last<Check>, double>);
+  STATIC_REQUIRE(not std::is_same_v<Sequential::Last<Check>, int>);
+  STATIC_REQUIRE(not std::is_same_v<Sequential::Last<Check>, short>);
+}
