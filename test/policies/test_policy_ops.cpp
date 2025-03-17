@@ -95,10 +95,12 @@ TEST_CASE("PolicySelect selects correct policies", "[policy]") {
     STATIC_REQUIRE(std::is_same_v<Result::Value, float>);
   }
 
-  // TODO: adjust for this crap
-  SECTION("Override single policy (I hope)") {
-    using Input = PolicyContainer<PMulAccu>;
-    using Result = PolicySelect<AccPolicy, Input>;
+  SECTION("Override single policy") {
+    using Result = PolicySelect<AccPolicy, PolicyContainer<PMulAccu>>;
+
+    STATIC_REQUIRE(std::is_same_v<Result::Accu, AccPolicy::AccuTypeCate::Mul>);
+    STATIC_REQUIRE(Result::IsAve == false);
+    STATIC_REQUIRE(std::is_same_v<Result::Value, float>);
   }
 }
 
