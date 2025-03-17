@@ -1,4 +1,3 @@
-#include "core/traits.hpp"
 #include <array>
 #include <catch2/catch_test_macros.hpp>
 
