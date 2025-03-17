@@ -19,7 +19,7 @@ struct PolicySelectionRes<PolicyContainer<TCurrPolicy, TOtherPolicies...>>
 template <typename TMajorClass> struct MajorFilter_ {
   template <typename TState, typename TInput>
   using apply = std::conditional_t<
-      std::is_same_v<typename TInput::TMajorClass, TMajorClass>,
+      std::is_same_v<typename TInput::MajorClass, TMajorClass>,
       Sequential::PushBack_<TState, TInput>, Identity_<TState>>;
 };
 

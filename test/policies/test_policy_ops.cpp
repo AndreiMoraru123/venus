@@ -24,25 +24,25 @@ struct AccPolicy {
 };
 
 struct PAddAccu : virtual AccPolicy {
-  using TMajorClass = AccPolicy;
+  using MajorClass = AccPolicy;
   using MinorClass = AccPolicy::AccuTypeCate;
   using Accu = MinorClass::Add;
 };
 
 struct PMulAccu : virtual AccPolicy {
-  using TMajorClass = AccPolicy;
+  using MajorClass = AccPolicy;
   using MinorClass = AccPolicy::AccuTypeCate;
   using Accu = MinorClass::Mul;
 };
 
 struct PAve : virtual AccPolicy {
-  using TMajorClass = AccPolicy;
+  using MajorClass = AccPolicy;
   using MinorClass = AccPolicy::IsAveValueCate;
   static constexpr bool IsAve = true;
 };
 
 template <typename T> struct PValueTypeIs : virtual AccPolicy {
-  using TMajorClass = AccPolicy;
+  using MajorClass = AccPolicy;
   using Value = T;
 };
 
