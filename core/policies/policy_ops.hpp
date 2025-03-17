@@ -1,6 +1,7 @@
 #pragma once
 #include "../sequential.hpp"
 #include "../traits.hpp"
+#include "core/concepts.hpp"
 #include "policy_container.hpp"
 #include <type_traits>
 
@@ -16,8 +17,12 @@ template <typename TCurrPolicy, typename... TOtherPolicies>
 struct PolicySelectionRes<PolicyContainer<TCurrPolicy, TOtherPolicies...>>
     : TCurrPolicy, TOtherPolicies... {};
 
+template <typename T>
+concept HasMajorClass = requires { typename T::MajorClass; };
+
 template <typename TMajorClass> struct MajorFilter_ {
   template <typename TState, typename TInput>
+    requires HasMajorClass<TInput>
   using apply = std::conditional_t<
       std::is_same_v<typename TInput::MajorClass, TMajorClass>,
       Sequential::PushBack_<TState, TInput>, Identity_<TState>>;
