@@ -52,4 +52,9 @@ TEST_CASE("PolicySelect selects correct policies", "[policy]") {
     STATIC_REQUIRE(Result::IsAve == false);
     STATIC_REQUIRE(std::is_same_v<Result::Value, float>);
   }
+
+  SECTION("Override single policy") {
+    using Input = PolicyContainer<PMulAccu>;
+    using Result = PolicySelect<AccPolicy, Input>;
+  }
 }

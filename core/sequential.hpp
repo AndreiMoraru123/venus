@@ -66,8 +66,7 @@ struct FoldImpl {
 template <typename TState, template <typename, typename> typename Fn,
           typename T0, typename... TRemain>
 struct FoldImpl<TState, Fn, T0, TRemain...> {
-  using type =
-      typename FoldImpl<typename Fn<TState, T0>::type, Fn, TRemain...>::type;
+  using type = typename FoldImpl<Fn<TState, T0>, Fn, TRemain...>::type;
 };
 // =============================================================
 
