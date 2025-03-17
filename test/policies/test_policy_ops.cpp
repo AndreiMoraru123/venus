@@ -10,6 +10,7 @@
 using namespace venus;
 
 struct AccPolicy {
+  using MajorClass = AccPolicy;
   struct AccuTypeCate {
     struct Add;
     struct Mul;
@@ -24,19 +25,16 @@ struct AccPolicy {
 };
 
 struct PAddAccu : virtual AccPolicy {
-  using MajorClass = AccPolicy;
   using MinorClass = AccPolicy::AccuTypeCate;
   using Accu = MinorClass::Add;
 };
 
 struct PMulAccu : virtual AccPolicy {
-  using MajorClass = AccPolicy;
   using MinorClass = AccPolicy::AccuTypeCate;
   using Accu = MinorClass::Mul;
 };
 
 struct PAve : virtual AccPolicy {
-  using MajorClass = AccPolicy;
   using MinorClass = AccPolicy::IsAveValueCate;
   static constexpr bool IsAve = true;
 };
