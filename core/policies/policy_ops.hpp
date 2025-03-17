@@ -37,10 +37,20 @@ struct MinorCheck_<PolicyContainer<TCurrPolicy, TP...>> {
       AndValue<currCheck, MinorCheck_<PolicyContainer<TP...>>>;
 };
 
-template <typename TMajorClass, typename TPolicyContainer> struct Selector_ {};
-
+template <typename TMajorClass, typename TPolicyContainer> struct Selector_ {
+  using MajFilt = Sequential::Fold<PolicyContainer<>, TPolicyContainer,
+                                   MajorFilter_<TMajorClass>::template apply>;
+  static_assert(MinorCheck_<MajFilt>::value, "Minor class set conflict!");
+  using type = std::conditional_t<Sequential::Size<MajFilt> == 0, TMajorClass,
+                                  PolicySelectionRes<MajFilt>>;
+};
+// =============================================================
 } // namespace detail
 
+// Policy Select ===============================================
+template <typename TMajorClass, typename TPolicyContainer>
+using PolicySelect =
+    typename detail::Selector_<TMajorClass, TPolicyContainer>::type;
 // =============================================================
 
 } // namespace venus
