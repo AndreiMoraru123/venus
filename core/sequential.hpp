@@ -47,7 +47,6 @@ struct SetImpl<TCon<>, 0, TValue, TCon<Processed...>,
 // Recursive case: Move elements from Remaining to Processed until I reach Nth
 template <template <typename...> typename TCon, std::size_t N, typename TValue,
           typename... Processed, typename Current, typename... Remaining>
-  requires(N > 0)
 struct SetImpl<TCon<>, N, TValue, TCon<Processed...>,
                TCon<Current, Remaining...>> {
   using type =
