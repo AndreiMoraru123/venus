@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <core/policies/policy_container.hpp>
+#include <core/policies/policy_macro_begin.hpp>
 #include <core/policies/policy_ops.hpp>
 #include <type_traits>
 
@@ -23,20 +24,9 @@ struct AccPolicy {
   using Value = float;
 };
 
-struct PAddAccu : virtual AccPolicy {
-  using MinorClass = AccPolicy::AccuTypeCate;
-  using Accu = MinorClass::Add;
-};
-
-struct PMulAccu : virtual AccPolicy {
-  using MinorClass = AccPolicy::AccuTypeCate;
-  using Accu = MinorClass::Mul;
-};
-
-struct PAve : virtual AccPolicy {
-  using MinorClass = AccPolicy::IsAveValueCate;
-  static constexpr bool IsAve = true;
-};
+EnumValuePolicyObj(PAddAccu, AccPolicy, Accu, Add);
+EnumValuePolicyObj(PMulAccu, AccPolicy, Accu, Mul);
+ValuePolicyObj(PAve, AccPolicy, IsAve, true);
 
 template <typename T> struct PValueTypeIs : virtual AccPolicy {
   using MinorClass = AccPolicy::ValueTypeCate;
@@ -135,3 +125,5 @@ TEST_CASE("Accumulator with different policies", "[policy]") {
     STATIC_REQUIRE(res1 == res2);
   }
 }
+
+#include <core/policies/policy_macro_end.hpp>

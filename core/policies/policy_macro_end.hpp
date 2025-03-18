@@ -1,0 +1,2 @@
+#undef EnumTypePolicyObj
+#undef ValuePolicyObj
