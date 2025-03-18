@@ -13,6 +13,12 @@ concept Policy = requires {
   std::is_same_v<typename T::MajorClass, MajorClass>;
 };
 
+template <typename T, typename U>
+concept SameMinorClass = requires {
+  typename T::MinorClass;
+  typename U::MinorClass;
+} && std::is_same_v<typename T::MinorClass, typename U::MinorClass>;
+
 // Details =====================================================
 namespace detail {
 
@@ -38,9 +44,7 @@ template <typename TPolicyCont> struct MinorCheck_ {
 template <typename TCurrPolicy, typename... TP>
 struct MinorCheck_<PolicyContainer<TCurrPolicy, TP...>> {
   static constexpr bool currCheck =
-      ((not std::is_same_v<typename TCurrPolicy::MinorClass,
-                           typename TP::MinorClass>) and
-       ...); // checks for uniqueness in minor class
+      ((not SameMinorClass<TCurrPolicy, TP>) and ...);
   static constexpr bool value =
       AndValue<currCheck, MinorCheck_<PolicyContainer<TP...>>>;
 };
@@ -60,5 +64,4 @@ template <typename TMajorClass, typename TPolicyContainer>
 using PolicySelect =
     typename detail::Selector_<TMajorClass, TPolicyContainer>::type;
 // =============================================================
-
 } // namespace venus
