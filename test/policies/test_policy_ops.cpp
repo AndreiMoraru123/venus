@@ -39,7 +39,7 @@ struct PAve : virtual AccPolicy {
 };
 
 template <typename T> struct PValueTypeIs : virtual AccPolicy {
-  using MajorClass = AccPolicy;
+  using MinorClass = AccPolicy::ValueTypeCate;
   using Value = T;
 };
 

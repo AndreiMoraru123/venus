@@ -6,6 +6,13 @@
 
 namespace venus {
 
+template <typename T, typename MajorClass>
+concept Policy = requires {
+  typename T::MajorClass;
+  typename T::MinorClass;
+  std::is_same_v<typename T::MajorClass, MajorClass>;
+};
+
 // Details =====================================================
 namespace detail {
 
@@ -16,12 +23,9 @@ template <typename TCurrPolicy, typename... TOtherPolicies>
 struct PolicySelectionRes<PolicyContainer<TCurrPolicy, TOtherPolicies...>>
     : TCurrPolicy, TOtherPolicies... {};
 
-template <typename T>
-concept HasMajorClass = requires { typename T::MajorClass; };
-
 template <typename TMajorClass> struct MajorFilter_ {
   template <typename TState, typename TInput>
-    requires HasMajorClass<TInput>
+    requires Policy<TInput, TMajorClass>
   using apply = std::conditional_t<
       std::is_same_v<typename TInput::MajorClass, TMajorClass>,
       Sequential::PushBack_<TState, TInput>, Identity_<TState>>;
