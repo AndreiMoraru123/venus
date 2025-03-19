@@ -52,7 +52,7 @@ struct PolicyConflict;
 template <typename ParentPolicy, typename... ChildPolicies>
 struct PolicyConflict<ParentPolicy, PolicyContainer<ChildPolicies...>> {
   static constexpr bool value =
-      (HasSameClassTags<ParentPolicy, ChildPolicies> || ...);
+      (HasSameClassTags<ParentPolicy, ChildPolicies> or ...);
 };
 
 template <typename... ChildPolicies> struct Filter_ {
