@@ -23,6 +23,14 @@ concept SameMinorClass = requires {
   typename U::MinorClass;
 } and std::is_same_v<typename T::MinorClass, typename U::MinorClass>;
 
+template <typename P1, typename P2>
+concept HasSameClassTags =
+    Policy<P1> and Policy<P2> and
+    SameMajorClass<P1, typename P2::MajorClass> and SameMinorClass<P1, P2>;
+
+template <typename P, typename... Ps>
+concept ConflictingPolicy = (HasSameClassTags<P, Ps> or ...);
+
 // Details =====================================================
 namespace detail {
 
@@ -63,35 +71,21 @@ template <typename TMajorClass, typename TPolicyContainer> struct Selector_ {
 // =============================================================
 
 // Policy Derive ===============================================
-template <typename TPolicy>
-  requires Policy<TPolicy>
-struct PolicyExistsKV {
-  static std::true_type apply(typename TPolicy::MajorClass *,
-                              typename TPolicy::MinorClass *);
+template <typename ParentPolicy, typename ChildPoliciesContainer>
+struct PolicyConflict;
+
+template <typename ParentPolicy, typename... ChildPolicies>
+struct PolicyConflict<ParentPolicy, PolicyContainer<ChildPolicies...>> {
+  static constexpr bool value =
+      (HasSameClassTags<ParentPolicy, ChildPolicies> || ...);
 };
 
-template <typename TLayer, typename... TParams>
-struct PolicyExistsKV<SubPolicyContainer<TLayer, TParams...>> {
-  static void apply(SubPolicyContainer<TLayer, TParams...> *);
-};
-
-template <typename TSubPolicies> struct PolicyExist;
-
-template <typename... TPolicies>
-struct PolicyExist<PolicyContainer<TPolicies...>>
-    : PolicyExistsKV<TPolicies>... {
-  static std::false_type apply(...);
-  using PolicyExistsKV<TPolicies>::apply...;
-};
-
-template <typename TSubPolicies> struct Filter_ {
-  template <typename TState, typename TInput>
+template <typename... ChildPolicies> struct Filter_ {
+  template <typename TState, typename TParentPolicy>
   using apply =
-      std::conditional_t<decltype(PolicyExist<TSubPolicies>::apply(
-                             (typename TInput::MajorClass *)nullptr,
-                             (typename TInput::MinorClass *)nullptr))::value,
+      std::conditional_t<PolicyConflict<TParentPolicy, ChildPolicies...>::value,
                          Identity_<TState>,
-                         Sequential::PushBack_<TState, TInput>>;
+                         Sequential::PushBack_<TState, TParentPolicy>>;
 };
 // =============================================================
 
