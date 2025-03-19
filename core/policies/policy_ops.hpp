@@ -6,18 +6,22 @@
 
 namespace venus {
 
-template <typename T, typename MajorClass>
+template <typename T>
 concept Policy = requires {
   typename T::MajorClass;
   typename T::MinorClass;
-  std::is_same_v<typename T::MajorClass, MajorClass>;
+};
+
+template <typename T, typename MajorClass>
+concept SameMajorClass = requires {
+  Policy<T> and std::is_same_v<typename T::MajorClass, MajorClass>;
 };
 
 template <typename T, typename U>
 concept SameMinorClass = requires {
   typename T::MinorClass;
   typename U::MinorClass;
-} && std::is_same_v<typename T::MinorClass, typename U::MinorClass>;
+} and std::is_same_v<typename T::MinorClass, typename U::MinorClass>;
 
 // Details =====================================================
 namespace detail {
@@ -31,7 +35,7 @@ struct PolicySelectionRes<PolicyContainer<TCurrPolicy, TOtherPolicies...>>
 
 template <typename TMajorClass> struct MajorFilter_ {
   template <typename TState, typename TInput>
-    requires Policy<TInput, TMajorClass>
+    requires SameMajorClass<TInput, TMajorClass>
   using apply = std::conditional_t<
       std::is_same_v<typename TInput::MajorClass, TMajorClass>,
       Sequential::PushBack_<TState, TInput>, Identity_<TState>>;
@@ -57,11 +61,52 @@ template <typename TMajorClass, typename TPolicyContainer> struct Selector_ {
                                   PolicySelectionRes<MajFilt>>;
 };
 // =============================================================
+
+// Policy Derive ===============================================
+template <typename TPolicy>
+  requires Policy<TPolicy>
+struct PolicyExistsKV {
+  static std::true_type apply(typename TPolicy::MajorClass *,
+                              typename TPolicy::MinorClass *);
+};
+
+template <typename TLayer, typename... TParams>
+struct PolicyExistsKV<SubPolicyContainer<TLayer, TParams...>> {
+  static void apply(SubPolicyContainer<TLayer, TParams...> *);
+};
+
+template <typename TSubPolicies> struct PolicyExist;
+
+template <typename... TPolicies>
+struct PolicyExist<PolicyContainer<TPolicies...>>
+    : PolicyExistsKV<TPolicies>... {
+  static std::false_type apply(...);
+  using PolicyExistsKV<TPolicies>::apply...;
+};
+
+template <typename TSubPolicies> struct Filter_ {
+  template <typename TState, typename TInput>
+  using apply =
+      std::conditional_t<decltype(PolicyExist<TSubPolicies>::apply(
+                             (typename TInput::MajorClass *)nullptr,
+                             (typename TInput::MinorClass *)nullptr))::value,
+                         Identity_<TState>,
+                         Sequential::PushBack_<TState, TInput>>;
+};
+// =============================================================
+
 } // namespace detail
 
 // Policy Select ===============================================
 template <typename TMajorClass, typename TPolicyContainer>
 using PolicySelect =
     typename detail::Selector_<TMajorClass, TPolicyContainer>::type;
+// =============================================================
+
+// Policy Derive ===============================================
+template <typename TSubPolicies, typename TParentPolicies>
+using PolicyDerive =
+    Sequential::Fold<TSubPolicies, TParentPolicies,
+                     detail::Filter_<TSubPolicies>::template apply>;
 // =============================================================
 } // namespace venus
