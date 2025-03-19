@@ -27,11 +27,7 @@ struct AccPolicy {
 EnumValuePolicyObj(PAddAccu, AccPolicy, Accu, Add);
 EnumValuePolicyObj(PMulAccu, AccPolicy, Accu, Mul);
 ValuePolicyObj(PAve, AccPolicy, IsAve, true);
-
-template <typename T> struct PValueTypeIs : virtual AccPolicy {
-  using MinorClass = AccPolicy::ValueTypeCate;
-  using Value = T;
-};
+TypePolicyTemplate(PValueTypeIs, AccPolicy, Value);
 
 template <typename... TPolicies> struct Accumulator {
   using Container = PolicyContainer<TPolicies...>;

@@ -15,3 +15,9 @@
   public:                                                                      \
     static constexpr type2 Mi = static_cast<type2>(Val);                       \
   }
+
+#define TypePolicyTemplate(PolicyName, Ma, Mi)                                 \
+  template <typename T> struct PolicyName : virtual public Ma {                \
+    using MinorClass = Ma::Mi##TypeCate;                                       \
+    using Mi = T;                                                              \
+  }
