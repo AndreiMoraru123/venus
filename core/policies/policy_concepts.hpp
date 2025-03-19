@@ -1,0 +1,24 @@
+#include <type_traits>
+
+namespace venus {
+
+template <typename T>
+concept Policy = requires {
+  typename T::MajorClass;
+  typename T::MinorClass;
+};
+
+template <typename T, typename U>
+concept SameMajorClass =
+    Policy<T> and Policy<U> and
+    std::is_same_v<typename T::MajorClass, typename U::MajorClass>;
+
+template <typename T, typename U>
+concept SameMinorClass =
+    Policy<T> and Policy<U> and
+    std::is_same_v<typename T::MinorClass, typename U::MinorClass>;
+
+template <typename P1, typename P2>
+concept HasSameClassTags = Policy<P1> and Policy<P2> and
+                           SameMajorClass<P1, P2> and SameMinorClass<P1, P2>;
+} // namespace venus
