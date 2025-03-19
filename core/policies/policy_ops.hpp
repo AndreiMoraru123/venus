@@ -12,21 +12,19 @@ concept Policy = requires {
   typename T::MinorClass;
 };
 
-template <typename T, typename MajorClass>
-concept SameMajorClass = requires {
-  Policy<T> and std::is_same_v<typename T::MajorClass, MajorClass>;
-};
+template <typename T, typename U>
+concept SameMajorClass =
+    Policy<T> and Policy<U> and
+    std::is_same_v<typename T::MajorClass, typename U::MajorClass>;
 
 template <typename T, typename U>
-concept SameMinorClass = requires {
-  typename T::MinorClass;
-  typename U::MinorClass;
-} and std::is_same_v<typename T::MinorClass, typename U::MinorClass>;
+concept SameMinorClass =
+    Policy<T> and Policy<U> and
+    std::is_same_v<typename T::MinorClass, typename U::MinorClass>;
 
 template <typename P1, typename P2>
-concept HasSameClassTags =
-    Policy<P1> and Policy<P2> and
-    SameMajorClass<P1, typename P2::MajorClass> and SameMinorClass<P1, P2>;
+concept HasSameClassTags = Policy<P1> and Policy<P2> and
+                           SameMajorClass<P1, P2> and SameMinorClass<P1, P2>;
 
 template <typename P, typename... Ps>
 concept ConflictingPolicy = (HasSameClassTags<P, Ps> or ...);
@@ -43,7 +41,6 @@ struct PolicySelectionRes<PolicyContainer<TCurrPolicy, TOtherPolicies...>>
 
 template <typename TMajorClass> struct MajorFilter_ {
   template <typename TState, typename TInput>
-    requires SameMajorClass<TInput, TMajorClass>
   using apply = std::conditional_t<
       std::is_same_v<typename TInput::MajorClass, TMajorClass>,
       Sequential::PushBack_<TState, TInput>, Identity_<TState>>;
