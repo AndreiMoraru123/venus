@@ -16,7 +16,7 @@ struct Parent {
   };
   using A = ATypeCate::Option1;
 
-  struct ValueBValueCate;
+  struct BValueCate;
   static constexpr int B = 10;
 
   struct CValueCate;
@@ -38,6 +38,7 @@ ValuePolicyObj(ChildPolicyX, Child, X, true);
 
 // Define override Parent Policy to be used by Child Container
 EnumValuePolicyObj(ParentOverridePolicyTypeA, Parent, A, Option2);
+ValuePolicyObj(ParentOverridePolicyValueB, Parent, B, 20);
 
 TEST_CASE("PolicyDerive derives the correct policies", "[policy]") {
 
@@ -60,18 +61,20 @@ TEST_CASE("PolicyDerive derives the correct policies", "[policy]") {
     STATIC_REQUIRE(ChildRes::X == true);
   }
 
-  SECTION("Override parent policy") {
+  SECTION("Override parent policies") {
     using ParentPolicies = PolicyContainer<ParentPolicyTypeA>;
     using ChildPolicies =
-        PolicyContainer<ChildPolicyX, ParentOverridePolicyTypeA>;
+        PolicyContainer<ChildPolicyX, ParentOverridePolicyTypeA,
+                        ParentOverridePolicyValueB>;
     using Combined = PolicyDerive<ChildPolicies, ParentPolicies>;
 
-    // Policy Container is merged via overriding one of the policies
-    STATIC_REQUIRE(Sequential::Size<Combined> == 2);
+    // Policy Container is merged via overriding the parent policies
+    STATIC_REQUIRE(Sequential::Size<Combined> == 3);
 
     // Parent policy is overriden
     using ParentRes = PolicySelect<Parent, Combined>;
     STATIC_REQUIRE(std::is_same_v<ParentRes::A, Parent::ATypeCate::Option2>);
+    STATIC_REQUIRE(ParentRes::B == 20);
   }
 }
 
