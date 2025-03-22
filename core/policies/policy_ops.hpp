@@ -64,6 +64,19 @@ template <typename... ChildPolicies> struct Filter_ {
 };
 // =============================================================
 
+// Plain Policy ================================================
+struct Plain {
+  template <typename TState, typename TInput> struct apply {
+    using type = Sequential::PushBack<TState, TInput>;
+  };
+
+  template <typename TState, typename TLayerName, typename... TAdded>
+  struct apply<TState, SubPolicyContainer<TLayerName, TAdded...>> {
+    using type = TState;
+  };
+};
+// =============================================================
+
 } // namespace detail
 
 // Policy Select ===============================================
@@ -77,5 +90,11 @@ template <typename TSubPolicies, typename TParentPolicies>
 using PolicyDerive =
     Sequential::Fold<TSubPolicies, TParentPolicies,
                      detail::Filter_<TSubPolicies>::template apply>;
+
+// Plain Policy ================================================
+template <typename TPolicyContainer>
+using PlainPolicy = Sequential::Fold<PolicyContainer<>, TPolicyContainer,
+                                     detail::Plain::template apply>;
+// =============================================================
 // =============================================================
 } // namespace venus
