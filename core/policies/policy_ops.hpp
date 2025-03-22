@@ -77,6 +77,20 @@ struct Plain {
 };
 // =============================================================
 
+// Sub Policy Picker ===========================================
+template <typename TLayerName> struct PolicySubPicker {
+  template <typename TState, typename TInput> struct apply {
+    using type = TState;
+  };
+
+  template <typename... TProcessed, typename... TAdded>
+  struct apply<PolicyContainer<TProcessed...>,
+               SubPolicyContainer<TLayerName, TAdded...>> {
+    using type = PolicyContainer<TProcessed..., TAdded...>;
+  };
+};
+// =============================================================
+
 } // namespace detail
 
 // Policy Select ===============================================
@@ -96,5 +110,17 @@ template <typename TPolicyContainer>
 using PlainPolicy = Sequential::Fold<PolicyContainer<>, TPolicyContainer,
                                      detail::Plain::template apply>;
 // =============================================================
+
+// Sub Policy Picker ===========================================
+template <typename TPolicyContainer, typename TLayerName>
+struct SubPolicyPicker_ {
+  using SubPolicies =
+      Sequential::Fold<PolicyContainer<>, TPolicyContainer,
+                       detail::PolicySubPicker<TLayerName>::template apply>;
+  using type = PolicyDerive<SubPolicies, PlainPolicy<TPolicyContainer>>;
+};
+
+template <typename TPolicyContainer, typename TLayerName>
+using SubPolicyPicker = SubPolicyPicker_<TPolicyContainer, TLayerName>::type;
 // =============================================================
 } // namespace venus
