@@ -83,3 +83,5 @@ TEST_CASE("ChangePolicy correctly changes policy", "[policy]") {
     STATIC_REQUIRE(SecondPolicy::B == 20);
   }
 }
+
+#include <core/policies/policy_macro_end.hpp>

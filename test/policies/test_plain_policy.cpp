@@ -62,3 +62,5 @@ TEST_CASE("PlainPolicy correctly parses policies", "[policy]") {
     STATIC_REQUIRE(std::is_same_v<FirstPolicy, LastPolicy>);
   }
 }
+
+#include <core/policies/policy_macro_end.hpp>

@@ -88,3 +88,5 @@ TEST_CASE("SubPolicyPicker correctly picks policies", "[policy]") {
     STATIC_REQUIRE(Result::B == 20);
   }
 }
+
+#include <core/policies/policy_macro_end.hpp>
