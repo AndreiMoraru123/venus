@@ -21,4 +21,14 @@ concept SameMinorClass =
 template <typename P1, typename P2>
 concept HasSameClassTags = Policy<P1> and Policy<P2> and
                            SameMajorClass<P1, P2> and SameMinorClass<P1, P2>;
+
+template <typename Container> struct AllPolicies_;
+
+template <template <typename...> typename Container, typename... Ts>
+struct AllPolicies_<Container<Ts...>> {
+  static constexpr bool value = (Policy<Ts> and ...);
+};
+
+template <typename Container>
+static constexpr bool AllPolicies = AllPolicies_<Container>::value;
 } // namespace venus

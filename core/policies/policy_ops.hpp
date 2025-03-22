@@ -118,6 +118,8 @@ struct SubPolicyPicker_ {
       Sequential::Fold<PolicyContainer<>, TPolicyContainer,
                        detail::PolicySubPicker<TLayerName>::template apply>;
   using type = PolicyDerive<SubPolicies, PlainPolicy<TPolicyContainer>>;
+  static_assert(AllPolicies<type>,
+                "SubPolicyPicker must return only policy types");
 };
 
 template <typename TPolicyContainer, typename TLayerName>
