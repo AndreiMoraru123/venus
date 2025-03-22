@@ -3,6 +3,7 @@
 #include "../traits.hpp"
 #include "policy_concepts.hpp"
 #include "policy_container.hpp"
+#include <tuple>
 #include <type_traits>
 
 namespace venus {
@@ -91,6 +92,23 @@ template <typename TLayerName> struct PolicySubPicker {
 };
 // =============================================================
 
+// Change Policy ===============================================
+template <typename NewPolicy>
+  requires Policy<NewPolicy>
+struct ChangeFilter {
+  template <typename TState, typename TInput>
+  struct apply : std::conditional_t<HasSameClassTags<TInput, NewPolicy>,
+                                    Identity_<TState>,
+                                    Sequential::PushBack_<TState, TInput>> {};
+
+  template <typename TState, typename TLayer, typename... TParams>
+  struct apply<TState, SubPolicyContainer<TLayer, TParams...>> {
+    using type =
+        Sequential::PushBack<TState, SubPolicyContainer<TLayer, TParams...>>;
+  };
+};
+// =============================================================
+
 } // namespace detail
 
 // Policy Select ===============================================
@@ -124,5 +142,17 @@ struct SubPolicyPicker_ {
 
 template <typename TPolicyContainer, typename TLayerName>
 using SubPolicyPicker = SubPolicyPicker_<TPolicyContainer, TLayerName>::type;
+// =============================================================
+
+// Change Policy ===============================================
+template <typename NewPolicy, typename SourceContainer> struct ChangePolicy_ {
+  using type = Sequential::PushBack<
+      Sequential::Fold<PolicyContainer<>, SourceContainer,
+                       detail::ChangeFilter<NewPolicy>::template apply>,
+      NewPolicy>;
+};
+
+template <typename NewPolicy, typename SourceContainer>
+using ChangePolicy = ChangePolicy_<NewPolicy, SourceContainer>::type;
 // =============================================================
 } // namespace venus
