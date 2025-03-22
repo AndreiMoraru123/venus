@@ -8,8 +8,8 @@
 
 using namespace venus;
 
-struct TestPolicy {
-  using MajorClass = TestPolicy;
+struct SomePolicy {
+  using MajorClass = SomePolicy;
   struct ATypeCate {
     struct Option1;
     struct Option2;
@@ -26,9 +26,9 @@ struct TestPolicy {
 struct SomeLayer {};
 struct OtherLayer {};
 
-EnumValuePolicyObj(TestPolicyOption1A, TestPolicy, A, Option1);
-ValuePolicyObj(TestPolicyValueB20, TestPolicy, B, 20);
-ValuePolicyObj(TestPolicyValueB10, TestPolicy, B, 10);
+EnumValuePolicyObj(SomePolicyOption1A, SomePolicy, A, Option1);
+ValuePolicyObj(SomePolicyB20, SomePolicy, B, 20);
+ValuePolicyObj(SomePolicyB10, SomePolicy, B, 10);
 
 TEST_CASE("SubPolicyPicker correctly picks policies", "[policy]") {
 
@@ -40,51 +40,51 @@ TEST_CASE("SubPolicyPicker correctly picks policies", "[policy]") {
   }
 
   SECTION("Regular policies are included in the result") {
-    using TestPolicy = PolicyContainer<TestPolicyOption1A>;
+    using TestPolicy = PolicyContainer<SomePolicyOption1A>;
 
     using SubContainer = SubPolicyPicker<TestPolicy, SomeLayer>;
     STATIC_REQUIRE(Sequential::Size<SubContainer> == 1);
 
     using ExtractedPolicy = Sequential::At<SubContainer, 0>;
-    STATIC_REQUIRE(std::is_same_v<ExtractedPolicy, TestPolicyOption1A>);
+    STATIC_REQUIRE(std::is_same_v<ExtractedPolicy, SomePolicyOption1A>);
   }
 
   SECTION("Sub policy container with matching Layer type is included") {
-    using TestContainer =
-        PolicyContainer<TestPolicyValueB20,
-                        SubPolicyContainer<SomeLayer, TestPolicyOption1A>>;
+    using TestPolicy =
+        PolicyContainer<SomePolicyB20,
+                        SubPolicyContainer<SomeLayer, SomePolicyOption1A>>;
 
-    using SubContainer = SubPolicyPicker<TestContainer, SomeLayer>;
-    STATIC_REQUIRE(Sequential::Size<SubContainer> == 2);
+    using SubPolicy = SubPolicyPicker<TestPolicy, SomeLayer>;
+    STATIC_REQUIRE(Sequential::Size<SubPolicy> == 2);
 
-    using FirstPolicy = Sequential::At<SubContainer, 0>;
-    STATIC_REQUIRE(std::is_same_v<FirstPolicy, TestPolicyOption1A>);
+    using FirstPolicy = Sequential::At<SubPolicy, 0>;
+    STATIC_REQUIRE(std::is_same_v<FirstPolicy, SomePolicyOption1A>);
 
-    using SecondPolicy = Sequential::At<SubContainer, 1>;
-    STATIC_REQUIRE(std::is_same_v<SecondPolicy, TestPolicyValueB20>);
+    using SecondPolicy = Sequential::At<SubPolicy, 1>;
+    STATIC_REQUIRE(std::is_same_v<SecondPolicy, SomePolicyB20>);
   }
 
   SECTION("Sub-policy container with non-matching Layer type is not included") {
-    using TestContainer =
-        PolicyContainer<TestPolicyValueB20,
-                        SubPolicyContainer<SomeLayer, TestPolicyOption1A>>;
+    using TestPolicy =
+        PolicyContainer<SomePolicyB20,
+                        SubPolicyContainer<SomeLayer, SomePolicyOption1A>>;
 
-    using SubContainer = SubPolicyPicker<TestContainer, OtherLayer>;
-    STATIC_REQUIRE(Sequential::Size<SubContainer> == 1);
+    using SubPolicy = SubPolicyPicker<TestPolicy, OtherLayer>;
+    STATIC_REQUIRE(Sequential::Size<SubPolicy> == 1);
 
-    using ExtractedPolicy = Sequential::At<SubContainer, 0>;
-    STATIC_REQUIRE(std::is_same_v<ExtractedPolicy, TestPolicyValueB20>);
+    using ExtractedPolicy = Sequential::At<SubPolicy, 0>;
+    STATIC_REQUIRE(std::is_same_v<ExtractedPolicy, SomePolicyB20>);
   }
 
   SECTION("Sub-policy overrides regular policy") {
-    using TestContainer =
-        PolicyContainer<TestPolicyValueB10,
-                        SubPolicyContainer<SomeLayer, TestPolicyValueB20>>;
+    using TestPolicy =
+        PolicyContainer<SomePolicyB10,
+                        SubPolicyContainer<SomeLayer, SomePolicyB20>>;
 
-    using SubContainer = SubPolicyPicker<TestContainer, SomeLayer>;
-    STATIC_REQUIRE(Sequential::Size<SubContainer> == 1);
+    using SubPolicy = SubPolicyPicker<TestPolicy, SomeLayer>;
+    STATIC_REQUIRE(Sequential::Size<SubPolicy> == 1);
 
-    using Result = PolicySelect<TestPolicy, SubContainer>;
+    using Result = PolicySelect<SomePolicy, SubPolicy>;
     STATIC_REQUIRE(Result::B == 20);
   }
 }
