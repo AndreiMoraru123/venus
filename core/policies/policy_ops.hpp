@@ -55,7 +55,7 @@ struct PolicyConflict<ParentPolicy, PolicyContainer<ChildPolicies...>> {
       (HasSameClassTags<ParentPolicy, ChildPolicies> or ...);
 };
 
-template <typename... ChildPolicies> struct Filter_ {
+template <typename... ChildPolicies> struct DeriveFilter {
   template <typename TState, typename TParentPolicy>
   using apply =
       std::conditional_t<PolicyConflict<TParentPolicy, ChildPolicies...>::value,
@@ -103,7 +103,7 @@ using PolicySelect =
 template <typename TSubPolicies, typename TParentPolicies>
 using PolicyDerive =
     Sequential::Fold<TSubPolicies, TParentPolicies,
-                     detail::Filter_<TSubPolicies>::template apply>;
+                     detail::DeriveFilter<TSubPolicies>::template apply>;
 
 // Plain Policy ================================================
 template <typename TPolicyContainer>
