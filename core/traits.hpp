@@ -14,4 +14,9 @@ template <bool curr, typename TNext> static constexpr bool AndValue = false;
 
 template <typename TNext>
 static constexpr bool AndValue<true, TNext> = TNext::value;
+
+template <bool curr, typename TNext> static constexpr bool OrValue = true;
+
+template <typename TNext>
+static constexpr bool OrValue<false, TNext> = TNext::value;
 } // namespace venus

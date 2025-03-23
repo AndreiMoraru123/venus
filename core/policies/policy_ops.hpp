@@ -183,4 +183,31 @@ template <typename TPolicyContainer, typename TMajorClass, typename TMinorClass>
 using PickPolicyObject =
     PickPolicyObject_<TPolicyContainer, TMajorClass, TMinorClass>::type;
 // =============================================================
+
+// Has Non Trivial Policy ======================================
+template <typename TPolicyContainer, typename TMajorClass, typename TMinorClass>
+struct HasNonTrivialPolicy_;
+template <typename TMajorClass, typename TMinorClass, typename... TPolicies>
+  requires(Policy<TPolicies> and ...)
+struct HasNonTrivialPolicy_<PolicyContainer<TPolicies...>, TMajorClass,
+                            TMinorClass> {
+  static constexpr bool value = false;
+};
+
+template <typename TMajorClass, typename TMinorClass, typename TCurrPolicy,
+          typename... TPolicies>
+  requires(Policy<TPolicies> and ...)
+struct HasNonTrivialPolicy_<PolicyContainer<TCurrPolicy, TPolicies...>,
+                            TMajorClass, TMinorClass> {
+  static constexpr bool value =
+      OrValue<SameTargetClasses<TCurrPolicy, TMajorClass, TMinorClass>,
+              HasNonTrivialPolicy_<PolicyContainer<TPolicies...>, TMajorClass,
+                                   TMinorClass>>;
+};
+
+template <typename TPolicyContainer, typename TMajorClass, typename TMinorClass>
+static constexpr bool HasNonTrivialPolicy =
+    HasNonTrivialPolicy_<TPolicyContainer, TMajorClass, TMinorClass>::value;
+
+// =============================================================
 } // namespace venus
