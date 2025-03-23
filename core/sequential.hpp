@@ -23,11 +23,11 @@ template <typename T, typename... Types> struct FindTypeIndex;
 
 template <typename T, typename U, typename... Rest>
 struct FindTypeIndex<T, U, Rest...> {
-  constexpr static int value = 1 + FindTypeIndex<T, Rest...>::value;
+  constexpr static std::size_t value = 1 + FindTypeIndex<T, Rest...>::value;
 };
 
 template <typename T, typename... Rest> struct FindTypeIndex<T, T, Rest...> {
-  constexpr static int value = 0;
+  constexpr static std::size_t value = 0;
 };
 // =============================================================
 
@@ -106,11 +106,12 @@ template <typename TCon, typename TReq> struct Order_ {};
 template <template <typename...> typename TCon, typename... TParams,
           typename TReq>
 struct Order_<TCon<TParams...>, TReq> {
-  static constexpr int value = detail::FindTypeIndex<TReq, TParams...>::value;
+  static constexpr std::size_t value =
+      detail::FindTypeIndex<TReq, TParams...>::value;
 };
 
 template <typename TCon, typename TReq>
-static constexpr int Order = Order_<TCon, TReq>::value;
+static constexpr std::size_t Order = Order_<TCon, TReq>::value;
 // =============================================================
 
 // Set =========================================================
