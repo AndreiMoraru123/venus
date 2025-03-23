@@ -52,9 +52,8 @@ template <typename... TParameters> struct VarTypeDict {
       });
     }
 
-    // chained update alternative
     template <typename TTag, typename... TParams>
-    Values &ChainUpdate(TParams &&...params) {
+    auto ChainUpdate(TParams &&...params) -> Values & {
       static constexpr auto TagPos = Sequential::Order<VarTypeDict, TTag>;
       using rawType = Sequential::At<Values, TagPos>;
 
