@@ -3,7 +3,6 @@
 #include "../traits.hpp"
 #include "policy_concepts.hpp"
 #include "policy_container.hpp"
-#include <tuple>
 #include <type_traits>
 
 namespace venus {
@@ -53,7 +52,7 @@ struct PolicyConflict;
 template <typename ParentPolicy, typename... ChildPolicies>
 struct PolicyConflict<ParentPolicy, PolicyContainer<ChildPolicies...>> {
   static constexpr bool value =
-      (HasSameClassTags<ParentPolicy, ChildPolicies> or ...);
+      (SameClassTags<ParentPolicy, ChildPolicies> or ...);
 };
 
 template <typename... ChildPolicies> struct DeriveFilter {
@@ -97,9 +96,9 @@ template <typename NewPolicy>
   requires Policy<NewPolicy>
 struct ChangeFilter {
   template <typename TState, typename TInput>
-  struct apply : std::conditional_t<HasSameClassTags<TInput, NewPolicy>,
-                                    Identity_<TState>,
-                                    Sequential::PushBack_<TState, TInput>> {};
+  struct apply
+      : std::conditional_t<SameClassTags<TInput, NewPolicy>, Identity_<TState>,
+                           Sequential::PushBack_<TState, TInput>> {};
 
   template <typename TState, typename TLayer, typename... TParams>
   struct apply<TState, SubPolicyContainer<TLayer, TParams...>> {
@@ -154,5 +153,34 @@ template <typename NewPolicy, typename SourceContainer> struct ChangePolicy_ {
 
 template <typename NewPolicy, typename SourceContainer>
 using ChangePolicy = ChangePolicy_<NewPolicy, SourceContainer>::type;
+// =============================================================
+
+// Pick Policy Object ==========================================
+template <typename TPolicyContainer, typename TMajorClass, typename TMinorClass>
+struct PickPolicyObject_;
+
+template <typename TMajorClass, typename TMinorClass, typename... TPolicies>
+  requires(Policy<TPolicies> and ...)
+struct PickPolicyObject_<PolicyContainer<TPolicies...>, TMajorClass,
+                         TMinorClass> {
+  using type = TMajorClass;
+};
+
+template <typename TMajorClass, typename TMinorClass, typename TCurrPolicy,
+          typename... TPolicies>
+  requires(Policy<TPolicies> and ...)
+struct PickPolicyObject_<PolicyContainer<TCurrPolicy, TPolicies...>,
+                         TMajorClass, TMinorClass> {
+  using type = std::conditional_t<
+      SameTargetClasses<TCurrPolicy, TMajorClass, TMinorClass>,
+      Identity_<TCurrPolicy>,
+      PickPolicyObject_<PolicyContainer<TPolicies...>, TMajorClass,
+                        TMinorClass>>::type;
+  static_assert(Policy<type>, "PickPolicyObject must return a policy");
+};
+
+template <typename TPolicyContainer, typename TMajorClass, typename TMinorClass>
+using PickPolicyObject =
+    PickPolicyObject_<TPolicyContainer, TMajorClass, TMinorClass>::type;
 // =============================================================
 } // namespace venus
