@@ -22,6 +22,16 @@ TEST_CASE("VarTypeDict ops") {
 
   SECTION("Initial values") { REQUIRE(fn(params) == 2.0f); }
 
+  SECTION("Get values") {
+    const auto a = params.Get<A>();
+    const auto b = params.Get<B>();
+    const auto weight = params.Get<Weight>();
+
+    REQUIRE(a == 2.5f);
+    REQUIRE(b == 1.5);
+    REQUIRE(weight == 0.5f);
+  }
+
   SECTION("After update") {
     params.Update<A>(3.5f);
     REQUIRE(fn(params) == 2.5f);
