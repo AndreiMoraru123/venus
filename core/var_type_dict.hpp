@@ -43,11 +43,11 @@ template <typename... TParameters> struct VarTypeDict {
     template <typename TTag, typename... TParams>
     void Update(TParams &&...params) {
       static constexpr auto idx = Sequential::Order<VarTypeDict, TTag>;
-      using rawType = Sequential::At<Values, idx>;
+      using RawType = Sequential::At<Values, idx>;
 
-      rawType *tmp = new rawType(std::forward<TParams>(params)...);
+      RawType *tmp = new RawType(std::forward<TParams>(params)...);
       m_tuple[idx] = std::shared_ptr<void>(tmp, [](void *ptr) {
-        rawType *nptr = static_cast<rawType *>(ptr);
+        RawType *nptr = static_cast<RawType *>(ptr);
         delete nptr;
       });
     }
@@ -55,11 +55,11 @@ template <typename... TParameters> struct VarTypeDict {
     template <typename TTag, typename... TParams>
     auto ChainUpdate(TParams &&...params) -> Values & {
       static constexpr auto idx = Sequential::Order<VarTypeDict, TTag>;
-      using rawType = Sequential::At<Values, idx>;
+      using RawType = Sequential::At<Values, idx>;
 
-      rawType *tmp = new rawType(std::forward<TParams>(params)...);
+      RawType *tmp = new RawType(std::forward<TParams>(params)...);
       m_tuple[idx] = std::shared_ptr<void>(tmp, [](void *ptr) {
-        rawType *nptr = static_cast<rawType *>(ptr);
+        RawType *nptr = static_cast<RawType *>(ptr);
         delete nptr;
       });
 
@@ -68,19 +68,19 @@ template <typename... TParameters> struct VarTypeDict {
 
     template <typename TTag, typename TVal> auto Set(TVal &&val) && {
       static constexpr auto idx = Sequential::Order<VarTypeDict, TTag>;
-      using rawType = RemoveConstRef<TVal>;
+      using RawType = RemoveConstRef<TVal>;
 
-      rawType *tmp = new rawType(std::forward<TVal>(val));
+      RawType *tmp = new RawType(std::forward<TVal>(val));
       m_tuple[idx] = std::shared_ptr<void>(tmp, [](void *ptr) {
-        rawType *nptr = static_cast<rawType *>(ptr);
+        RawType *nptr = static_cast<RawType *>(ptr);
         delete nptr;
       });
 
-      if constexpr (std::is_same_v<rawType, Sequential::At<Values, idx>>) {
+      if constexpr (std::is_same_v<RawType, Sequential::At<Values, idx>>) {
         return *this;
       } else {
-        using newType = Sequential::Set<Values, idx, rawType>;
-        return newType(std::move(m_tuple));
+        using NewType = Sequential::Set<Values, idx, RawType>;
+        return NewType(std::move(m_tuple));
       }
     }
 
