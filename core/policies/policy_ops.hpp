@@ -92,9 +92,7 @@ template <typename TLayerName> struct PolicySubPicker {
 // =============================================================
 
 // Change Policy ===============================================
-template <typename NewPolicy>
-  requires Policy<NewPolicy>
-struct ChangeFilter {
+template <Policy NewPolicy> struct ChangeFilter {
   template <typename TState, typename TInput>
   struct apply
       : std::conditional_t<SameClassTags<TInput, NewPolicy>, Identity_<TState>,
@@ -159,16 +157,14 @@ using ChangePolicy = ChangePolicy_<NewPolicy, SourceContainer>::type;
 template <typename TPolicyContainer, typename TMajorClass, typename TMinorClass>
 struct PickPolicyObject_;
 
-template <typename TMajorClass, typename TMinorClass, typename... TPolicies>
-  requires(Policy<TPolicies> and ...)
+template <typename TMajorClass, typename TMinorClass, Policy... TPolicies>
 struct PickPolicyObject_<PolicyContainer<TPolicies...>, TMajorClass,
                          TMinorClass> {
   using type = TMajorClass;
 };
 
 template <typename TMajorClass, typename TMinorClass, typename TCurrPolicy,
-          typename... TPolicies>
-  requires(Policy<TPolicies> and ...)
+          Policy... TPolicies>
 struct PickPolicyObject_<PolicyContainer<TCurrPolicy, TPolicies...>,
                          TMajorClass, TMinorClass> {
   using type = std::conditional_t<
@@ -187,16 +183,14 @@ using PickPolicyObject =
 // Has Non Trivial Policy ======================================
 template <typename TPolicyContainer, typename TMajorClass, typename TMinorClass>
 struct HasNonTrivialPolicy_;
-template <typename TMajorClass, typename TMinorClass, typename... TPolicies>
-  requires(Policy<TPolicies> and ...)
+template <typename TMajorClass, typename TMinorClass, Policy... TPolicies>
 struct HasNonTrivialPolicy_<PolicyContainer<TPolicies...>, TMajorClass,
                             TMinorClass> {
   static constexpr bool value = false;
 };
 
 template <typename TMajorClass, typename TMinorClass, typename TCurrPolicy,
-          typename... TPolicies>
-  requires(Policy<TPolicies> and ...)
+          Policy... TPolicies>
 struct HasNonTrivialPolicy_<PolicyContainer<TCurrPolicy, TPolicies...>,
                             TMajorClass, TMinorClass> {
   static constexpr bool value =
