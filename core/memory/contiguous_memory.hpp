@@ -1,3 +1,5 @@
+#pragma once
+
 #include "../traits.hpp"
 #include "allocators.hpp"
 #include <cassert>

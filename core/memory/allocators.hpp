@@ -1,3 +1,5 @@
+#pragma once
+
 #include "device.hpp"
 #include <cstddef>
 #include <memory>
