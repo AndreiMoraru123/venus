@@ -79,7 +79,7 @@ template <typename TElem, typename TDevice, std::size_t Dim>
 struct LowLevelAccess<Tensor<TElem, TDevice, Dim>> {
   LowLevelAccess(Tensor<TElem, TDevice, Dim> p) : m_tensor(std::move(p)) {}
 
-  auto RawMemory() -> TElem *const { return m_tensor.m_mem.RawMemory(); }
+  auto RawMemory() const -> const TElem * { return m_tensor.m_mem.RawMemory(); }
   auto SharedMemory() const { return m_tensor.m_mem; }
 
 private:

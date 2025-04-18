@@ -20,13 +20,13 @@ TEST_CASE("Tensor Ops", "[tensor]") {
   }
 
   SECTION("Shared Memory") {
-    auto shared_memo = ContiguousMemory<float, Device::CPU>(1);
+    const auto shared_memo = ContiguousMemory<float, Device::CPU>(1);
 
     float *rawPtr = shared_memo.RawMemory();
     rawPtr[0] = 1.0f;
 
-    auto scalar1 = Tensor<float, Device::CPU, 0>(shared_memo);
-    auto scalar2 = Tensor<float, Device::CPU, 0>(shared_memo);
+    const auto scalar1 = Tensor<float, Device::CPU, 0>(shared_memo);
+    const auto scalar2 = Tensor<float, Device::CPU, 0>(shared_memo);
 
     REQUIRE(scalar1.Value() == 1.0f);
     REQUIRE(scalar2.Value() == 1.0f);
@@ -36,14 +36,14 @@ TEST_CASE("Tensor Ops", "[tensor]") {
   }
 
   SECTION("Shared Shifted Memory") {
-    auto shared_memo = ContiguousMemory<float, Device::CPU>(3);
+    const auto shared_memo = ContiguousMemory<float, Device::CPU>(3);
 
     float *rawPtr = shared_memo.RawMemory();
     rawPtr[0] = 1.0f;
     rawPtr[2] = 3.0f;
 
-    auto scalar1 = Tensor<float, Device::CPU, 0>(shared_memo);
-    auto scalar2 = Tensor<float, Device::CPU, 0>(shared_memo.Shift(2));
+    const auto scalar1 = Tensor<float, Device::CPU, 0>(shared_memo);
+    const auto scalar2 = Tensor<float, Device::CPU, 0>(shared_memo.Shift(2));
 
     REQUIRE(scalar1.Value() == 1.0f);
     REQUIRE(scalar2.Value() == 3.0f);
@@ -53,14 +53,14 @@ TEST_CASE("Tensor Ops", "[tensor]") {
   }
 
   SECTION("Low Level Access") {
-    auto memo = ContiguousMemory<float, Device::CPU>(1);
+    const auto memo = ContiguousMemory<float, Device::CPU>(1);
     float *rawPtr = memo.RawMemory();
     rawPtr[0] = 10.0f;
 
-    auto tensor = Tensor<float, Device::CPU, 0>(memo);
+    const auto tensor = Tensor<float, Device::CPU, 0>(memo);
     REQUIRE_FALSE(tensor.AvailableForWrite()); // internal copy of memo
 
-    auto lowLevelTensor = LowLevel(tensor);
+    const auto lowLevelTensor = LowLevel(std::move(tensor));
     REQUIRE(lowLevelTensor.SharedMemory() == memo);
     REQUIRE(*lowLevelTensor.RawMemory() == 10.0f);
   }
