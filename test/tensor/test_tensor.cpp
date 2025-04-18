@@ -58,6 +58,7 @@ TEST_CASE("Tensor Ops", "[tensor]") {
     rawPtr[0] = 10.0f;
 
     auto tensor = Tensor<float, Device::CPU, 0>(memo);
+    REQUIRE_FALSE(tensor.AvailableForWrite()); // internal copy of memo
 
     auto lowLevelTensor = LowLevel(tensor);
     REQUIRE(lowLevelTensor.SharedMemory() == memo);
