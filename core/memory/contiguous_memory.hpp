@@ -25,11 +25,17 @@ public:
   }
 
   auto RawMemory() const { return m_mem.get(); }
-  bool IsShared() const { return not m_mem.unique(); }
+  bool IsShared() const { return m_mem.use_count() > 1; }
   std::size_t Size() const { return m_size; }
 
   bool operator==(const ContiguousMemory &val) const {
     return (m_mem == val.m_mem) and (m_size == val.m_size);
+  }
+
+  ContiguousMemory(ContiguousMemory &&other) noexcept
+      : m_mem(std::move(other.m_mem)), m_size(other.m_size) {
+    other.m_size = 0;
+    other.m_mem.reset();
   }
 
 private:
