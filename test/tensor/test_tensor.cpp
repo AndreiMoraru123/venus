@@ -11,12 +11,12 @@ using namespace venus;
 TEST_CASE("Tensor Ops", "[tensor]") {
 
   SECTION("Scalar Tensor") {
-    auto scalar = Tensor<float, Device::CPU, 0>();
-    REQUIRE(scalar.Value() == 0.0f);
+    auto scalar = Tensor<float, Device::CPU, 0>(10.0f);
+    REQUIRE(scalar.Value() == 10.0f);
     REQUIRE(scalar.AvailableForWrite());
 
-    scalar.SetValue(10.0f);
-    REQUIRE(scalar.Value() == 10.0f);
+    scalar.SetValue(100.0f);
+    REQUIRE(scalar.Value() == 100.0f);
   }
 
   SECTION("Shared Memory") {
