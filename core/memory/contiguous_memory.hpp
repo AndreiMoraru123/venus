@@ -32,12 +32,6 @@ public:
     return (m_mem == val.m_mem) and (m_size == val.m_size);
   }
 
-  ContiguousMemory(ContiguousMemory &&other) noexcept
-      : m_mem(std::move(other.m_mem)), m_size(other.m_size) {
-    other.m_size = 0;
-    other.m_mem.reset();
-  }
-
 private:
   ContiguousMemory(std::shared_ptr<ElementType> ptr, std::size_t sz)
       : m_mem(std::move(ptr)), m_size(sz) {}

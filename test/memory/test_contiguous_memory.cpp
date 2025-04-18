@@ -37,6 +37,19 @@ TEST_CASE("ContiguousMemory basics", "[memory]") {
 
     REQUIRE_FALSE(memo.IsShared());
     {
+      auto copy = memo;
+      REQUIRE(memo.IsShared());
+      REQUIRE(copy.IsShared());
+      REQUIRE(memo == copy);
+    }
+    REQUIRE_FALSE(memo.IsShared());
+  }
+
+  SECTION("Moved ownership") {
+    ContiguousMemory<char, Device::CPU> memo(50);
+
+    REQUIRE_FALSE(memo.IsShared());
+    {
       auto copy = std::move(memo);
       REQUIRE(not memo.IsShared());
       REQUIRE(not copy.IsShared());
