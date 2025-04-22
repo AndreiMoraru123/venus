@@ -53,6 +53,23 @@ TEST_CASE("Tensor Ops", "[tensor]") {
   }
 
   SECTION("Low Level Access") {
+    const auto tensor = Tensor<float, Device::CPU, 0>(10.0f);
+    REQUIRE(tensor.AvailableForWrite());
+
+    const auto lowLevelTensor = tensor.LowLevel();
+    REQUIRE(*lowLevelTensor.RawMemory() == 10.0f);
+    REQUIRE_FALSE(tensor.AvailableForWrite());
+  }
+
+  SECTION("Low Level Access Discard") {
+    const auto tensor = Tensor<float, Device::CPU, 0>(10.0f);
+    REQUIRE(tensor.AvailableForWrite());
+
+    (void)tensor.LowLevel(); // discard
+    REQUIRE(tensor.AvailableForWrite());
+  }
+
+  SECTION("Low Level Access Memory") {
     const auto memo = ContiguousMemory<float, Device::CPU>(1);
     float *rawPtr = memo.RawMemory();
     rawPtr[0] = 10.0f;
@@ -60,7 +77,7 @@ TEST_CASE("Tensor Ops", "[tensor]") {
     const auto tensor = Tensor<float, Device::CPU, 0>(memo);
     REQUIRE_FALSE(tensor.AvailableForWrite()); // internal copy of memo
 
-    const auto lowLevelTensor = LowLevel(std::move(tensor));
+    const auto lowLevelTensor = tensor.LowLevel();
     REQUIRE(lowLevelTensor.SharedMemory() == memo);
     REQUIRE(*lowLevelTensor.RawMemory() == 10.0f);
   }

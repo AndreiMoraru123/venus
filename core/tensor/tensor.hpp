@@ -34,6 +34,11 @@ public:
 
   auto EvalRegister() const;
 
+  auto LowLevel() const {
+    using ThisType = RemoveConstRef<decltype(*this)>;
+    return LowLevelAccess<ThisType>(*this);
+  }
+
 private:
   ContiguousMemory<ElementType, DeviceType> m_mem;
 };
@@ -70,6 +75,11 @@ public:
   }
 
   auto EvalRegister() const;
+
+  auto LowLevel() const {
+    using ThisType = RemoveConstRef<decltype(*this)>;
+    return LowLevelAccess<ThisType>(*this);
+  }
 
 private:
   ContiguousMemory<ElementType, DeviceType> m_mem;
