@@ -111,7 +111,7 @@ template <typename... TParameters> struct VarTypeDict {
   };
 
   static auto Create() {
-    using type = typename Sequential::Create<sizeof...(TParameters), Values>;
+    using type = Sequential::Create<sizeof...(TParameters), Values>;
     return type{};
   }
 };

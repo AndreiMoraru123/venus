@@ -11,7 +11,7 @@ namespace detail {
 
 // At details ==================================================
 template <std::size_t N, typename T, typename... Rest> struct TypeAt {
-  using type = typename TypeAt<N - 1, Rest...>::type;
+  using type = TypeAt<N - 1, Rest...>::type;
 };
 template <typename T, typename... Rest> struct TypeAt<0, T, Rest...> {
   using type = T;
@@ -49,8 +49,7 @@ template <template <typename...> typename TCon, std::size_t N, typename TValue,
           typename... Processed, typename Current, typename... Remaining>
 struct SetImpl<TCon<>, N, TValue, TCon<Processed...>,
                TCon<Current, Remaining...>> {
-  using type =
-      typename SetImpl<TCon<>, N - 1, TValue, TCon<Processed..., Current>,
+  using type = SetImpl<TCon<>, N - 1, TValue, TCon<Processed..., Current>,
                        TCon<Remaining...>>::type;
 };
 // =============================================================
@@ -65,7 +64,7 @@ struct FoldImpl {
 template <typename TState, template <typename, typename> typename Fn,
           typename T0, typename... TRemain>
 struct FoldImpl<TState, Fn, T0, TRemain...> {
-  using type = typename FoldImpl<Fn<TState, T0>, Fn, TRemain...>::type;
+  using type = FoldImpl<Fn<TState, T0>, Fn, TRemain...>::type;
 };
 // =============================================================
 
@@ -84,7 +83,7 @@ struct Create_<0, TCont, T...> {
 };
 
 template <std::size_t N, template <typename...> typename TCon, typename... T>
-using Create = typename Create_<N, TCon, T...>::type;
+using Create = Create_<N, TCon, T...>::type;
 // =============================================================
 
 // At ==========================================================
@@ -94,10 +93,10 @@ template <template <typename...> typename TCon, typename... TParams,
           std::size_t N>
 struct At_<TCon<TParams...>, N> {
   static_assert(N < sizeof...(TParams), "index out of bounds");
-  using type = typename detail::TypeAt<N, TParams...>::type;
+  using type = detail::TypeAt<N, TParams...>::type;
 };
 
-template <typename TCon, std::size_t N> using At = typename At_<TCon, N>::type;
+template <typename TCon, std::size_t N> using At = At_<TCon, N>::type;
 // =============================================================
 
 // Order =======================================================
@@ -121,12 +120,12 @@ template <template <typename...> typename TCont, std::size_t N, typename TValue,
           typename... TParams>
 struct Set_<TCont<TParams...>, N, TValue> {
   static_assert(N < sizeof...(TParams), "index out of bounds");
-  using type = typename detail::SetImpl<TCont<>, N, TValue, TCont<>,
-                                        TCont<TParams...>>::type;
+  using type =
+      detail::SetImpl<TCont<>, N, TValue, TCont<>, TCont<TParams...>>::type;
 };
 
 template <typename TCon, std::size_t N, typename TValue>
-using Set = typename Set_<TCon, N, TValue>::type;
+using Set = Set_<TCon, N, TValue>::type;
 // =============================================================
 
 // PushBack ====================================================
@@ -150,13 +149,13 @@ struct Fold_;
 template <typename TInitState, template <typename...> typename TCont,
           typename... TParams, template <typename, typename> typename Fn>
 struct Fold_<TInitState, TCont<TParams...>, Fn> {
-  template <typename S, typename I> using Fun = typename Fn<S, I>::type;
-  using type = typename detail::FoldImpl<TInitState, Fun, TParams...>::type;
+  template <typename S, typename I> using Fun = Fn<S, I>::type;
+  using type = detail::FoldImpl<TInitState, Fun, TParams...>::type;
 };
 
 template <typename TInitState, typename TInputCont,
           template <typename, typename> typename Fn>
-using Fold = typename Fold_<TInitState, TInputCont, Fn>::type;
+using Fold = Fold_<TInitState, TInputCont, Fn>::type;
 // =============================================================
 
 // Size ========================================================

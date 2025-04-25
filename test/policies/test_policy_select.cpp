@@ -33,9 +33,9 @@ template <typename... TPolicies> struct Accumulator {
   using Container = PolicyContainer<TPolicies...>;
   using PolicyRes = PolicySelect<AccPolicy, Container>;
 
-  using ValueType = typename PolicyRes::Value;
+  using ValueType = PolicyRes::Value;
   static constexpr bool isAve = PolicyRes::IsAve;
-  using AccuType = typename PolicyRes::Accu;
+  using AccuType = PolicyRes::Accu;
 
   template <typename TIn> static constexpr auto Eval(const TIn &in) {
     if constexpr (std::is_same_v<AccuType, AccPolicy::AccuTypeCate::Add>) {
