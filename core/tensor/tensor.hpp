@@ -26,10 +26,8 @@ public:
     m_mem.RawMemory()[0] = val;
   }
 
-  auto Value() const noexcept { return m_mem.RawMemory()[0]; }
-
-  auto operator==(const Tensor &tensor) const noexcept -> bool {
-    return Value() == tensor.Value();
+  auto operator==(const Tensor &tensor) const -> bool {
+    // return (m_shape == tensor.msh)
   }
 
   auto EvalRegister() const;
@@ -41,6 +39,7 @@ public:
 
 private:
   ContiguousMemory<ElementType, DeviceType> m_mem;
+  // Shape<Dim> m_shape;
 };
 
 template <typename TElem, typename TDevice> class Tensor<TElem, TDevice, 0> {
