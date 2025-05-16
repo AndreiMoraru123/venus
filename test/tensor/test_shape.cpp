@@ -12,7 +12,15 @@ TEST_CASE("Shape semantics", "[shape]") {
     for (int i = 0; i <= 2; i++) {
       REQUIRE(shape[i] == 0);
     }
+  }
 
-    // const auto anotherShape = Shape(1, 2, 3);
+  SECTION("Shape argument deduction") {
+    REQUIRE(Shape<3>() == Shape(0, 0, 0));
+    REQUIRE(Shape<3>(1, 2, 3) == Shape(1, 2, 3));
+  }
+
+  SECTION("Shapes of different dimensions") {
+    REQUIRE(Shape<4>() != Shape<3>());
+    REQUIRE(Shape<4>() != Shape(0, 0, 0));
   }
 }
