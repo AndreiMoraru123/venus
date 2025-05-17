@@ -1,17 +1,23 @@
 #pragma once
 
 #include <array>
+#include <bits/ranges_algo.h>
 #include <cassert>
 #include <cstddef>
+#include <functional>
+#include <stdexcept>
 #include <type_traits>
 namespace venus {
 
 namespace detail {
-template <std::size_t idx, typename TShape> void Fill(TShape &shape) { return; }
+template <std::size_t idx, typename TShape> constexpr void Fill(TShape &shape) {
+  return;
+}
 
 template <std::size_t idx, typename TShape, typename TCurrParam,
           typename... TShapeParameter>
-void Fill(TShape &shape, TCurrParam currParam, TShapeParameter... shapes) {
+constexpr void Fill(TShape &shape, TCurrParam currParam,
+                    TShapeParameter... shapes) {
   shape[idx] = static_cast<std::size_t>(currParam);
   Fill<idx + 1>(shape, shapes...);
 }
@@ -26,21 +32,36 @@ template <std::size_t Dim> class Shape {
 public:
   static constexpr std::size_t dimNum = Dim;
 
-  explicit Shape() = default;
+  constexpr explicit Shape() = default;
 
-  template <SizeTLike... TIntTypes> explicit Shape(TIntTypes... shapes) {
+  template <SizeTLike... TIntTypes>
+  constexpr explicit Shape(TIntTypes... shapes) {
     static_assert(sizeof...(TIntTypes) == Dim);
     detail::Fill<0>(m_dims, shapes...);
   }
 
-  bool operator==(const Shape &val) const { return m_dims == val.m_dims; }
+  constexpr auto operator==(const Shape &val) const -> bool {
+    return m_dims == val.m_dims;
+  }
 
-  template <size_t otherDim> bool operator==(const Shape<otherDim> &) const {
+  template <size_t otherDim>
+  auto constexpr operator==(const Shape<otherDim> &) const -> bool {
     return false;
   }
 
-  auto operator[](size_t idx) const -> std::size_t {
-    assert(idx < dimNum);
+  constexpr std::size_t Count() const {
+    return std::ranges::fold_left(m_dims, static_cast<std::size_t>(1),
+                                  std::multiplies<>());
+  }
+
+  constexpr auto operator[](size_t idx) const -> std::size_t {
+    if constexpr (std::is_constant_evaluated()) {
+      if (idx >= dimNum) {
+        throw std::out_of_range("Index out of bounds for Shape");
+      }
+    } else {
+      assert(idx < dimNum);
+    }
     return m_dims[idx];
   }
 
@@ -49,8 +70,12 @@ private:
 };
 
 template <> class Shape<0> {
+public:
   static constexpr std::size_t dimNum = 0;
+
   explicit Shape() = default;
+
+  constexpr std::size_t Count() const { return 1; }
 };
 
 template <SizeTLike... TShapeParameter>

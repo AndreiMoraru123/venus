@@ -8,19 +8,25 @@ using namespace venus;
 TEST_CASE("Shape semantics", "[shape]") {
 
   SECTION("Shape construction") {
-    const auto shape = Shape<3>();
-    for (int i = 0; i <= 2; i++) {
-      REQUIRE(shape[i] == 0);
-    }
+    constexpr auto shape = Shape<3>();
+    STATIC_REQUIRE(shape[0] == 0);
+    STATIC_REQUIRE(shape[1] == 0);
+    STATIC_REQUIRE(shape[2] == 0);
   }
 
   SECTION("Shape argument deduction") {
-    REQUIRE(Shape<3>() == Shape(0, 0, 0));
-    REQUIRE(Shape<3>(1, 2, 3) == Shape(1, 2, 3));
+    STATIC_REQUIRE(Shape<3>() == Shape(0, 0, 0));
+    STATIC_REQUIRE(Shape<3>(1, 2, 3) == Shape(1, 2, 3));
   }
 
   SECTION("Shapes of different dimensions") {
-    REQUIRE(Shape<4>() != Shape<3>());
-    REQUIRE(Shape<4>() != Shape(0, 0, 0));
+    STATIC_REQUIRE(Shape<4>() != Shape<3>());
+    STATIC_REQUIRE(Shape<4>() != Shape(0, 0, 0));
+  }
+
+  SECTION("Shape Count") {
+    STATIC_REQUIRE(Shape(0, 0, 0).Count() == 0);
+    STATIC_REQUIRE(Shape(1, 2, 3).Count() == 6);
+    STATIC_REQUIRE(Shape().Count() == 1); // scalar
   }
 }
