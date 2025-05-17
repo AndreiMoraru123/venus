@@ -83,6 +83,13 @@ public:
   explicit Shape() = default;
 
   constexpr std::size_t Count() const { return 1; }
+
+  constexpr auto operator==(const Shape &val) const -> bool { return true; }
+
+  template <size_t otherDim>
+  auto constexpr operator==(const Shape<otherDim> &) const -> bool {
+    return false;
+  }
 };
 
 template <SizeTLike... TShapeParameter>
