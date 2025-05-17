@@ -65,6 +65,13 @@ public:
     return m_dims[idx];
   }
 
+  // Range Ops
+  constexpr auto begin() const { return m_dims.begin(); }
+  constexpr auto end() const { return m_dims.end(); }
+
+  // TODO: Do I need to expose the size? (performance)
+  constexpr auto size() const { return m_dims.size(); }
+
 private:
   std::array<std::size_t, Dim> m_dims{};
 };
