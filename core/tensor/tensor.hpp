@@ -2,6 +2,8 @@
 #include "../memory/contiguous_memory.hpp"
 #include "../memory/lower_access.hpp"
 #include "../traits.hpp"
+#include "core/memory/device.hpp"
+#include "core/tensor/shape.hpp"
 #include <cassert>
 #include <cstddef>
 #include <type_traits>
@@ -19,6 +21,16 @@ public:
 
   friend struct LowLevelAccess<Tensor>;
 
+  template <typename... TShapeParameter>
+  explicit Tensor(TShapeParameter... shapes)
+      : m_shape(shapes...), m_mem(m_shape.Count()) {}
+
+  explicit Tensor(ContiguousMemory<ElementType, DeviceType> p_mem,
+                  venus::Shape<Dim> p_shape)
+      : m_shape(std::move(p_shape)), m_mem(std::move(p_mem)) {}
+
+  const auto &Shape() const noexcept { return m_shape; }
+
   auto AvailableForWrite() const -> bool { return not m_mem.IsShared(); }
 
   void SetValue(ElementType val) {
@@ -27,7 +39,29 @@ public:
   }
 
   auto operator==(const Tensor &tensor) const -> bool {
-    // return (m_shape == tensor.msh)
+    return (m_shape == tensor.m_shape) && (m_mem == tensor.m_mem);
+  }
+
+  // Tensor indexing for reading
+  template <typename... Indices>
+    requires(sizeof...(Indices) == Dim)
+  constexpr auto operator[](Indices... indices) const -> const ElementType & {
+    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+                  "Indexing is currently only supported on CPU");
+    const auto offset =
+        m_shape.IndexToOffset(static_cast<std::size_t>(indices)...);
+    return (m_mem.RawMemory())[offset];
+  }
+
+  // Tensor indexing for assignment
+  template <typename... Indices>
+    requires(sizeof...(Indices) == Dim)
+  constexpr auto operator[](Indices... indices) -> ElementType & {
+    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+                  "Indexing is currently only supported on CPU");
+    const auto offset =
+        m_shape.IndexToOffset(static_cast<std::size_t>(indices)...);
+    return (m_mem.RawMemory())[offset];
   }
 
   auto EvalRegister() const;
@@ -39,9 +73,10 @@ public:
 
 private:
   ContiguousMemory<ElementType, DeviceType> m_mem;
-  // Shape<Dim> m_shape;
+  venus::Shape<Dim> m_shape;
 };
 
+// Scalar Tensor ===============================================
 template <typename TElem, typename TDevice> class Tensor<TElem, TDevice, 0> {
   static_assert(std::is_same_v<RemoveConstRef<TElem>, TElem>);
 
@@ -55,9 +90,16 @@ public:
     SetValue(elem);
   }
 
+  explicit Tensor(venus::Shape<0>) : Tensor() {};
+
   explicit Tensor(ContiguousMemory<ElementType, DeviceType> p_mem)
       : m_mem(std::move(p_mem)) {
     assert(m_mem.Size() >= 1);
+  }
+
+  const auto &Shape() const noexcept {
+    static const venus::Shape<0> shape;
+    return shape;
   }
 
   auto AvailableForWrite() const -> bool { return not m_mem.IsShared(); }

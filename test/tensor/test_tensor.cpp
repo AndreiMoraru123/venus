@@ -3,6 +3,7 @@
 #include "core/memory/device.hpp"
 #include <catch2/catch_test_macros.hpp>
 
+#include <cmath>
 #include <core/tensor/tensor.hpp>
 
 using namespace venus;
@@ -79,5 +80,36 @@ TEST_CASE("Tensor Ops", "[tensor]") {
     const auto lowLevelTensor = tensor.LowLevel();
     REQUIRE(lowLevelTensor.SharedMemory() == memo);
     REQUIRE(*lowLevelTensor.RawMemory() == 10.0f);
+  }
+
+  SECTION("Tensor Indexing") {
+    constexpr auto NUM_DIMS = 3;
+    constexpr auto shape = Shape<NUM_DIMS>(3, 2, 2);
+
+    /** NOTE: shallow (bitwise) constness (can't point to different memory, but
+     * has no control/restrictions over the thing it points to), so the tensor
+     elements can be modified, so long as the tensor itself is not const
+     */
+    const auto memo = ContiguousMemory<float, Device::CPU>(12);
+
+    auto tensor = Tensor<float, Device::CPU, NUM_DIMS>(memo, shape);
+    REQUIRE(tensor.Shape() == shape);
+
+    for (int i = 0; i < 3; ++i) {
+      for (int j = 0; j < 2; ++j) {
+        for (int k = 0; k < 2; ++k) {
+          tensor[i, j, k] = i * 100 + j * 10 + k;
+        }
+      }
+    }
+
+    REQUIRE(tensor[0, 0, 0] == 0);
+    REQUIRE(tensor[0, 0, 1] == 1);
+    REQUIRE(tensor[2, 0, 0] == 200);
+    REQUIRE(tensor[2, 1, 1] == 211);
+
+    REQUIRE_THROWS_AS((tensor[3, 0, 0]), std::out_of_range);
+    REQUIRE_THROWS_AS((tensor[0, 2, 0]), std::out_of_range);
+    REQUIRE_THROWS_AS((tensor[0, 0, 2]), std::out_of_range);
   }
 }

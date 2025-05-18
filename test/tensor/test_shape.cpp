@@ -1,4 +1,5 @@
 
+#include <cassert>
 #include <catch2/catch_test_macros.hpp>
 
 #include <core/tensor/shape.hpp>
@@ -47,5 +48,36 @@ TEST_CASE("Shape semantics", "[shape]") {
     constexpr auto shape = Shape<4>(1, 2, 3, 4);
     constexpr auto sz = std::ranges::size(shape);
     STATIC_REQUIRE(sz == 4);
+  }
+
+  SECTION("Index to Offset") {
+    constexpr auto shape = Shape<3>(3, 2, 2);
+    STATIC_REQUIRE(shape.IndexToOffset(0, 0, 0) == 0);
+    STATIC_REQUIRE(shape.IndexToOffset(0, 0, 1) == 1);
+    STATIC_REQUIRE(shape.IndexToOffset(0, 1, 0) == 2);
+    STATIC_REQUIRE(shape.IndexToOffset(1, 0, 0) == 4);
+    STATIC_REQUIRE(shape.IndexToOffset(1, 0, 1) == 5);
+    STATIC_REQUIRE(shape.IndexToOffset(1, 1, 0) == 6);
+    STATIC_REQUIRE(shape.IndexToOffset(1, 1, 1) == 7);
+    STATIC_REQUIRE(shape.IndexToOffset(2, 0, 0) == 8);
+    STATIC_REQUIRE(shape.IndexToOffset(2, 0, 1) == 9);
+    STATIC_REQUIRE(shape.IndexToOffset(2, 1, 0) == 10);
+    STATIC_REQUIRE(shape.IndexToOffset(2, 1, 1) == 11);
+  }
+
+  SECTION("Offset to Index") {
+    const auto shape = Shape<3>(3, 2, 2);
+    size_t input = 0;
+    for (size_t i = 0; i < 3; ++i) {
+      for (size_t j = 0; j < 2; ++j) {
+        for (size_t k = 0; k < 2; ++k) {
+          auto res = shape.OffsetToIndex(input);
+          assert(res[0] == i);
+          assert(res[1] == j);
+          assert(res[2] == k);
+          ++input;
+        }
+      }
+    }
   }
 }
