@@ -82,6 +82,33 @@ TEST_CASE("Tensor Ops", "[tensor]") {
     REQUIRE(*lowLevelTensor.RawMemory() == 10.0f);
   }
 
+  SECTION("Attempty to Build Tensor From Insufficient Memory") {
+    constexpr auto NUM_DIMS = 3;
+    constexpr auto shape = Shape<NUM_DIMS>(3, 2, 2);
+
+    const auto memo = ContiguousMemory<float, Device::CPU>(10);
+    REQUIRE_THROWS_AS((Tensor<float, Device::CPU, NUM_DIMS>(memo, shape)),
+                      std::invalid_argument);
+  }
+
+  SECTION("Build Tensor From Memory and Shape") {
+    constexpr auto NUM_DIMS = 3;
+    constexpr auto shape = Shape<NUM_DIMS>(3, 2, 2);
+
+    const auto memo = ContiguousMemory<float, Device::CPU>(12);
+    const auto tensor = Tensor<float, Device::CPU, NUM_DIMS>(memo, shape);
+    REQUIRE(tensor.Shape() == shape);
+  }
+
+  SECTION("Build Tensor From Shape") {
+    constexpr auto NUM_DIMS = 3;
+    constexpr auto shape = Shape<NUM_DIMS>(3, 2, 2);
+
+    // memory layout is deduced automatically
+    const auto tensor = Tensor<float, Device::CPU, NUM_DIMS>(shape);
+    REQUIRE(tensor.Shape() == shape);
+  }
+
   SECTION("Tensor Indexing") {
     constexpr auto NUM_DIMS = 3;
     constexpr auto shape = Shape<NUM_DIMS>(3, 2, 2);
@@ -91,9 +118,7 @@ TEST_CASE("Tensor Ops", "[tensor]") {
      elements can be modified, so long as the tensor itself is not const
      */
     const auto memo = ContiguousMemory<float, Device::CPU>(12);
-
     auto tensor = Tensor<float, Device::CPU, NUM_DIMS>(memo, shape);
-    REQUIRE(tensor.Shape() == shape);
 
     for (int i = 0; i < 3; ++i) {
       for (int j = 0; j < 2; ++j) {

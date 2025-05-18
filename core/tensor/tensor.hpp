@@ -6,6 +6,8 @@
 #include "core/tensor/shape.hpp"
 #include <cassert>
 #include <cstddef>
+#include <format>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 
@@ -21,13 +23,19 @@ public:
 
   friend struct LowLevelAccess<Tensor>;
 
-  template <typename... TShapeParameter>
-  explicit Tensor(TShapeParameter... shapes)
-      : m_shape(shapes...), m_mem(m_shape.Count()) {}
+  explicit Tensor(const venus::Shape<Dim> &shape)
+      : m_shape(shape), m_mem(shape.Count()) {}
 
   explicit Tensor(ContiguousMemory<ElementType, DeviceType> p_mem,
                   venus::Shape<Dim> p_shape)
-      : m_shape(std::move(p_shape)), m_mem(std::move(p_mem)) {}
+      : m_shape(std::move(p_shape)), m_mem(std::move(p_mem)) {
+    if (m_mem.Size() < m_shape.Count()) {
+      throw std::invalid_argument(
+          std::format("Insufficient memory for tensor shape: need {} elements, "
+                      "but only {} provided",
+                      m_shape.Count(), m_mem.Size()));
+    }
+  }
 
   const auto &Shape() const noexcept { return m_shape; }
 
