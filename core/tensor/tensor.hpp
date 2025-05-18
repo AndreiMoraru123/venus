@@ -39,12 +39,7 @@ public:
 
   const auto &Shape() const noexcept { return m_shape; }
 
-  auto AvailableForWrite() const -> bool { return not m_mem.IsShared(); }
-
-  void SetValue(ElementType val) {
-    assert(AvailableForWrite());
-    m_mem.RawMemory()[0] = val;
-  }
+  auto HasUniqueMemory() const -> bool { return not m_mem.IsShared(); }
 
   auto operator==(const Tensor &tensor) const -> bool {
     return (m_shape == tensor.m_shape) && (m_mem == tensor.m_mem);
@@ -67,6 +62,10 @@ public:
   constexpr auto operator[](Indices... indices) -> ElementType & {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Indexing is currently only supported on CPU");
+    if (!HasUniqueMemory()) {
+      throw std::runtime_error(
+          "Tensor is not available for writing (memory is shared)");
+    }
     const auto offset =
         m_shape.IndexToOffset(static_cast<std::size_t>(indices)...);
     return (m_mem.RawMemory())[offset];
@@ -110,10 +109,10 @@ public:
     return shape;
   }
 
-  auto AvailableForWrite() const -> bool { return not m_mem.IsShared(); }
+  auto HasUniqueMemory() const -> bool { return not m_mem.IsShared(); }
 
   void SetValue(ElementType val) {
-    assert(AvailableForWrite());
+    assert(HasUniqueMemory());
     m_mem.RawMemory()[0] = val;
   }
 

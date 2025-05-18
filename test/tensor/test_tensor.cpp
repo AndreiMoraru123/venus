@@ -1,6 +1,7 @@
 
 #include "core/memory/contiguous_memory.hpp"
 #include "core/memory/device.hpp"
+#include <cassert>
 #include <catch2/catch_test_macros.hpp>
 
 #include <cmath>
@@ -13,7 +14,7 @@ TEST_CASE("Tensor Ops", "[tensor]") {
   SECTION("Scalar Tensor") {
     auto scalar = Tensor<float, Device::CPU, 0>(10.0f);
     REQUIRE(scalar.Value() == 10.0f);
-    REQUIRE(scalar.AvailableForWrite());
+    REQUIRE(scalar.HasUniqueMemory());
 
     scalar.SetValue(100.0f);
     REQUIRE(scalar.Value() == 100.0f);
@@ -31,8 +32,8 @@ TEST_CASE("Tensor Ops", "[tensor]") {
     REQUIRE(scalar1.Value() == 1.0f);
     REQUIRE(scalar2.Value() == 1.0f);
 
-    REQUIRE_FALSE(scalar1.AvailableForWrite());
-    REQUIRE_FALSE(scalar2.AvailableForWrite());
+    REQUIRE_FALSE(scalar1.HasUniqueMemory());
+    REQUIRE_FALSE(scalar2.HasUniqueMemory());
   }
 
   SECTION("Shared Shifted Memory") {
@@ -48,25 +49,25 @@ TEST_CASE("Tensor Ops", "[tensor]") {
     REQUIRE(scalar1.Value() == 1.0f);
     REQUIRE(scalar2.Value() == 3.0f);
 
-    REQUIRE_FALSE(scalar1.AvailableForWrite());
-    REQUIRE_FALSE(scalar2.AvailableForWrite());
+    REQUIRE_FALSE(scalar1.HasUniqueMemory());
+    REQUIRE_FALSE(scalar2.HasUniqueMemory());
   }
 
   SECTION("Low Level Access") {
     const auto tensor = Tensor<float, Device::CPU, 0>(10.0f);
-    REQUIRE(tensor.AvailableForWrite());
+    REQUIRE(tensor.HasUniqueMemory());
 
     const auto lowLevelTensor = tensor.LowLevel();
     REQUIRE(*lowLevelTensor.RawMemory() == 10.0f);
-    REQUIRE_FALSE(tensor.AvailableForWrite());
+    REQUIRE_FALSE(tensor.HasUniqueMemory());
   }
 
   SECTION("Low Level Access Discard") {
     const auto tensor = Tensor<float, Device::CPU, 0>(10.0f);
-    REQUIRE(tensor.AvailableForWrite());
+    REQUIRE(tensor.HasUniqueMemory());
 
     (void)tensor.LowLevel(); // discard
-    REQUIRE(tensor.AvailableForWrite());
+    REQUIRE(tensor.HasUniqueMemory());
   }
 
   SECTION("Low Level Access Memory") {
@@ -75,7 +76,7 @@ TEST_CASE("Tensor Ops", "[tensor]") {
     rawPtr[0] = 10.0f;
 
     const auto tensor = Tensor<float, Device::CPU, 0>(memo);
-    REQUIRE_FALSE(tensor.AvailableForWrite()); // internal copy of memo
+    REQUIRE_FALSE(tensor.HasUniqueMemory()); // internal copy of memo
 
     const auto lowLevelTensor = tensor.LowLevel();
     REQUIRE(lowLevelTensor.SharedMemory() == memo);
@@ -95,8 +96,14 @@ TEST_CASE("Tensor Ops", "[tensor]") {
     constexpr auto NUM_DIMS = 3;
     constexpr auto shape = Shape<NUM_DIMS>(3, 2, 2);
 
+    /** NOTE: shallow (bitwise) constness (can't point to different memory, but
+     * has no control/restrictions over the thing it points to), so the tensor
+     elements can be modified, so long as the tensor itself is not const
+     */
     const auto memo = ContiguousMemory<float, Device::CPU>(12);
+
     const auto tensor = Tensor<float, Device::CPU, NUM_DIMS>(memo, shape);
+    REQUIRE_FALSE(tensor.HasUniqueMemory());
     REQUIRE(tensor.Shape() == shape);
   }
 
@@ -106,6 +113,7 @@ TEST_CASE("Tensor Ops", "[tensor]") {
 
     // memory layout is deduced automatically
     const auto tensor = Tensor<float, Device::CPU, NUM_DIMS>(shape);
+    REQUIRE(tensor.HasUniqueMemory());
     REQUIRE(tensor.Shape() == shape);
   }
 
@@ -113,12 +121,9 @@ TEST_CASE("Tensor Ops", "[tensor]") {
     constexpr auto NUM_DIMS = 3;
     constexpr auto shape = Shape<NUM_DIMS>(3, 2, 2);
 
-    /** NOTE: shallow (bitwise) constness (can't point to different memory, but
-     * has no control/restrictions over the thing it points to), so the tensor
-     elements can be modified, so long as the tensor itself is not const
-     */
-    const auto memo = ContiguousMemory<float, Device::CPU>(12);
-    auto tensor = Tensor<float, Device::CPU, NUM_DIMS>(memo, shape);
+    auto memo = ContiguousMemory<float, Device::CPU>(12);
+    auto tensor = Tensor<float, Device::CPU, NUM_DIMS>(std::move(memo), shape);
+    REQUIRE(tensor.HasUniqueMemory());
 
     for (int i = 0; i < 3; ++i) {
       for (int j = 0; j < 2; ++j) {
@@ -136,5 +141,25 @@ TEST_CASE("Tensor Ops", "[tensor]") {
     REQUIRE_THROWS_AS((tensor[3, 0, 0]), std::out_of_range);
     REQUIRE_THROWS_AS((tensor[0, 2, 0]), std::out_of_range);
     REQUIRE_THROWS_AS((tensor[0, 0, 2]), std::out_of_range);
+  }
+
+  SECTION("Shared Memory Indexing") {
+    constexpr auto NUM_DIMS = 3;
+    constexpr auto shape = Shape<NUM_DIMS>(3, 2, 2);
+
+    auto memo = ContiguousMemory<float, Device::CPU>(12);
+    std::fill_n(memo.RawMemory(), 12, 0.0f);
+
+    const auto &tensor1 = Tensor<float, Device::CPU, NUM_DIMS>(memo, shape);
+    const auto &tensor2 = Tensor<float, Device::CPU, NUM_DIMS>(memo, shape);
+
+    REQUIRE_FALSE(tensor1.HasUniqueMemory());
+    REQUIRE_FALSE(tensor2.HasUniqueMemory());
+
+    auto firstElement1 = tensor1[0, 0, 0];
+    auto firstElement2 = tensor2[0, 0, 0];
+
+    REQUIRE(firstElement1 == 0.0f);
+    REQUIRE(firstElement2 == 0.0f);
   }
 }
