@@ -11,6 +11,15 @@
 #include <type_traits>
 #include <utility>
 
+#define DEFINE_COMPOUND_OPERATOR(op)                                           \
+  ElementProxy &operator op##=(const ElementType & value) {                    \
+    if (!m_tensor.HasUniqueMemory()) {                                         \
+      throw std::runtime_error("Cannot write to shared tensor");               \
+    }                                                                          \
+    m_element op## = value;                                                    \
+    return *this;                                                              \
+  }
+
 namespace venus {
 
 template <typename TElem, typename TDevice, std::size_t Dim> class Tensor {
@@ -56,19 +65,55 @@ public:
     return (m_mem.RawMemory())[offset];
   }
 
+  //* Proxy pattern for indexing elements (know when I'm reading vs writing)
+  //? Price to pay: have to specify all possible operator overloads that I want
+  class ElementProxy {
+  private:
+    Tensor &m_tensor;
+    ElementType &m_element;
+
+  public:
+    ElementProxy(Tensor &tensor, ElementType &element)
+        : m_tensor(tensor), m_element(element) {}
+
+    // reading
+    operator ElementType() const { return m_element; }
+
+    // writing
+    ElementProxy &operator=(const ElementType &value) {
+      if (not m_tensor.HasUniqueMemory()) {
+        //? Do I want to throw here or do I want copy on write (cow)
+        throw std::runtime_error("Cannot write to shared tensor");
+        //     const std::size_t offset = &m_element -
+        //     m_tensor.m_mem.RawMemory();
+        // auto new_mem =
+        //     ContiguousMemory<ElementType, DeviceType>(m_tensor.m_mem.Size());
+        // std::copy_n(m_tensor.m_mem.RawMemory(), m_tensor.m_mem.Size(),
+        //             new_mem.RawMemory());
+        // m_tensor.m_mem = std::move(new_mem);
+        // m_tensor.m_mem.RawMemory()[offset] = value;
+        // return *this;
+      }
+      m_element = value;
+      return *this;
+    }
+
+    DEFINE_COMPOUND_OPERATOR(+)
+    DEFINE_COMPOUND_OPERATOR(-)
+    DEFINE_COMPOUND_OPERATOR(*)
+    DEFINE_COMPOUND_OPERATOR(/)
+    DEFINE_COMPOUND_OPERATOR(%)
+  };
+
   // Tensor indexing for assignment
   template <typename... Indices>
     requires(sizeof...(Indices) == Dim)
-  constexpr auto operator[](Indices... indices) -> ElementType & {
+  constexpr auto operator[](Indices... indices) -> ElementProxy {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Indexing is currently only supported on CPU");
-    if (!HasUniqueMemory()) {
-      throw std::runtime_error(
-          "Tensor is not available for writing (memory is shared)");
-    }
     const auto offset =
         m_shape.IndexToOffset(static_cast<std::size_t>(indices)...);
-    return (m_mem.RawMemory())[offset];
+    return ElementProxy(*this, (m_mem.RawMemory())[offset]);
   }
 
   auto EvalRegister() const;

@@ -6,6 +6,7 @@
 
 #include <cmath>
 #include <core/tensor/tensor.hpp>
+#include <stdexcept>
 
 using namespace venus;
 
@@ -143,6 +144,35 @@ TEST_CASE("Tensor Ops", "[tensor]") {
     REQUIRE_THROWS_AS((tensor[0, 0, 2]), std::out_of_range);
   }
 
+  SECTION("Attempting To Write To Shared Tensor") {
+    constexpr auto NUM_DIMS = 3;
+    constexpr auto shape = Shape<NUM_DIMS>(3, 2, 2);
+
+    auto memo = ContiguousMemory<float, Device::CPU>(12);
+    std::fill_n(memo.RawMemory(), 12, 0.0f);
+
+    auto tensor = Tensor<float, Device::CPU, NUM_DIMS>(memo, shape);
+    REQUIRE_FALSE(tensor.HasUniqueMemory());
+
+    // writing is forbidden
+    for (int i = 0; i < 3; ++i) {
+      for (int j = 0; j < 2; ++j) {
+        for (int k = 0; k < 2; ++k) {
+          REQUIRE_THROWS_AS((tensor[i, j, k] += 1.0f), std::runtime_error);
+        }
+      }
+    }
+
+    // reading is allowed
+    for (int i = 0; i < 3; ++i) {
+      for (int j = 0; j < 2; ++j) {
+        for (int k = 0; k < 2; ++k) {
+          REQUIRE(tensor[i, j, k] == 0.0f);
+        }
+      }
+    }
+  }
+
   SECTION("Shared Memory Indexing") {
     constexpr auto NUM_DIMS = 3;
     constexpr auto shape = Shape<NUM_DIMS>(3, 2, 2);
@@ -150,16 +180,13 @@ TEST_CASE("Tensor Ops", "[tensor]") {
     auto memo = ContiguousMemory<float, Device::CPU>(12);
     std::fill_n(memo.RawMemory(), 12, 0.0f);
 
-    const auto &tensor1 = Tensor<float, Device::CPU, NUM_DIMS>(memo, shape);
-    const auto &tensor2 = Tensor<float, Device::CPU, NUM_DIMS>(memo, shape);
+    auto tensor1 = Tensor<float, Device::CPU, NUM_DIMS>(memo, shape);
+    auto tensor2 = Tensor<float, Device::CPU, NUM_DIMS>(memo, shape);
 
     REQUIRE_FALSE(tensor1.HasUniqueMemory());
     REQUIRE_FALSE(tensor2.HasUniqueMemory());
 
-    auto firstElement1 = tensor1[0, 0, 0];
-    auto firstElement2 = tensor2[0, 0, 0];
-
-    REQUIRE(firstElement1 == 0.0f);
-    REQUIRE(firstElement2 == 0.0f);
+    REQUIRE(tensor1[0, 0, 0] == 0.0f);
+    REQUIRE(tensor2[0, 0, 0] == 0.0f);
   }
 }
