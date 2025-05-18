@@ -134,6 +134,17 @@ TEST_CASE("Tensor Ops", "[tensor]") {
       }
     }
 
+    for (int i = 0; i < 3; ++i) {
+      for (int j = 0; j < 2; ++j) {
+        for (int k = 0; k < 2; ++k) {
+          tensor[i, j, k]++;
+          tensor[i, j, k]--;
+          ++tensor[i, j, k];
+          --tensor[i, j, k];
+        }
+      }
+    }
+
     REQUIRE(tensor[0, 0, 0] == 0);
     REQUIRE(tensor[0, 0, 1] == 1);
     REQUIRE(tensor[2, 0, 0] == 200);

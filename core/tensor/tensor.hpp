@@ -11,6 +11,25 @@
 #include <type_traits>
 #include <utility>
 
+#define DEFINE_PRE_OPERATOR(op)                                                \
+  ElementProxy &operator op() {                                                \
+    if (!m_tensor.HasUniqueMemory()) {                                         \
+      throw std::runtime_error("Cannot write to shared tensor");               \
+    }                                                                          \
+    op m_element;                                                              \
+    return *this;                                                              \
+  }
+
+#define DEFINE_POST_OPERATOR(op)                                               \
+  ElementType operator op(int) {                                               \
+    if (!m_tensor.HasUniqueMemory()) {                                         \
+      throw std::runtime_error("Cannot write to shared tensor");               \
+    }                                                                          \
+    ElementType old_value = m_element;                                         \
+    m_element op;                                                              \
+    return old_value;                                                          \
+  }
+
 #define DEFINE_COMPOUND_OPERATOR(op)                                           \
   ElementProxy &operator op##=(const ElementType & value) {                    \
     if (!m_tensor.HasUniqueMemory()) {                                         \
@@ -103,6 +122,11 @@ public:
     DEFINE_COMPOUND_OPERATOR(*)
     DEFINE_COMPOUND_OPERATOR(/)
     DEFINE_COMPOUND_OPERATOR(%)
+
+    DEFINE_PRE_OPERATOR(++)
+    DEFINE_PRE_OPERATOR(--)
+    DEFINE_POST_OPERATOR(++)
+    DEFINE_POST_OPERATOR(--)
   };
 
   // Tensor indexing for assignment
