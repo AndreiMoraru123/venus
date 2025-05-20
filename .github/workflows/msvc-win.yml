@@ -22,8 +22,6 @@ jobs:
 
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
-        with:
-          toolset: 14.39
 
       - name: Create build directory
         run: mkdir build
