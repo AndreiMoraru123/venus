@@ -1,0 +1,42 @@
+name: GCC Linux
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-gcc:
+    name: Build and Test (GCC 14)
+    runs-on: ubuntu-latest
+    container:
+      image: gcc:14
+    steps:
+      - name: Install Dependencies
+        run: |
+          apt-get update && apt-get install -y \
+          cmake \
+          git
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set Git safe directory
+        run: git config --global --add safe.directory $(pwd)
+
+      - name: Create build directory
+        run: mkdir -p build
+
+      - name: Configure with CMake
+        working-directory: build
+        run: cmake .. -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build with GCC 14
+        working-directory: build
+        run: cmake --build . -j$(nproc)
+
+      - name: Run tests
+        working-directory: build
+        run: ctest --output-on-failure
