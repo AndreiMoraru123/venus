@@ -14,11 +14,9 @@ jobs:
     container:
       image: gcc:14
     steps:
-      - name: Install Dependencies
+      - name: Install CMake
         run: |
-          apt-get update && apt-get install -y \
-          cmake \
-          git
+          apt-get update && apt-get install -y cmake
 
       - name: Checkout code
         uses: actions/checkout@v4
