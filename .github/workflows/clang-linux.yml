@@ -9,31 +9,33 @@ on:
 
 jobs:
   build-clang:
-    name: Build and Test (Clang 17)
+    name: Build and Test (Clang 19)
     runs-on: ubuntu-latest
-    container:
-      image: silkeh/clang:17
     steps:
-      - name: Install Dependencies
-        run: |
-          apt-get update && apt-get install -y \
-          cmake \
-          git
-
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set Git safe directory
-        run: git config --global --add safe.directory $(pwd)
+      - name: Install LLVM and Clang 19
+        run: |
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          sudo add-apt-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy main"
+          sudo apt-get update
+          sudo apt-get install -y clang-19 libc++-19-dev libc++abi-19-dev lld-19
+          clang-19 --version
+
+      - name: Install CMake
+        run: |
+          sudo apt-get install -y cmake
+          cmake --version
 
       - name: Create build directory
         run: mkdir -p build
 
       - name: Configure with CMake
         working-directory: build
-        run: cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++
+        run: cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++-19 -DCMAKE_C_COMPILER=clang-19 -DBUILD_TESTING=ON
 
-      - name: Build with Clang
+      - name: Build with Clang 19
         working-directory: build
         run: cmake --build . -j$(nproc)
 
