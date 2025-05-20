@@ -23,10 +23,10 @@ jobs:
           sudo apt-get install -y clang-19 libc++-19-dev libc++abi-19-dev lld-19
           clang-19 --version
 
-      - name: Install CMake
-        run: |
-          sudo apt-get install -y cmake
-          cmake --version
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v1.14
+        with:
+          cmake-version: "3.25.1"
 
       - name: Create build directory
         run: mkdir -p build

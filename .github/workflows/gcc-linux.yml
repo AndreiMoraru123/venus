@@ -14,12 +14,13 @@ jobs:
     container:
       image: gcc:14
     steps:
-      - name: Install CMake
-        run: |
-          apt-get update && apt-get install -y cmake
-
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v1.14
+        with:
+          cmake-version: "3.25.1"
 
       - name: Create build directory
         run: mkdir -p build
