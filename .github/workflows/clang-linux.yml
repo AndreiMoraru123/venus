@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-clang:
-    name: Build and Test (Clang 19)
+    name: Build and Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
