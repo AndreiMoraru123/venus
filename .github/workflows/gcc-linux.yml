@@ -29,7 +29,7 @@ jobs:
         working-directory: build
         run: cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
 
-      - name: Build with GCC 14
+      - name: Build
         working-directory: build
         run: cmake --build . -j$(nproc)
 
