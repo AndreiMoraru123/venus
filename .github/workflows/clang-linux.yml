@@ -1,4 +1,4 @@
-name: Clang:19 Linux
+name: LLVM Clang:19 Linux
 on:
   push:
     branches:
