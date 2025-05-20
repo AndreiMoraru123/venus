@@ -73,17 +73,6 @@ public:
     return (m_shape == tensor.m_shape) && (m_mem == tensor.m_mem);
   }
 
-  // Tensor indexing for reading
-  template <typename... Indices>
-    requires(sizeof...(Indices) == Dim)
-  constexpr auto operator[](Indices... indices) const -> const ElementType & {
-    static_assert(std::is_same_v<DeviceType, Device::CPU>,
-                  "Indexing is currently only supported on CPU");
-    const auto offset =
-        m_shape.IndexToOffset(static_cast<std::size_t>(indices)...);
-    return (m_mem.RawMemory())[offset];
-  }
-
   //* Proxy pattern for indexing elements (know when I'm reading vs writing)
   //? Price to pay: have to specify all possible operator overloads that I want
   class ElementProxy {
@@ -129,7 +118,7 @@ public:
     DEFINE_POST_OPERATOR(--)
   };
 
-  // Tensor indexing for assignment
+  // Tensor indexing
   template <typename... Indices>
     requires(sizeof...(Indices) == Dim)
   constexpr auto operator[](Indices... indices) -> ElementProxy {
