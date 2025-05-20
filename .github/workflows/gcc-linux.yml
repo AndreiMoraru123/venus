@@ -1,4 +1,4 @@
-name: GCC Linux
+name: GCC:14
 on:
   push:
     branches:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-gcc:
-    name: Build and Test (GCC 14)
+    name: Build and Test
     runs-on: ubuntu-latest
     container:
       image: gcc:14

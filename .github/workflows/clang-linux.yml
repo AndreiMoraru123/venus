@@ -1,4 +1,4 @@
-name: Clang Linux
+name: Clang:19 Linux
 on:
   push:
     branches:
