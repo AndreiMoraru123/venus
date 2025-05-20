@@ -11,23 +11,29 @@ jobs:
   clang-tidy:
     name: Lint with Clang-Tidy
     runs-on: ubuntu-latest
+    container:
+      image: gcc:14
     steps:
+      - name: Install dependencies
+        run: |
+          apt-get update && apt-get install -y \
+          clang-tidy \
+          cmake \
+          git
+
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install clang-tidy
-        run: sudo apt-get update && sudo apt-get install -y clang-tidy
-
-      - name: Setup CMake
-        uses: jwlawson/actions-setup-cmake@v1.14
-        with:
-          cmake-version: "3.31.3"
+      - name: Set Git safe directory
+        run: git config --global --add safe.directory $(pwd)
 
       - name: Generate compile_commands.json
         run: |
           mkdir -p build
           cd build
-          cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_CXX_STANDARD=23
 
-      - name: Run Clang-Tidy
-        run: clang-tidy -p=build $(find . -name "*.cpp" -o -name "*.hpp" -o -name "*.h" -o -name "*.c") || true
+      - name: Run Clang-Tidy only on project files
+        run: |
+          find core test -name "*.cpp" -o -name "*.hpp" | \
+          xargs clang-tidy -p=build -extra-arg=-std=c++2b || true
