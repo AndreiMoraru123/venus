@@ -1,4 +1,4 @@
-name: MSVC Windows
+name: MSVC Visual Studio 17 2022
 on:
   push:
     branches:
@@ -22,6 +22,8 @@ jobs:
 
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
+        with:
+          vsversion: "2022"
 
       - name: Create build directory
         run: mkdir build
