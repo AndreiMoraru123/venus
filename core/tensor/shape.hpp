@@ -59,6 +59,7 @@ public:
   constexpr auto operator[](size_t idx) const -> std::size_t {
     if constexpr (std::is_constant_evaluated()) {
       if (idx >= dimNum) {
+        // TODO: This won't actually throw, do I really need comptime? (shape)
         throw std::out_of_range("Index out of bounds for Shape");
       }
     } else {
