@@ -90,7 +90,7 @@ public:
     // writing
     ElementProxy &operator=(const ElementType &value) {
       if (not m_tensor.HasUniqueMemory()) {
-        //? Do I want to throw here or do I want copy on write (cow)
+        // TODO: Do I want to throw here or do I want copy on write (cow)
         throw std::runtime_error("Cannot write to shared tensor");
         //     const std::size_t offset = &m_element -
         //     m_tensor.m_mem.RawMemory();
