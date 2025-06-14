@@ -203,3 +203,7 @@ private:
 };
 
 } // namespace venus
+
+#undef DEFINE_COMPOUND_OPERATOR
+#undef DEFINE_POST_OPERATOR
+#undef DEFINE_POST_OPERATOR
