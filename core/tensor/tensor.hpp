@@ -75,7 +75,12 @@ public:
   };
 
   constexpr pointer operator->() const {
-    return &(m_tensor->LowLevel().RawMemory()[m_offset]);
+    if constexpr (std::is_const_v<T>) {
+      return &(m_tensor->LowLevel().RawMemory()[m_offset]);
+    } else {
+      return &(
+          const_cast<value_type &>(m_tensor->LowLevel().RawMemory()[m_offset]));
+    }
   }
 
   constexpr tensor_iterator &operator++() {
