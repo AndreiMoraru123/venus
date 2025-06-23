@@ -5,8 +5,11 @@
 #include "core/memory/device.hpp"
 #include "core/tensor/shape.hpp"
 #include <cassert>
+#include <compare>
+#include <concepts>
 #include <cstddef>
 #include <format>
+#include <iterator>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -40,6 +43,111 @@
   }
 
 namespace venus {
+
+template <typename T> class tensor_iterator {
+public:
+  using iterator_category = std::contiguous_iterator_tag; // do I need this?
+  using value_type = T::ElementType;
+  using difference_type = std::ptrdiff_t;
+  using pointer =
+      std::conditional_t<std::is_const_v<T>, const value_type *, value_type *>;
+  using reference =
+      std::conditional_t<std::is_const_v<T>, const value_type &,
+                         typename std::remove_const_t<T>::ElementProxy>;
+
+private:
+  T *m_tensor;
+  std::size_t m_offset;
+
+public:
+  constexpr tensor_iterator() : m_tensor(nullptr), m_offset(0) {}
+  constexpr tensor_iterator(T *tensor, std::size_t offset)
+      : m_tensor(tensor), m_offset(offset) {}
+
+  constexpr reference operator*() const {
+    if constexpr (std::is_const_v<T>) {
+      return m_tensor->LowLevel().RawMemory()[m_offset];
+    } else {
+      return typename std::remove_const_t<T>::ElementProxy(
+          *const_cast<std::remove_const_t<T> *>(m_tensor),
+          const_cast<value_type &>(m_tensor->LowLevel().RawMemory()[m_offset]));
+    }
+  };
+
+  constexpr pointer operator->() const {
+    return &(m_tensor->LowLevel().RawMemory()[m_offset]);
+  }
+
+  constexpr tensor_iterator &operator++() {
+    ++m_offset;
+    return *this;
+  }
+
+  constexpr tensor_iterator operator++(int) {
+    auto temp = *this;
+    ++m_offset;
+    return temp;
+  }
+
+  constexpr tensor_iterator &operator--() {
+    --m_offset;
+    return *this;
+  }
+
+  constexpr tensor_iterator operator--(int) {
+    auto temp = *this;
+    --m_offset;
+    return temp;
+  }
+
+  constexpr tensor_iterator &operator+=(difference_type n) {
+    m_offset += n;
+    return *this;
+  }
+
+  constexpr tensor_iterator &operator-=(difference_type n) {
+    m_offset -= n;
+    return *this;
+  }
+
+  constexpr tensor_iterator operator+(difference_type n) {
+    return tensor_iterator(m_tensor, m_offset + n);
+  }
+
+  constexpr tensor_iterator operator+(difference_type n) const {
+    return tensor_iterator(m_tensor, m_offset + n);
+  }
+
+  constexpr tensor_iterator operator-(difference_type n) {
+    return tensor_iterator(m_tensor, m_offset - n);
+  }
+
+  constexpr tensor_iterator operator-(difference_type n) const {
+    return tensor_iterator(m_tensor, m_offset - n);
+  }
+
+  constexpr difference_type operator-(const tensor_iterator &other) const {
+    return static_cast<difference_type>(m_offset) -
+           static_cast<difference_type>(other.m_offset);
+  }
+
+  constexpr bool operator==(const tensor_iterator &other) const {
+    return m_tensor == other.m_tensor && m_offset == other.m_offset;
+  }
+
+  constexpr auto operator<=>(const tensor_iterator &other) const {
+    if (m_tensor != other.m_tensor) {
+      // comparing different tensors alltogether
+      return std::compare_three_way{}(m_tensor, other.m_tensor);
+    }
+    // comparing offsets on the same tensor
+    return m_offset <=> other.m_offset;
+  }
+
+  constexpr reference operator[](difference_type n) const {
+    return *(*this + n);
+  }
+};
 
 template <typename TElem, typename TDevice, std::size_t Dim> class Tensor {
   static_assert(std::is_same_v<RemoveConstRef<TElem>, TElem>);
@@ -88,7 +196,7 @@ public:
     operator ElementType() const { return m_element; }
 
     // writing
-    ElementProxy &operator=(const ElementType &value) {
+    const ElementProxy &operator=(const ElementType &value) const {
       if (not m_tensor.HasUniqueMemory()) {
         // TODO: Do I want to throw here or do I want copy on write (cow)
         throw std::runtime_error("Cannot write to shared tensor");
@@ -103,6 +211,25 @@ public:
         // return *this;
       }
       m_element = value;
+      return *this;
+    }
+
+    const ElementProxy &operator=(ElementType &&value) const {
+      if (not m_tensor.HasUniqueMemory()) {
+        throw std::runtime_error("Cannot write to shared tensor");
+      }
+      m_element = std::move(value);
+      return *this;
+    }
+
+    // Required for modifying the tensor through range algos
+    template <typename U>
+      requires std::convertible_to<U, ElementType>
+    const ElementProxy &operator=(U &&value) const {
+      if (not m_tensor.HasUniqueMemory()) {
+        throw std::runtime_error("Cannot write to shared tensor");
+      }
+      m_element = std::forward<U>(value);
       return *this;
     }
 
@@ -139,6 +266,36 @@ public:
 private:
   ContiguousMemory<ElementType, DeviceType> m_mem;
   venus::Shape<Dim> m_shape;
+
+public:
+  constexpr auto begin() {
+    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+                  "Range iteration is currently only supported on CPU");
+    return tensor_iterator<Tensor>(this, 0);
+  }
+
+  constexpr auto end() {
+    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+                  "Range iteration is currently only supported on CPU");
+    return tensor_iterator<Tensor>(this, m_shape.Count());
+  }
+
+  constexpr auto begin() const {
+    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+                  "Range iteration is currently only supported on CPU");
+    return tensor_iterator<const Tensor>(this, 0);
+  }
+
+  constexpr auto end() const {
+    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+                  "Range iteration is currently only supported on CPU");
+    return tensor_iterator<const Tensor>(this, m_shape.Count());
+  }
+
+  constexpr auto cbegin() const { return begin(); }
+  constexpr auto cend() const { return end(); }
+
+  constexpr std::size_t size() const { return m_shape.Count(); }
 };
 
 // Scalar Tensor ===============================================
@@ -201,6 +358,14 @@ struct LowLevelAccess<Tensor<TElem, TDevice, Dim>> {
 private:
   Tensor<TElem, TDevice, Dim> m_tensor;
 };
+
+// difference_type + iterator (for random_access_range | addition commutative)
+template <typename T>
+constexpr tensor_iterator<T>
+operator+(typename tensor_iterator<T>::difference_type n,
+          const tensor_iterator<T> &it) {
+  return it + n;
+}
 
 } // namespace venus
 
