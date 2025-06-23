@@ -2,6 +2,7 @@
 
 #include "device.hpp"
 #include <cstddef>
+#include <cstring>
 #include <deque>
 #include <memory>
 #include <mutex>
@@ -54,15 +55,19 @@ public:
 
     std::lock_guard<std::mutex> guard(m_mutex);
 
+    T *raw_buf;
     auto &slot = m_pool.memBuffer[p_elemSize];
+
     if (slot.empty()) {
-      auto raw_buf = (T *)new char[p_elemSize];
-      return std::shared_ptr<T>(raw_buf, Deleter(slot));
+      raw_buf = (T *)new char[p_elemSize];
     } else {
       void *mem = slot.back();
       slot.pop_back();
-      return std::shared_ptr<T>((T *)mem, Deleter(slot));
+      raw_buf = (T *)mem;
     }
+
+    std::memset(raw_buf, 0, p_elemSize);
+    return std::shared_ptr<T>(raw_buf, Deleter(slot));
   }
 
 private:
