@@ -178,6 +178,12 @@ public:
     }
   }
 
+  template <typename... Dims>
+    requires(sizeof...(Dims) == Dim) &&
+            (std::is_convertible_v<Dims, std::size_t> && ...)
+  explicit Tensor(Dims &&...dimensions)
+      : Tensor(venus::Shape<Dim>(std::forward<Dims>(dimensions)...)) {}
+
   const auto &Shape() const noexcept { return m_shape; }
 
   auto HasUniqueMemory() const -> bool { return not m_mem.IsShared(); }

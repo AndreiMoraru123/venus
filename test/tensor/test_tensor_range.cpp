@@ -12,7 +12,7 @@ using namespace venus;
 
 TEST_CASE("Tensor as Range", "[tensor][range]") {
   SECTION("Basic Range Requirements") {
-    auto tensor = Tensor<float, Device::CPU, 2>(Shape<2>(3, 2));
+    auto tensor = Tensor<float, Device::CPU, 2>(3, 2);
 
     STATIC_REQUIRE(std::ranges::range<decltype(tensor)>);
     STATIC_REQUIRE(std::ranges::sized_range<decltype(tensor)>);
@@ -44,7 +44,7 @@ TEST_CASE("Tensor as Range", "[tensor][range]") {
   }
 
   SECTION("Iterate over Tensor") {
-    auto tensor = Tensor<int, Device::CPU, 2>(Shape(2, 3));
+    auto tensor = Tensor<int, Device::CPU, 2>(2, 3);
 
     int value = 0;
     for (int i = 0; i < 2; ++i) {
@@ -62,7 +62,7 @@ TEST_CASE("Tensor as Range", "[tensor][range]") {
   }
 
   SECTION("Iterate over const tensor") {
-    auto tensor = Tensor<int, Device::CPU, 2>(Shape(2, 3));
+    auto tensor = Tensor<int, Device::CPU, 2>(2, 3);
 
     std::vector<int> collected;
     for (const auto &element : tensor) {
@@ -73,13 +73,13 @@ TEST_CASE("Tensor as Range", "[tensor][range]") {
   }
 
   SECTION("Tensor Size") {
-    auto tensor = Tensor<float, Device::CPU, 3>(Shape(2, 3, 4));
+    auto tensor = Tensor<float, Device::CPU, 3>(2, 3, 4);
     REQUIRE(std::ranges::size(tensor) == 24);
     REQUIRE(tensor.size() == 24);
   }
 
   SECTION("Modify Tensor through ElementProxy") {
-    auto tensor = Tensor<float, Device::CPU, 3>(Shape(2, 3, 4));
+    auto tensor = Tensor<float, Device::CPU, 3>(2, 3, 4);
     auto iterator = tensor.begin();
     auto proxy = *iterator;
 
@@ -98,7 +98,7 @@ TEST_CASE("Tensor as Range", "[tensor][range]") {
   }
 
   SECTION("Ranges Algos - Fill") {
-    auto tensor = Tensor<float, Device::CPU, 3>(Shape(2, 3, 4));
+    auto tensor = Tensor<float, Device::CPU, 3>(2, 3, 4);
 
     std::ranges::fill(tensor, 25.0f);
     for (auto element : tensor) {
@@ -107,7 +107,7 @@ TEST_CASE("Tensor as Range", "[tensor][range]") {
   }
 
   SECTION("Range Algos - Accumulation") {
-    auto tensor = Tensor<int, Device::CPU, 2>(Shape(2, 3));
+    auto tensor = Tensor<int, Device::CPU, 2>(2, 3);
 #if _cpp_lib_ranges >= 202110L
     std::ranges::iota(tensor, 1);
 #else
@@ -119,7 +119,7 @@ TEST_CASE("Tensor as Range", "[tensor][range]") {
   }
 
   SECTION("Ranges Algos - Transform and Copy") {
-    auto tensor = Tensor<int, Device::CPU, 2>(Shape(2, 2));
+    auto tensor = Tensor<int, Device::CPU, 2>(2, 2);
 
 #if _cpp_lib_ranges >= 202110L
     std::ranges::iota(tensor, 1);
@@ -139,7 +139,7 @@ TEST_CASE("Tensor as Range", "[tensor][range]") {
   }
 
   SECTION("Range Algos - Find and Count") {
-    auto tensor = Tensor<int, Device::CPU, 2>(Shape(2, 3));
+    auto tensor = Tensor<int, Device::CPU, 2>(2, 3);
 #if _cpp_lib_ranges >= 202110L
     std::ranges::iota(tensor, 1);
 #else
@@ -155,7 +155,7 @@ TEST_CASE("Tensor as Range", "[tensor][range]") {
   }
 
   SECTION("Ranges Views") {
-    auto tensor = Tensor<int, Device::CPU, 2>(Shape(2, 2));
+    auto tensor = Tensor<int, Device::CPU, 2>(2, 2);
 
 #if _cpp_lib_ranges >= 202110L
     std::ranges::iota(tensor, 1);
