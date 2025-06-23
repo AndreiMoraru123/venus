@@ -69,7 +69,7 @@ public:
       return m_tensor->LowLevel().RawMemory()[m_offset];
     } else {
       return typename std::remove_const_t<T>::ElementProxy(
-          *const_cast<std::remove_const_t<T> *>(m_tensor),
+          *m_tensor,
           const_cast<value_type &>(m_tensor->LowLevel().RawMemory()[m_offset]));
     }
   };
