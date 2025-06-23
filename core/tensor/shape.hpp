@@ -100,8 +100,14 @@ public:
   }
 
   // Range Ops
+  constexpr auto begin() { return m_dims.begin(); }
+  constexpr auto end() { return m_dims.end(); }
+
   constexpr auto begin() const { return m_dims.begin(); }
   constexpr auto end() const { return m_dims.end(); }
+
+  constexpr auto cbegin() const { return m_dims.begin(); }
+  constexpr auto cend() const { return m_dims.end(); }
 
   // TODO: Do I need to expose the size? (performance)
   constexpr auto size() const { return m_dims.size(); }

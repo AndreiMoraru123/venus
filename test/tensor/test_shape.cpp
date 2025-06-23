@@ -1,4 +1,5 @@
 
+#include <algorithm>
 #include <cassert>
 #include <catch2/catch_test_macros.hpp>
 
@@ -79,5 +80,29 @@ TEST_CASE("Shape semantics", "[shape]") {
         }
       }
     }
+  }
+
+  SECTION("Shape as Range") {
+    auto shape = Shape<3>();
+    STATIC_REQUIRE(std::ranges::random_access_range<decltype(shape)>);
+
+    std::ranges::fill(shape, 1);
+    for (const auto dim : shape) {
+      REQUIRE(dim == 1);
+    }
+
+    std::ranges::transform(shape, shape.begin(), [](auto &x) { return x * 2; });
+    for (const auto dim : shape) {
+      REQUIRE(dim == 2);
+    }
+
+    std::ranges::iota(shape, 1);
+    REQUIRE(shape[0] == 1);
+    REQUIRE(shape[1] == 2);
+    REQUIRE(shape[2] == 3);
+
+    bool all_positive =
+        std::ranges::all_of(shape, [](const auto &x) { return x > 0; });
+    REQUIRE(all_positive == true);
   }
 }
