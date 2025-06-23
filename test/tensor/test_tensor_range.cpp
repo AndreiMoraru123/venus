@@ -133,12 +133,7 @@ TEST_CASE("Tensor as Range", "[tensor][range]") {
 
     std::vector<int> expected = {2, 4, 6, 8};
     std::vector<int> actual;
-
-#if _cpp_lib_ranges >= 202110L
     std::ranges::copy(tensor, std::back_inserter(actual));
-#else
-    std::copy(tensor.begin(), tensor.end(), std::back_inserter(actual));
-#endif
 
     REQUIRE(actual == expected);
   }
