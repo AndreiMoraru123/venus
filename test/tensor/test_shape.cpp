@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cassert>
 #include <catch2/catch_test_macros.hpp>
+#include <numeric>
 
 #include <core/tensor/shape.hpp>
 #include <ranges>
@@ -96,7 +97,11 @@ TEST_CASE("Shape semantics", "[shape]") {
       REQUIRE(dim == 2);
     }
 
+#if _cpp_lib_ranges >= 202110L
     std::ranges::iota(shape, 1);
+#else
+    std::iota(shape.begin(), shape.end(), 1);
+#endif
     REQUIRE(shape[0] == 1);
     REQUIRE(shape[1] == 2);
     REQUIRE(shape[2] == 3);
