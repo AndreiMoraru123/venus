@@ -1,0 +1,39 @@
+name: Update README
+on:
+  push:
+    paths:
+      - "main.cpp"
+      - "README.md"
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install embedme
+        run: npm install -g embedme
+
+      - name: Update README
+        run: embedme README.md
+
+      - name: Commit changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add README.md
+          git diff --staged --quiet || git commit -m "Auto-update README with latest code"
+
+      - name: Push changes
+        run: git push
