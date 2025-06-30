@@ -1,9 +1,9 @@
 #pragma once
 #include "../memory/contiguous_memory.hpp"
+#include "../memory/device.hpp"
 #include "../memory/lower_access.hpp"
 #include "../traits.hpp"
-#include "core/memory/device.hpp"
-#include "core/tensor/shape.hpp"
+#include "shape.hpp"
 #include <cassert>
 #include <compare>
 #include <concepts>
