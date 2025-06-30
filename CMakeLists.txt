@@ -32,7 +32,8 @@ FetchContent_MakeAvailable(flux mdspan Catch2)
 add_library(venus INTERFACE)
 target_include_directories(venus INTERFACE
      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-     $<INSTALL_INTERFACE:include>)
+     $<INSTALL_INTERFACE:include>
+     $<BUILD_INTERFACE:${mdspan_SOURCE_DIR}/include>)
 
-target_link_libraries(venus INTERFACE flux::flux std::mdspan)
+target_link_libraries(venus INTERFACE flux::flux)
 add_subdirectory(test)
