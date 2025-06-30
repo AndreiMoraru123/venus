@@ -37,3 +37,11 @@ target_include_directories(venus INTERFACE
 
 target_link_libraries(venus INTERFACE flux::flux)
 add_subdirectory(test)
+
+add_executable(demo main.cpp)
+target_link_libraries(demo PRIVATE venus)
+target_include_directories(demo PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${mdspan_SOURCE_DIR}/include
+)
+
