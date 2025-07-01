@@ -353,6 +353,11 @@ public:
     return Value() == tensor.Value();
   }
 
+  auto operator==(const ElementType &element) const noexcept
+      -> Tensor<bool, DeviceType, 0> {
+    return Tensor<bool, DeviceType, 0>(Value() == element);
+  }
+
   auto EvalRegister() const;
 
   auto LowLevel() const {
