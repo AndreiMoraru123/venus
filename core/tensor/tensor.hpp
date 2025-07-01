@@ -16,7 +16,7 @@
 
 #define DEFINE_PRE_OPERATOR(op)                                                \
   ElementProxy &operator op() {                                                \
-    if (!m_tensor.HasUniqueMemory()) {                                         \
+    if (not m_tensor.HasUniqueMemory()) {                                      \
       throw std::runtime_error("Cannot write to shared tensor");               \
     }                                                                          \
     op m_element;                                                              \
@@ -25,7 +25,7 @@
 
 #define DEFINE_POST_OPERATOR(op)                                               \
   ElementType operator op(int) {                                               \
-    if (!m_tensor.HasUniqueMemory()) {                                         \
+    if (not m_tensor.HasUniqueMemory()) {                                      \
       throw std::runtime_error("Cannot write to shared tensor");               \
     }                                                                          \
     ElementType old_value = m_element;                                         \
@@ -35,7 +35,7 @@
 
 #define DEFINE_COMPOUND_OPERATOR(op)                                           \
   ElementProxy &operator op##=(const ElementType & value) {                    \
-    if (!m_tensor.HasUniqueMemory()) {                                         \
+    if (not m_tensor.HasUniqueMemory()) {                                      \
       throw std::runtime_error("Cannot write to shared tensor");               \
     }                                                                          \
     m_element op## = value;                                                    \
@@ -340,9 +340,13 @@ public:
 
   auto HasUniqueMemory() const -> bool { return not m_mem.IsShared(); }
 
-  void SetValue(ElementType val) {
-    assert(HasUniqueMemory());
-    m_mem.RawMemory()[0] = val;
+  void SetValue(ElementType value) const = delete;
+
+  void SetValue(ElementType value) {
+    if (not HasUniqueMemory()) {
+      throw std::runtime_error("Cannot write to shared scalar tensor.");
+    }
+    m_mem.RawMemory()[0] = value;
   }
 
   auto Value() const noexcept { return m_mem.RawMemory()[0]; }
