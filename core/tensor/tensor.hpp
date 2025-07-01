@@ -324,8 +324,8 @@ public:
 
   friend struct LowLevelAccess<Tensor>;
 
-  explicit Tensor(ElementType elem = ElementType()) : m_mem(1) {
-    SetValue(elem);
+  explicit Tensor(ElementType value = ElementType()) : m_mem(1) {
+    SetValue(value);
   }
 
   explicit Tensor(venus::Shape<0>) : Tensor() {};
