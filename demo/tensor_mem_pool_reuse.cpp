@@ -17,7 +17,7 @@ auto main() -> int {
   {
     auto tensor2 = Tensor<int, Device::CPU, 2>(3, 3);
     for (auto el : tensor2) {
-      std::print("{} ", static_cast<int>(el)); // this should be all 0s
+      std::print("{} ", static_cast<int>(el)); // these should all be 0s
     }
   }
 }
