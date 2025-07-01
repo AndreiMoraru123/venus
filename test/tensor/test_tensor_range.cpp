@@ -127,9 +127,8 @@ TEST_CASE("Tensor as Range", "[tensor][range]") {
     std::iota(tensor.begin(), tensor.end(), 1);
 #endif
 
-    std::ranges::transform(tensor, tensor.begin(), [](auto proxy) {
-      return static_cast<int>(proxy) * 2;
-    });
+    std::ranges::transform(tensor, tensor.begin(),
+                           [](auto proxy) { return proxy * 2; });
 
     std::vector<int> expected = {2, 4, 6, 8};
     std::vector<int> actual;
