@@ -40,12 +40,7 @@ add_subdirectory(test)
 
 option(BUILD_DEMO "Build demo executable" ON)
 
-if(BUILD_DEMO AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/demo.cpp")
-    add_executable(demo demo.cpp)
-    target_link_libraries(demo PRIVATE venus)
-    target_include_directories(demo PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}
-        ${mdspan_SOURCE_DIR}/include
-    )
+if(BUILD_DEMO AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/demo")
+    add_subdirectory(demo)
 endif()
 
