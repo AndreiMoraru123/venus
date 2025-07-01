@@ -52,8 +52,7 @@ public:
   using pointer =
       std::conditional_t<std::is_const_v<T>, const value_type *, value_type *>;
   using reference =
-      std::conditional_t<std::is_const_v<T>, const value_type &,
-                         typename std::remove_const_t<T>::ElementProxy>;
+      std::conditional_t<std::is_const_v<T>, const value_type &, value_type &>;
 
 private:
   T *m_tensor;
@@ -68,9 +67,8 @@ public:
     if constexpr (std::is_const_v<T>) {
       return m_tensor->LowLevel().RawMemory()[m_offset];
     } else {
-      return typename std::remove_const_t<T>::ElementProxy(
-          *m_tensor,
-          const_cast<value_type &>(m_tensor->LowLevel().RawMemory()[m_offset]));
+      return const_cast<value_type &>(
+          m_tensor->LowLevel().RawMemory()[m_offset]);
     }
   };
 

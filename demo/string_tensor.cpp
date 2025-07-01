@@ -11,6 +11,6 @@ auto main() -> int {
   std::ranges::fill(tensor, "hello");
 
   for (auto el : tensor) {
-    std::print("{} ", static_cast<std::string>(el)); // hello hello hello
+    std::print("{} ", el); // hello hello hello
   }
 }

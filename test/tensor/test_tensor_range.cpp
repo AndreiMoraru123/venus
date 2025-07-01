@@ -78,25 +78,6 @@ TEST_CASE("Tensor as Range", "[tensor][range]") {
     REQUIRE(tensor.size() == 24);
   }
 
-  SECTION("Modify Tensor through ElementProxy") {
-    auto tensor = Tensor<float, Device::CPU, 3>(2, 3, 4);
-    auto iterator = tensor.begin();
-    auto proxy = *iterator;
-
-    float value = 25.0f;
-    proxy = value;
-    proxy = 30.0f;
-
-    const float &const_ref = value;
-    proxy = const_ref;
-
-    const auto &const_proxy = proxy;
-    auto &&moved_const_proxy = std::move(const_proxy);
-    moved_const_proxy = 25.0f;
-
-    REQUIRE(tensor[0, 0, 0] == 25.0f);
-  }
-
   SECTION("Ranges Algos - Fill") {
     auto tensor = Tensor<float, Device::CPU, 3>(2, 3, 4);
 
