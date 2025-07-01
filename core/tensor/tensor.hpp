@@ -244,6 +244,11 @@ public:
       return *this;
     }
 
+    // explicit conversion (to extract the element by type)
+    template <typename U> explicit operator U() const {
+      return static_cast<U>(m_element);
+    }
+
     DEFINE_COMPOUND_OPERATOR(+)
     DEFINE_COMPOUND_OPERATOR(-)
     DEFINE_COMPOUND_OPERATOR(*)
