@@ -163,10 +163,9 @@ TEST_CASE("Tensor as Range", "[tensor][range]") {
     std::iota(tensor.begin(), tensor.end(), 1);
 #endif
 
-    auto result =
-        tensor |
-        std::views::transform([](auto x) { return static_cast<int>(x) * 2; }) |
-        std::views::filter([](int x) { return x > 5; }) | std::views::take(1);
+    auto result = tensor | std::views::transform([](int x) { return x * 2; }) |
+                  std::views::filter([](int x) { return x > 5; }) |
+                  std::views::take(1);
 
     auto it = result.begin();
     REQUIRE(*it == 6);
