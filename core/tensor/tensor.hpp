@@ -329,9 +329,7 @@ public:
   explicit Tensor(venus::Shape<0>) : Tensor() {};
 
   explicit Tensor(ContiguousMemory<ElementType, DeviceType> p_mem)
-      : m_mem(std::move(p_mem)) {
-    assert(m_mem.Size() >= 1);
-  }
+      : m_mem(std::move(p_mem)) {}
 
   const auto &Shape() const noexcept {
     static const venus::Shape<0> shape;

@@ -5,6 +5,7 @@
 #include <cassert>
 #include <cstddef>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 
 namespace venus {
@@ -16,7 +17,11 @@ template <typename TElem, typename TDevice> class ContiguousMemory {
 public:
   explicit ContiguousMemory(std::size_t p_size)
       : m_mem(Allocator<TDevice>::template Allocate<ElementType>(p_size)),
-        m_size(p_size) {}
+        m_size(p_size) {
+    if (p_size == 0) {
+      throw std::invalid_argument("Cannot allocate zero-sized memory.");
+    }
+  }
 
   auto Shift(size_t pos) const {
     assert(pos < m_size);
