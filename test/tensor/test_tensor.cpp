@@ -15,10 +15,23 @@ TEST_CASE("Tensor Ops", "[tensor]") {
   SECTION("Scalar Tensor") {
     auto scalar = Tensor<float, Device::CPU, 0>(10.0f);
     REQUIRE(scalar.Value() == 10.0f);
+    REQUIRE(bool(scalar) == true);
     REQUIRE(scalar.HasUniqueMemory());
 
     scalar.SetValue(100.0f);
     REQUIRE(scalar.Value() == 100.0f);
+
+    scalar.SetValue(0.0f);
+    REQUIRE(bool(scalar) == false);
+  }
+
+  SECTION("Scalar Boolean Tensor") {
+    auto scalar = Tensor<bool, Device::CPU, 0>(true);
+    REQUIRE(scalar.Value() == true);
+    REQUIRE(scalar == true);
+
+    scalar.SetValue(false);
+    REQUIRE(scalar == false);
   }
 
   SECTION("Shared Memory") {

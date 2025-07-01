@@ -14,6 +14,12 @@
 #include <type_traits>
 #include <utility>
 
+#define DEFINE_SCALAR_COMPARISON(op)                                           \
+  auto operator op(const ElementType &element) const noexcept                  \
+      -> Tensor<bool, DeviceType, 0> {                                         \
+    return Tensor<bool, DeviceType, 0>(Value() op element);                    \
+  }
+
 #define DEFINE_PRE_OPERATOR(op)                                                \
   ElementProxy &operator op() {                                                \
     if (not m_tensor.HasUniqueMemory()) {                                      \
@@ -353,10 +359,20 @@ public:
     return Value() == tensor.Value();
   }
 
-  auto operator==(const ElementType &element) const noexcept
-      -> Tensor<bool, DeviceType, 0> {
-    return Tensor<bool, DeviceType, 0>(Value() == element);
+  operator bool() const noexcept {
+    if constexpr (std::is_same_v<ElementType, bool>) {
+      return Value();
+    } else {
+      return Value() != ElementType{};
+    }
   }
+
+  DEFINE_SCALAR_COMPARISON(==)
+  DEFINE_SCALAR_COMPARISON(!=)
+  DEFINE_SCALAR_COMPARISON(<)
+  DEFINE_SCALAR_COMPARISON(<=)
+  DEFINE_SCALAR_COMPARISON(>)
+  DEFINE_SCALAR_COMPARISON(>=)
 
   auto EvalRegister() const;
 
@@ -393,3 +409,4 @@ operator+(typename tensor_iterator<T>::difference_type n,
 #undef DEFINE_COMPOUND_OPERATOR
 #undef DEFINE_POST_OPERATOR
 #undef DEFINE_POST_OPERATOR
+#undef DEFINE_SCALAR_COMPARISON

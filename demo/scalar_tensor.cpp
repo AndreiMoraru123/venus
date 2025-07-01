@@ -10,6 +10,9 @@ auto main() -> int {
 
   tensor.SetValue(12.0f);
 
-  auto res = (tensor == 12.0f);
-  assert(res.Value() == true);
+  auto good = (tensor == 12.0f);
+  assert(good == true);
+
+  auto bad = (tensor != 12.0f);
+  assert(bad == false);
 }
