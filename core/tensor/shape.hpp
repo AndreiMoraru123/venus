@@ -138,6 +138,24 @@ public:
   }
 };
 
+template <std::size_t Dim>
+std::ostream &operator<<(std::ostream &os, const venus::Shape<Dim> &shape) {
+  os << "(";
+  std::size_t count = 0;
+  for (auto dim : shape) {
+    if (count > 0)
+      os << ", ";
+    count++;
+    os << dim;
+  }
+  return os << ")";
+}
+
+template <std::size_t Dim>
+std::ostream &operator<<(std::ostream &os, const venus::Shape<0> &shape) {
+  return os << "()";
+}
+
 template <SizeTLike... TShapeParameter>
 explicit Shape(TShapeParameter...) -> Shape<sizeof...(TShapeParameter)>;
 

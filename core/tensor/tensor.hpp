@@ -404,7 +404,41 @@ operator+(typename tensor_iterator<T>::difference_type n,
   return it + n;
 }
 
+template <typename TElem, typename TDevice, std::size_t Dim>
+std::ostream &operator<<(std::ostream &os,
+                         const Tensor<TElem, TDevice, Dim> &tensor) {
+  os << "venus::Tensor([";
+
+  std::size_t count = 0;
+  for (auto elem : tensor) {
+    if (count > 0)
+      os << ", ";
+    count++;
+    os << static_cast<TElem>(elem);
+  }
+
+  return os << "], " << "shape=" << tensor.Shape() << ")";
+}
+
+template <typename TElem, typename TDevice>
+std::ostream &operator<<(std::ostream &os,
+                         const Tensor<TElem, TDevice, 0> &tensor) {
+  return os << "venus::Tensor(" << tensor.Value() << ")";
+}
+
 } // namespace venus
+
+template <typename TElem, typename TDevice, std::size_t Dim>
+struct std::formatter<venus::Tensor<TElem, TDevice, Dim>> {
+  constexpr auto parse(std::format_parse_context &ctx) { return ctx.begin(); }
+
+  auto format(const venus::Tensor<TElem, TDevice, Dim> &tensor,
+              std::format_context &ctx) const {
+    ostringstream oss;
+    oss << tensor;
+    return std::format_to(ctx.out(), "{}", oss.str());
+  }
+};
 
 #undef DEFINE_COMPOUND_OPERATOR
 #undef DEFINE_POST_OPERATOR
