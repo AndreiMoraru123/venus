@@ -21,13 +21,7 @@ FetchContent_Declare(
     GIT_TAG stable
 )
 
-FetchContent_Declare(
-    Catch2
-    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG v3.8.0
-)
-
-FetchContent_MakeAvailable(flux mdspan Catch2)
+FetchContent_MakeAvailable(flux mdspan)
 
 add_library(venus INTERFACE)
 target_include_directories(venus INTERFACE
@@ -36,7 +30,16 @@ target_include_directories(venus INTERFACE
      $<BUILD_INTERFACE:${mdspan_SOURCE_DIR}/include>)
 
 target_link_libraries(venus INTERFACE flux::flux)
-add_subdirectory(test)
+
+if(BUILD_TESTING)
+    FetchContent_Declare(
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG v3.8.0
+    )
+    FetchContent_MakeAvailable(Catch2)
+    add_subdirectory(test)
+endif()
 
 option(BUILD_DEMO "Build demo executable" ON)
 
