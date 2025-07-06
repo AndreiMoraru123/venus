@@ -11,6 +11,8 @@
 #include <format>
 #include <iterator>
 #include <stdexcept>
+#include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 
@@ -404,6 +406,18 @@ operator+(typename tensor_iterator<T>::difference_type n,
   return it + n;
 }
 
+// Print Tensor ================================================
+template <typename T>
+concept StringLike = requires(T t) {
+  { t.c_str() } -> std::convertible_to<const char *>;
+} or std::convertible_to<T, const char *>;
+
+template <typename T>
+concept CharLike = std::same_as<T, char> || std::same_as<T, signed char> ||
+                   std::same_as<T, unsigned char> || std::same_as<T, wchar_t> ||
+                   std::same_as<T, char8_t> || std::same_as<T, char16_t> ||
+                   std::same_as<T, char32_t>;
+
 template <typename TElem, typename TDevice, std::size_t Dim>
 std::ostream &operator<<(std::ostream &os,
                          const Tensor<TElem, TDevice, Dim> &tensor) {
@@ -414,7 +428,13 @@ std::ostream &operator<<(std::ostream &os,
     if (count > 0)
       os << ", ";
     count++;
-    os << static_cast<TElem>(elem);
+    if constexpr (StringLike<TElem>) {
+      os << "\"" << static_cast<TElem>(elem) << "\"";
+    } else if constexpr (CharLike<TElem>) {
+      os << "'" << static_cast<TElem>(elem) << "'";
+    } else {
+      os << static_cast<TElem>(elem);
+    }
   }
 
   return os << "], " << "shape=" << tensor.Shape() << ")";
@@ -423,7 +443,13 @@ std::ostream &operator<<(std::ostream &os,
 template <typename TElem, typename TDevice>
 std::ostream &operator<<(std::ostream &os,
                          const Tensor<TElem, TDevice, 0> &tensor) {
-  return os << "venus::Tensor(" << tensor.Value() << ")";
+  if constexpr (StringLike<TElem>) {
+    return os << "venus::Tensor(" << "\"" << tensor.Value() << "\"" << ")";
+  } else if constexpr (CharLike<TElem>) {
+    return os << "venus::Tensor(" << "'" << tensor.Value() << "'" << ")";
+  } else {
+    return os << "venus::Tensor(" << tensor.Value() << ")";
+  }
 }
 
 } // namespace venus
