@@ -1,7 +1,6 @@
 
 #include "core/memory/device.hpp"
 #include "core/tensor/tensor.hpp"
-#include <cassert>
 #include <print>
 
 using namespace venus;

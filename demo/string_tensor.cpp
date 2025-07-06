@@ -2,7 +2,6 @@
 #include <string>
 
 #include "core/tensor/tensor.hpp"
-#include <cassert>
 
 using namespace venus;
 
