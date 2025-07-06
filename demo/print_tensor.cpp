@@ -21,6 +21,6 @@ auto main() -> int {
   std::println("{}", double_scalar);     // venus::Tensor(10.00)
   std::println("{}", tensor);            // venus::Tensor([0, 0, 0, 0, 0, 0], shape=(1, 2, 3))
   std::println("{}", float_tensor);      // venus::Tensor([0.00, 0.00, 0.00, 0.00, 0.00, 0.00], shape=(1, 2, 3))
-  std::println( "{}", ch_tensor);        // venus::Tensor(['', '', '', '', '', ''], shape=(1, 2, 3))
-  std::println( "{}", str_tensor);       // venus::Tensor(["", "", "", "", "", ""], shape=(1, 2, 3))
+  std::println("{}", ch_tensor);         // venus::Tensor(['', '', '', '', '', ''], shape=(1, 2, 3))
+  std::println("{}", str_tensor);        // venus::Tensor(["", "", "", "", "", ""], shape=(1, 2, 3))
 }
