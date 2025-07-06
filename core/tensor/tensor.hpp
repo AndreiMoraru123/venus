@@ -9,6 +9,8 @@
 #include <concepts>
 #include <cstddef>
 #include <format>
+#include <iomanip>
+#include <ios>
 #include <iterator>
 #include <stdexcept>
 #include <string>
@@ -432,6 +434,8 @@ std::ostream &operator<<(std::ostream &os,
       os << "\"" << static_cast<TElem>(elem) << "\"";
     } else if constexpr (CharLike<TElem>) {
       os << "'" << static_cast<TElem>(elem) << "'";
+    } else if constexpr (std::floating_point<TElem>) {
+      os << std::fixed << std::setprecision(2) << static_cast<TElem>(elem);
     } else {
       os << static_cast<TElem>(elem);
     }
@@ -447,6 +451,9 @@ std::ostream &operator<<(std::ostream &os,
     return os << "venus::Tensor(" << "\"" << tensor.Value() << "\"" << ")";
   } else if constexpr (CharLike<TElem>) {
     return os << "venus::Tensor(" << "'" << tensor.Value() << "'" << ")";
+  } else if constexpr (std::floating_point<TElem>) {
+    return os << std::fixed << std::setprecision(2) << "venus::Tensor("
+              << tensor.Value() << ")";
   } else {
     return os << "venus::Tensor(" << tensor.Value() << ")";
   }
