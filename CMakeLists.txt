@@ -10,18 +10,12 @@ include(CTest)
 include(FetchContent)
 
 FetchContent_Declare(
-    flux
-    GIT_REPOSITORY https://github.com/tcbrindle/flux.git
-    GIT_TAG main
-)
-
-FetchContent_Declare(
     mdspan
     GIT_REPOSITORY https://github.com/kokkos/mdspan
     GIT_TAG stable
 )
 
-FetchContent_MakeAvailable(flux mdspan)
+FetchContent_MakeAvailable(mdspan)
 
 add_library(venus INTERFACE)
 target_include_directories(venus INTERFACE
@@ -29,7 +23,7 @@ target_include_directories(venus INTERFACE
      $<INSTALL_INTERFACE:include>
      $<BUILD_INTERFACE:${mdspan_SOURCE_DIR}/include>)
 
-target_link_libraries(venus INTERFACE flux::flux)
+target_link_libraries(venus INTERFACE)
 
 if(BUILD_TESTING)
     FetchContent_Declare(
