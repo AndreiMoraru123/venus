@@ -18,6 +18,7 @@ TEST_CASE("Tensor as Range", "[tensor][range]") {
     STATIC_REQUIRE(std::ranges::sized_range<decltype(tensor)>);
     STATIC_REQUIRE(std::ranges::viewable_range<decltype(tensor)>);
     STATIC_REQUIRE(std::ranges::random_access_range<decltype(tensor)>);
+    STATIC_REQUIRE(std::ranges::contiguous_range<decltype(tensor)>);
   }
 
   SECTION("Random Access Iterators Ops") {
