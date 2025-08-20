@@ -29,7 +29,8 @@ public:
         std::shared_ptr<ElementType>(m_mem, m_mem.get() + pos), m_size - pos);
   }
 
-  auto RawMemory() const { return m_mem.get(); }
+  auto RawMemory() -> ElementType * { return m_mem.get(); }
+  auto RawMemory() const -> const ElementType * { return m_mem.get(); }
   bool IsShared() const { return m_mem.use_count() > 1; }
   std::size_t Size() const { return m_size; }
 

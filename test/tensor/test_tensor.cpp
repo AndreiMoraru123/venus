@@ -35,7 +35,7 @@ TEST_CASE("Tensor Ops", "[tensor]") {
   }
 
   SECTION("Shared Memory") {
-    const auto shared_memo = ContiguousMemory<float, Device::CPU>(1);
+    auto shared_memo = ContiguousMemory<float, Device::CPU>(1);
 
     float *rawPtr = shared_memo.RawMemory();
     rawPtr[0] = 1.0f;
@@ -51,7 +51,7 @@ TEST_CASE("Tensor Ops", "[tensor]") {
   }
 
   SECTION("Shared Shifted Memory") {
-    const auto shared_memo = ContiguousMemory<float, Device::CPU>(3);
+    auto shared_memo = ContiguousMemory<float, Device::CPU>(3);
 
     float *rawPtr = shared_memo.RawMemory();
     rawPtr[0] = 1.0f;
@@ -85,7 +85,7 @@ TEST_CASE("Tensor Ops", "[tensor]") {
   }
 
   SECTION("Low Level Access Memory") {
-    const auto memo = ContiguousMemory<float, Device::CPU>(1);
+    auto memo = ContiguousMemory<float, Device::CPU>(1);
     float *rawPtr = memo.RawMemory();
     rawPtr[0] = 10.0f;
 

@@ -72,21 +72,11 @@ public:
       : m_tensor(tensor), m_offset(offset) {}
 
   constexpr reference operator*() const {
-    if constexpr (std::is_const_v<T>) {
-      return m_tensor->LowLevel().RawMemory()[m_offset];
-    } else {
-      return const_cast<value_type &>(
-          m_tensor->LowLevel().RawMemory()[m_offset]);
-    }
+    return m_tensor->LowLevel().RawMemory()[m_offset];
   };
 
   constexpr pointer operator->() const {
-    if constexpr (std::is_const_v<T>) {
-      return &(m_tensor->LowLevel().RawMemory()[m_offset]);
-    } else {
-      return &(
-          const_cast<value_type &>(m_tensor->LowLevel().RawMemory()[m_offset]));
-    }
+    return &(m_tensor->LowLevel().RawMemory()[m_offset]);
   }
 
   constexpr tensor_iterator &operator++() {
@@ -391,6 +381,7 @@ template <typename TElem, typename TDevice, std::size_t Dim>
 struct LowLevelAccess<Tensor<TElem, TDevice, Dim>> {
   LowLevelAccess(Tensor<TElem, TDevice, Dim> p) : m_tensor(std::move(p)) {}
 
+  auto RawMemory() -> TElem * { return m_tensor.m_mem.RawMemory(); }
   auto RawMemory() const -> const TElem * { return m_tensor.m_mem.RawMemory(); }
   auto SharedMemory() const { return m_tensor.m_mem; }
 
