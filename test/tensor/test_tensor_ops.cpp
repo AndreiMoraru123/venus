@@ -1,0 +1,54 @@
+#include "core/memory/device.hpp"
+#include <cassert>
+#include <catch2/catch_test_macros.hpp>
+#include <print>
+
+#include <cmath>
+#include <core/tensor/tensor.hpp>
+#include <numeric>
+
+using namespace venus;
+
+TEST_CASE("Tensor Ops", "[tensor][ops]") {
+  SECTION("Scalar Addition") {
+    auto x = Tensor<int, Device::CPU, 0>(5);
+    auto y = Tensor<float, Device::CPU, 0>(2.5f);
+    auto z = x + y;
+
+    STATIC_REQUIRE(
+        std::is_same_v<decltype(z)::ElementType, float>); // type promotion
+    REQUIRE(z.Value() == 7.5f);
+  }
+
+  SECTION("Tensor Addition") {
+    auto x = Tensor<int, Device::CPU, 2>(3, 3);
+    auto y = Tensor<float, Device::CPU, 2>(3, 3);
+    auto expected = Tensor<int, Device::CPU, 2>(3, 3);
+
+#if _cpp_lib_ranges >= 202110L
+    std::ranges::iota(x, 1);
+    std::ranges::iota(y, 1);
+    std::ranges::iota(expected, 1);
+#else
+    std::iota(x.begin(), x.end(), 1);
+    std::iota(y.begin(), y.end(), 1);
+    std::iota(expected.begin(), expected.end(), 1);
+#endif
+
+    std::ranges::transform(expected, expected.begin(),
+                           [](int val) { return val * 2; });
+    auto z = x + y;
+
+    STATIC_REQUIRE(
+        std::is_same_v<decltype(z)::ElementType, float>); // type promotion
+    REQUIRE(z.Shape() == x.Shape());
+    REQUIRE(std::ranges::equal(z, expected));
+  }
+
+  SECTION("Tensor Addition (shape mismatch)") {
+    auto x = Tensor<int, Device::CPU, 2>(3, 3);
+    auto y = Tensor<int, Device::CPU, 2>(2, 2);
+
+    REQUIRE_THROWS_AS(x + y, std::invalid_argument);
+  }
+}

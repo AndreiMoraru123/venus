@@ -3,6 +3,7 @@
 #include "../memory/device.hpp"
 #include "../memory/lower_access.hpp"
 #include "../traits.hpp"
+#include "range_ops.hpp"
 #include "shape.hpp"
 #include <cassert>
 #include <compare>
@@ -188,6 +189,24 @@ public:
     return (m_shape == tensor.m_shape) && (m_mem == tensor.m_mem);
   }
 
+  template <typename OtherElementType>
+    requires std::is_arithmetic_v<ElementType> &&
+             std::is_arithmetic_v<OtherElementType>
+  auto operator+(const Tensor<OtherElementType, DeviceType, Dim> &other) const {
+    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+                  "Addition is currently only supported on CPU");
+
+    if (m_shape != other.Shape()) {
+      throw std::invalid_argument("Tensor shapes must match");
+    }
+
+    using ResultElementType = std::common_type_t<ElementType, OtherElementType>;
+    auto result = Tensor<ResultElementType, DeviceType, Dim>(m_shape);
+    auto computation = venus::ops::add(*this, other);
+    std::ranges::copy(computation, result.begin());
+    return result;
+  }
+
   //* Proxy pattern for indexing elements (know when I'm reading vs writing)
   //? Price to pay: have to specify all possible operator overloads that I want
   class ElementProxy {
@@ -349,6 +368,21 @@ public:
 
   auto operator==(const Tensor &tensor) const noexcept -> bool {
     return Value() == tensor.Value();
+  }
+
+  template <typename OtherElementType>
+    requires std::is_arithmetic_v<ElementType> &&
+             std::is_arithmetic_v<OtherElementType>
+  auto operator+(const Tensor<OtherElementType, DeviceType, 0> &other) const {
+    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+                  "Addition is currently only supported on CPU");
+
+    if (this->Shape() != other.Shape()) {
+      throw std::invalid_argument("Tensor shapes must match");
+    }
+    using ResultElementType = std::common_type_t<ElementType, OtherElementType>;
+    auto result = Tensor<ResultElementType, DeviceType, 0>{};
+    return Tensor<ResultElementType, Device::CPU, 0>(Value() + other.Value());
   }
 
   operator bool() const noexcept {
