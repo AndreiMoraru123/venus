@@ -196,6 +196,13 @@ public:
     return venus::ops::add(*this, other);
   }
 
+  template <typename OtherElementType>
+    requires std::is_arithmetic_v<ElementType> &&
+             std::is_arithmetic_v<OtherElementType>
+  auto operator*(const Tensor<OtherElementType, DeviceType, Dim> &other) const {
+    return venus::ops::multiply(*this, other);
+  }
+
   //* Proxy pattern for indexing elements (know when I'm reading vs writing)
   //? Price to pay: have to specify all possible operator overloads that I want
   class ElementProxy {
@@ -364,6 +371,13 @@ public:
              std::is_arithmetic_v<OtherElementType>
   auto operator+(const Tensor<OtherElementType, DeviceType, 0> &other) const {
     return venus::ops::add(*this, other);
+  }
+
+  template <typename OtherElementType>
+    requires std::is_arithmetic_v<ElementType> &&
+             std::is_arithmetic_v<OtherElementType>
+  auto operator*(const Tensor<OtherElementType, DeviceType, 0> &other) const {
+    return venus::ops::multiply(*this, other);
   }
 
   operator bool() const noexcept {
