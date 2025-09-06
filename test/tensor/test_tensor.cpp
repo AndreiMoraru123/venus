@@ -10,7 +10,7 @@
 
 using namespace venus;
 
-TEST_CASE("Tensor Ops", "[tensor]") {
+TEST_CASE("Tensor API", "[tensor][api]") {
 
   SECTION("Scalar Tensor") {
     auto scalar = Tensor<float, Device::CPU, 0>(10.0f);
