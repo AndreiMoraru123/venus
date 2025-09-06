@@ -86,4 +86,29 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
 
     REQUIRE_THROWS_AS(x + y, std::invalid_argument);
   }
+
+  SECTION("Scalar Transform") {
+    auto tensor = Tensor<float, Device::CPU, 0>(5.0);
+    auto res = venus::ops::transform(tensor, [](auto &&t) { return t * 3; });
+
+    STATIC_REQUIRE(std::is_same_v<decltype(res)::ElementType, float>);
+    REQUIRE(res.Value() == 15.0f);
+  }
+
+  SECTION("Tensor Transform") {
+    auto tensor = Tensor<float, Device::CPU, 2>(3, 3);
+
+#if _cpp_lib_ranges >= 202110L
+    std::ranges::iota(tensor, 1);
+#else
+    std::iota(tensor.begin(), tensor.end(), 1);
+#endif
+
+    auto res = venus::ops::transform(tensor, [](auto &&t) { return t * 3; });
+
+    STATIC_REQUIRE(std::is_same_v<decltype(res)::ElementType, float>);
+    REQUIRE(res[0, 0] == 3.0f);  // 1 * 3
+    REQUIRE(res[1, 1] == 15.0f); // 5 * 3
+    REQUIRE(res[2, 2] == 27.0f); // 9 * 3
+  }
 }

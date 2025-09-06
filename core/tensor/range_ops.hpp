@@ -28,7 +28,7 @@ void validate_binary_op(const Tensor<Elem1, Dev1, Dim1> &t1,
   static_assert(std::is_same_v<Dev1, Dev2>,
                 "Tensors must be on the same device");
   static_assert(std::is_same_v<Dev1, Device::CPU>,
-                "Operation currently only supported on CPU");
+                "Operation is currently only supported on CPU");
 
   if constexpr (Dim1 > 0) {
     if (t1.Shape() != t2.Shape()) {
@@ -85,5 +85,27 @@ template <template <typename, typename, std::size_t> class Tensor,
 auto multiply(const Tensor<Elem1, Dev1, Dim1> &t1,
               const Tensor<Elem2, Dev2, Dim2> &t2) {
   return detail::binary_elementwise_op(std::multiplies{}, t1, t2);
+}
+
+template <template <typename, typename, std::size_t> class Tensor,
+          typename Elem, typename Dev, std::size_t Dim, typename Fn>
+  requires VenusTensor<Tensor<Elem, Dev, Dim>> && std::is_arithmetic_v<Elem>
+auto transform(const Tensor<Elem, Dev, Dim> &tensor, Fn &&fn) {
+  static_assert(std::is_same_v<Dev, Device::CPU>,
+                "Transform is currently only supported on CPU");
+
+  using ResultElementType = std::invoke_result_t<Fn, Elem>;
+
+  if constexpr (Dim == 0) {
+    return Tensor<ResultElementType, Dev, 0>(fn(tensor.Value()));
+  } else {
+    using ResultTensor = Tensor<ResultElementType, Dev, Dim>;
+    ResultTensor result(tensor.Shape());
+    auto computation =
+        tensor | std::views::transform(
+                     [f = std::forward<Fn>(fn)](auto &&t) { return f(t); });
+    std::ranges::copy(computation, result.begin());
+    return result;
+  }
 }
 } // namespace venus::ops
