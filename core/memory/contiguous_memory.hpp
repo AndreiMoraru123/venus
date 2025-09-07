@@ -11,7 +11,7 @@
 namespace venus {
 
 template <typename TElem, typename TDevice> class ContiguousMemory {
-  static_assert(std::is_same_v<RemoveConstRef<TElem>, TElem>);
+  static_assert(std::is_same_v<std::remove_cvref_t<TElem>, TElem>);
   using ElementType = TElem;
 
 public:

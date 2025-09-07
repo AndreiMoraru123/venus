@@ -3,6 +3,7 @@
 #include "null_param.hpp"
 #include "traits.hpp"
 #include <cstddef>
+#include <type_traits>
 
 namespace venus::Sequential {
 
@@ -167,7 +168,7 @@ struct Size_<TCont<T...>> {
 };
 
 template <typename T>
-static constexpr size_t Size = Size_<RemoveConstRef<T>>::value;
+static constexpr size_t Size = Size_<std::remove_cvref_t<T>>::value;
 // =============================================================
 
 // Head ========================================================

@@ -68,7 +68,7 @@ template <typename... TParameters> struct VarTypeDict {
 
     template <typename TTag, typename TVal> auto Set(TVal &&val) && {
       static constexpr auto idx = Sequential::Order<VarTypeDict, TTag>;
-      using RawType = RemoveConstRef<TVal>;
+      using RawType = std::remove_cvref_t<TVal>;
 
       RawType *tmp = new RawType(std::forward<TVal>(val));
       m_tuple[idx] = std::shared_ptr<void>(tmp, [](void *ptr) {

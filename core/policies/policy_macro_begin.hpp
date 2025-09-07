@@ -16,7 +16,7 @@
                                                                                \
   private:                                                                     \
     using type1 = decltype(Ma::Mi);                                            \
-    using type2 = RemoveConstRef<type1>;                                       \
+    using type2 = std::remove_cvref_t<type1>;                                  \
                                                                                \
   public:                                                                      \
     static constexpr type2 Mi = static_cast<type2>(Val);                       \

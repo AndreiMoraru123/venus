@@ -153,7 +153,7 @@ public:
 };
 
 template <typename TElem, typename TDevice, std::size_t Dim> class Tensor {
-  static_assert(std::is_same_v<RemoveConstRef<TElem>, TElem>);
+  static_assert(std::is_same_v<std::remove_cvref_t<TElem>, TElem>);
   static_assert(Dim > 0);
 
 public:
@@ -297,7 +297,7 @@ public:
   auto EvalRegister() const;
 
   auto LowLevel() const {
-    using ThisType = RemoveConstRef<decltype(*this)>;
+    using ThisType = std::remove_cvref_t<decltype(*this)>;
     return LowLevelAccess<ThisType>(*this);
   }
 
@@ -338,7 +338,7 @@ public:
 
 // Scalar Tensor ===============================================
 template <typename TElem, typename TDevice> class Tensor<TElem, TDevice, 0> {
-  static_assert(std::is_same_v<RemoveConstRef<TElem>, TElem>);
+  static_assert(std::is_same_v<std::remove_cvref_t<TElem>, TElem>);
 
 public:
   using ElementType = TElem;
@@ -416,7 +416,7 @@ public:
   auto EvalRegister() const;
 
   auto LowLevel() const {
-    using ThisType = RemoveConstRef<decltype(*this)>;
+    using ThisType = std::remove_cvref_t<decltype(*this)>;
     return LowLevelAccess<ThisType>(*this);
   }
 
