@@ -65,6 +65,7 @@ auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Dim1> &t1,
 }
 } // namespace detail
 
+// Addition
 template <template <typename, typename, std::size_t> class Tensor,
           typename Elem1, typename Dev1, std::size_t Dim1, typename Elem2,
           typename Dev2, std::size_t Dim2>
@@ -76,14 +77,27 @@ auto add(const Tensor<Elem1, Dev1, Dim1> &t1,
   return detail::binary_elementwise_op(std::plus{}, t1, t2);
 }
 
+// Subtraction
 template <template <typename, typename, std::size_t> class Tensor,
           typename Elem1, typename Dev1, std::size_t Dim1, typename Elem2,
           typename Dev2, std::size_t Dim2>
   requires VenusTensor<Tensor<Elem1, Dev1, Dim1>> &&
            VenusTensor<Tensor<Elem2, Dev2, Dim2>> &&
            std::is_arithmetic_v<Elem1> && std::is_arithmetic_v<Elem2>
-auto multiply(const Tensor<Elem1, Dev1, Dim1> &t1,
-              const Tensor<Elem2, Dev2, Dim2> &t2) {
+auto sub(const Tensor<Elem1, Dev1, Dim1> &t1,
+         const Tensor<Elem2, Dev2, Dim2> &t2) {
+  return detail::binary_elementwise_op(std::minus{}, t1, t2);
+}
+
+// Multiplication (element-wise)
+template <template <typename, typename, std::size_t> class Tensor,
+          typename Elem1, typename Dev1, std::size_t Dim1, typename Elem2,
+          typename Dev2, std::size_t Dim2>
+  requires VenusTensor<Tensor<Elem1, Dev1, Dim1>> &&
+           VenusTensor<Tensor<Elem2, Dev2, Dim2>> &&
+           std::is_arithmetic_v<Elem1> && std::is_arithmetic_v<Elem2>
+auto mul(const Tensor<Elem1, Dev1, Dim1> &t1,
+         const Tensor<Elem2, Dev2, Dim2> &t2) {
   return detail::binary_elementwise_op(std::multiplies{}, t1, t2);
 }
 

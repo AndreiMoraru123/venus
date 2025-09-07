@@ -3,7 +3,7 @@
 #include "../memory/device.hpp"
 #include "../memory/lower_access.hpp"
 #include "../traits.hpp"
-#include "range_ops.hpp"
+#include "eager_ops.hpp"
 #include "shape.hpp"
 #include <cassert>
 #include <compare>
@@ -189,6 +189,7 @@ public:
     return (m_shape == tensor.m_shape) && (m_mem == tensor.m_mem);
   }
 
+  // Addition
   template <typename OtherElementType>
     requires std::is_arithmetic_v<ElementType> &&
              std::is_arithmetic_v<OtherElementType>
@@ -196,11 +197,20 @@ public:
     return venus::ops::add(*this, other);
   }
 
+  // Subtraction
+  template <typename OtherElementType>
+    requires std::is_arithmetic_v<ElementType> &&
+             std::is_arithmetic_v<OtherElementType>
+  auto operator-(const Tensor<OtherElementType, DeviceType, Dim> &other) const {
+    return venus::ops::sub(*this, other);
+  }
+
+  // Multiplication (element-wise)
   template <typename OtherElementType>
     requires std::is_arithmetic_v<ElementType> &&
              std::is_arithmetic_v<OtherElementType>
   auto operator*(const Tensor<OtherElementType, DeviceType, Dim> &other) const {
-    return venus::ops::multiply(*this, other);
+    return venus::ops::mul(*this, other);
   }
 
   //* Proxy pattern for indexing elements (know when I'm reading vs writing)
@@ -376,8 +386,15 @@ public:
   template <typename OtherElementType>
     requires std::is_arithmetic_v<ElementType> &&
              std::is_arithmetic_v<OtherElementType>
+  auto operator-(const Tensor<OtherElementType, DeviceType, 0> &other) const {
+    return venus::ops::sub(*this, other);
+  }
+
+  template <typename OtherElementType>
+    requires std::is_arithmetic_v<ElementType> &&
+             std::is_arithmetic_v<OtherElementType>
   auto operator*(const Tensor<OtherElementType, DeviceType, 0> &other) const {
-    return venus::ops::multiply(*this, other);
+    return venus::ops::mul(*this, other);
   }
 
   operator bool() const noexcept {
