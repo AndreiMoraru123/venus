@@ -159,6 +159,7 @@ template <typename TElem, typename TDevice, std::size_t Dim> class Tensor {
 public:
   using ElementType = TElem;
   using DeviceType = TDevice;
+  static constexpr std::size_t Dimension = Dim;
 
   friend struct LowLevelAccess<Tensor>;
 
@@ -194,35 +195,23 @@ public:
   }
 
   // Addition
-  template <typename OtherElementType>
-    requires std::is_arithmetic_v<ElementType> &&
-             std::is_arithmetic_v<OtherElementType>
-  auto operator+(const Tensor<OtherElementType, DeviceType, Dim> &other) const {
-    return venus::ops::add(*this, other);
+  template <typename OtherType> auto operator+(OtherType &&other) const {
+    return venus::ops::add(*this, std::forward<OtherType>(other));
   }
 
   // Subtraction
-  template <typename OtherElementType>
-    requires std::is_arithmetic_v<ElementType> &&
-             std::is_arithmetic_v<OtherElementType>
-  auto operator-(const Tensor<OtherElementType, DeviceType, Dim> &other) const {
-    return venus::ops::sub(*this, other);
+  template <typename OtherType> auto operator-(OtherType &&other) const {
+    return venus::ops::sub(*this, std::forward<OtherType>(other));
   }
 
-  // Multiplication (element-wise)
-  template <typename OtherElementType>
-    requires std::is_arithmetic_v<ElementType> &&
-             std::is_arithmetic_v<OtherElementType>
-  auto operator*(const Tensor<OtherElementType, DeviceType, Dim> &other) const {
-    return venus::ops::mul(*this, other);
+  // Multiplication
+  template <typename OtherType> auto operator*(OtherType &&other) const {
+    return venus::ops::mul(*this, std::forward<OtherType>(other));
   }
 
-  // Division (element-wise)
-  template <typename OtherElementType>
-    requires std::is_arithmetic_v<ElementType> &&
-             std::is_arithmetic_v<OtherElementType>
-  auto operator/(const Tensor<OtherElementType, DeviceType, Dim> &other) const {
-    return venus::ops::div(*this, other);
+  // Division
+  template <typename OtherType> auto operator/(OtherType &&other) const {
+    return venus::ops::div(*this, std::forward<OtherType>(other));
   }
 
   //* Proxy pattern for indexing elements (know when I'm reading vs writing)
@@ -354,6 +343,7 @@ template <typename TElem, typename TDevice> class Tensor<TElem, TDevice, 0> {
 public:
   using ElementType = TElem;
   using DeviceType = TDevice;
+  static constexpr std::size_t Dimension = 0;
 
   friend struct LowLevelAccess<Tensor>;
 
@@ -367,7 +357,7 @@ public:
       : m_mem(std::move(p_mem)) {}
 
   const auto &Shape() const noexcept {
-    static const venus::Shape<0> shape;
+    static const venus::Shape<Dimension> shape;
     return shape;
   }
 
@@ -388,32 +378,24 @@ public:
     return Value() == tensor.Value();
   }
 
-  template <typename OtherElementType>
-    requires std::is_arithmetic_v<ElementType> &&
-             std::is_arithmetic_v<OtherElementType>
-  auto operator+(const Tensor<OtherElementType, DeviceType, 0> &other) const {
-    return venus::ops::add(*this, other);
+  // Addition
+  template <typename OtherType> auto operator+(OtherType &&other) const {
+    return venus::ops::add(*this, std::forward<OtherType>(other));
   }
 
-  template <typename OtherElementType>
-    requires std::is_arithmetic_v<ElementType> &&
-             std::is_arithmetic_v<OtherElementType>
-  auto operator-(const Tensor<OtherElementType, DeviceType, 0> &other) const {
-    return venus::ops::sub(*this, other);
+  // Subtraction
+  template <typename OtherType> auto operator-(OtherType &&other) const {
+    return venus::ops::sub(*this, std::forward<OtherType>(other));
   }
 
-  template <typename OtherElementType>
-    requires std::is_arithmetic_v<ElementType> &&
-             std::is_arithmetic_v<OtherElementType>
-  auto operator*(const Tensor<OtherElementType, DeviceType, 0> &other) const {
-    return venus::ops::mul(*this, other);
+  // Multiplication
+  template <typename OtherType> auto operator*(OtherType &&other) const {
+    return venus::ops::mul(*this, std::forward<OtherType>(other));
   }
 
-  template <typename OtherElementType>
-    requires std::is_arithmetic_v<ElementType> &&
-             std::is_arithmetic_v<OtherElementType>
-  auto operator/(const Tensor<OtherElementType, DeviceType, 0> &other) const {
-    return venus::ops::div(*this, other);
+  // Division
+  template <typename OtherType> auto operator/(OtherType &&other) const {
+    return venus::ops::div(*this, std::forward<OtherType>(other));
   }
 
   operator bool() const noexcept {
@@ -526,6 +508,38 @@ struct std::formatter<venus::Tensor<TElem, TDevice, Dim>> {
     return std::format_to(ctx.out(), "{}", oss.str());
   }
 };
+
+// Scalar-first Addition
+template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
+          std::size_t Dim>
+auto operator+(const Scalar &scalar,
+               const venus::Tensor<TElem, TDevice, Dim> &tensor) {
+  return venus::ops::add(scalar, tensor);
+}
+
+// Scalar-first Substraction
+template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
+          std::size_t Dim>
+auto operator-(const Scalar &scalar,
+               const venus::Tensor<TElem, TDevice, Dim> &tensor) {
+  return venus::ops::sub(scalar, tensor);
+}
+
+// Scalar-first Multiplication
+template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
+          std::size_t Dim>
+auto operator*(const Scalar &scalar,
+               const venus::Tensor<TElem, TDevice, Dim> &tensor) {
+  return venus::ops::mul(scalar, tensor);
+}
+
+// Scalar-fist Division
+template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
+          std::size_t Dim>
+auto operator/(const Scalar &scalar,
+               const venus::Tensor<TElem, TDevice, Dim> &tensor) {
+  return venus::ops::div(scalar, tensor);
+}
 
 #undef DEFINE_COMPOUND_OPERATOR
 #undef DEFINE_POST_OPERATOR
