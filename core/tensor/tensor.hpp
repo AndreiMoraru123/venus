@@ -5,6 +5,7 @@
 #include "../traits.hpp"
 #include "eager_ops.hpp"
 #include "shape.hpp"
+#include <algorithm>
 #include <cassert>
 #include <compare>
 #include <concepts>
@@ -185,8 +186,11 @@ public:
 
   auto HasUniqueMemory() const -> bool { return not m_mem.IsShared(); }
 
-  auto operator==(const Tensor &tensor) const -> bool {
-    return (m_shape == tensor.m_shape) && (m_mem == tensor.m_mem);
+  auto operator==(const Tensor &other) const -> bool {
+    if (m_shape != other.Shape()) {
+      return false;
+    }
+    return std::ranges::equal(*this, other);
   }
 
   // Addition
@@ -211,6 +215,14 @@ public:
              std::is_arithmetic_v<OtherElementType>
   auto operator*(const Tensor<OtherElementType, DeviceType, Dim> &other) const {
     return venus::ops::mul(*this, other);
+  }
+
+  // Division (element-wise)
+  template <typename OtherElementType>
+    requires std::is_arithmetic_v<ElementType> &&
+             std::is_arithmetic_v<OtherElementType>
+  auto operator/(const Tensor<OtherElementType, DeviceType, Dim> &other) const {
+    return venus::ops::div(*this, other);
   }
 
   //* Proxy pattern for indexing elements (know when I'm reading vs writing)
@@ -395,6 +407,13 @@ public:
              std::is_arithmetic_v<OtherElementType>
   auto operator*(const Tensor<OtherElementType, DeviceType, 0> &other) const {
     return venus::ops::mul(*this, other);
+  }
+
+  template <typename OtherElementType>
+    requires std::is_arithmetic_v<ElementType> &&
+             std::is_arithmetic_v<OtherElementType>
+  auto operator/(const Tensor<OtherElementType, DeviceType, 0> &other) const {
+    return venus::ops::div(*this, other);
   }
 
   operator bool() const noexcept {

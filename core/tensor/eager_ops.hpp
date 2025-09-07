@@ -101,6 +101,18 @@ auto mul(const Tensor<Elem1, Dev1, Dim1> &t1,
   return detail::binary_elementwise_op(std::multiplies{}, t1, t2);
 }
 
+// Division (element-wise)
+template <template <typename, typename, std::size_t> class Tensor,
+          typename Elem1, typename Dev1, std::size_t Dim1, typename Elem2,
+          typename Dev2, std::size_t Dim2>
+  requires VenusTensor<Tensor<Elem1, Dev1, Dim1>> &&
+           VenusTensor<Tensor<Elem2, Dev2, Dim2>> &&
+           std::is_arithmetic_v<Elem1> && std::is_arithmetic_v<Elem2>
+auto div(const Tensor<Elem1, Dev1, Dim1> &t1,
+         const Tensor<Elem2, Dev2, Dim2> &t2) {
+  return detail::binary_elementwise_op(std::divides{}, t1, t2);
+}
+
 template <template <typename, typename, std::size_t> class Tensor,
           typename Elem, typename Dev, std::size_t Dim, typename Fn>
   requires VenusTensor<Tensor<Elem, Dev, Dim>> && std::is_arithmetic_v<Elem>
