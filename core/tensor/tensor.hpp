@@ -214,6 +214,12 @@ public:
     return venus::ops::div(*this, std::forward<OtherType>(other));
   }
 
+  // Dot product
+  template <typename OtherElementType>
+  auto dot(const Tensor<OtherElementType, DeviceType, Dim> &other) const {
+    return venus::ops::dot(*this, other);
+  }
+
   //* Proxy pattern for indexing elements (know when I'm reading vs writing)
   //? Price to pay: have to specify all possible operator overloads that I want
   class ElementProxy {
@@ -396,6 +402,12 @@ public:
   // Division
   template <typename OtherType> auto operator/(OtherType &&other) const {
     return venus::ops::div(*this, std::forward<OtherType>(other));
+  }
+
+  // Dot product
+  template <typename OtherElementType>
+  auto dot(const Tensor<OtherElementType, DeviceType, Dimension> &other) const {
+    return venus::ops::dot(*this, other);
   }
 
   operator bool() const noexcept {

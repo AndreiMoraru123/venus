@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <concepts>
 #include <functional>
+#include <numeric>
 #include <ranges>
 #include <tuple>
 #include <type_traits>
@@ -220,5 +221,20 @@ auto div(T1 &&t1, T2 &&t2) {
   else if constexpr (ScalarTensor<T1> && ScalarTensor<T2>) {
     return detail::binary_elementwise_op(std::divides{}, t1, t2);
   }
+}
+
+// Dot product
+template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
+          typename Dev1, Scalar Elem2, typename Dev2, std::size_t Dim1,
+          std::size_t Dim2>
+  requires VenusTensor<Tensor<Elem1, Dev1, Dim1>> &&
+           VenusTensor<Tensor<Elem2, Dev2, Dim2>>
+auto dot(const Tensor<Elem1, Dev1, Dim1> &t1,
+         const Tensor<Elem2, Dev2, Dim2> &t2) {
+  detail::validate_binary_op(t1, t2);
+  using ResultElementType = std::common_type_t<Elem1, Elem2>;
+  auto product =
+      std::inner_product(t1.begin(), t1.end(), t2.begin(), ResultElementType{});
+  return Tensor<ResultElementType, Dev1, 0>(product);
 }
 } // namespace venus::ops

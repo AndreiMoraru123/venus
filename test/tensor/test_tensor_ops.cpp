@@ -111,4 +111,24 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
     REQUIRE(res[1, 1] == 15.0f); // 5 * 3
     REQUIRE(res[2, 2] == 27.0f); // 9 * 3
   }
+
+  SECTION("Dot product") {
+    auto x = Tensor<int, Device::CPU, 1>(3);
+    auto y = Tensor<float, Device::CPU, 1>(3);
+
+#if _cpp_lib_ranges >= 202110L
+    std::ranges::iota(x, 1);
+    std::ranges::iota(y, 1);
+#else
+    std::iota(x.begin(), x.end(), 1);
+    std::iota(y.begin(), y.end(), 1);
+#endif
+
+    auto z = x.dot(y);
+
+    STATIC_REQUIRE(
+        std::is_same_v<decltype(z)::ElementType, float>); // type promotion
+    REQUIRE(z.Value() == 14.0f); // 1 * 1 + 2 * 2 + 3 * 3
+    REQUIRE(z == y.dot(x));      // commutative
+  }
 }
