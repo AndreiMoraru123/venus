@@ -237,4 +237,15 @@ auto dot(const Tensor<Elem1, Dev1, Dim1> &t1,
       std::inner_product(t1.begin(), t1.end(), t2.begin(), ResultElementType{});
   return Tensor<ResultElementType, Dev1, 0>(product);
 }
+
+template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+          Scalar Idx, typename Dev, std::size_t Dim>
+  requires VenusTensor<Tensor<Elem, Dev, Dim>>
+auto iota(Tensor<Elem, Dev, Dim> tensor, Idx i) {
+#if _cpp_lib_ranges >= 202110L
+  std::ranges::iota(tensor, i);
+#else
+  std::iota(tensor.begin(), tensor.end(), i);
+#endif
+}
 } // namespace venus::ops

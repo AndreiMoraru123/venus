@@ -41,14 +41,8 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
     auto x = Tensor<int, Device::CPU, 2>(3, 3);
     auto y = Tensor<float, Device::CPU, 2>(3, 3);
 
-#if _cpp_lib_ranges >= 202110L
-    std::ranges::iota(x, 1);
-    std::ranges::iota(y, 1);
-    std::ranges::iota(expected, 1);
-#else
-    std::iota(x.begin(), x.end(), 1);
-    std::iota(y.begin(), y.end(), 1);
-#endif
+    venus::ops::iota(x, 1);
+    venus::ops::iota(y, 1);
 
     using TensorOp = std::function<decltype(x + y)(decltype(x), decltype(y))>;
     using ScalarOp = std::function<float(int, float)>;
@@ -111,11 +105,7 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
   SECTION("Tensor Transform") {
     auto tensor = Tensor<float, Device::CPU, 2>(3, 3);
 
-#if _cpp_lib_ranges >= 202110L
-    std::ranges::iota(tensor, 1);
-#else
-    std::iota(tensor.begin(), tensor.end(), 1);
-#endif
+    venus::ops::iota(tensor, 1);
 
     auto res = venus::ops::transform(tensor, [](auto &&t) { return t * 3; });
 
@@ -129,13 +119,8 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
     auto x = Tensor<int, Device::CPU, 1>(3);
     auto y = Tensor<float, Device::CPU, 1>(3);
 
-#if _cpp_lib_ranges >= 202110L
-    std::ranges::iota(x, 1);
-    std::ranges::iota(y, 1);
-#else
-    std::iota(x.begin(), x.end(), 1);
-    std::iota(y.begin(), y.end(), 1);
-#endif
+    venus::ops::iota(x, 1);
+    venus::ops::iota(y, 1);
 
     auto z = x.dot(y);
 

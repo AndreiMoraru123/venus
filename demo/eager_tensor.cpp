@@ -9,8 +9,8 @@ auto main() -> int {
   auto x = Tensor<float, Device::CPU, 1>(7);
   auto y = Tensor<float, Device::CPU, 1>(7);
 
-  std::ranges::iota(x, 1); // 1, 2, 3, 4, 5, 6, 7
-  std::ranges::iota(y, 1); // 1, 2, 3, 4, 5, 6, 7
+  venus::ops::iota(x, 1);
+  venus::ops::iota(y, 1);
 
   auto z = x.dot(y);
   std::println("{}", z); // venus::Tensor(140.00)
