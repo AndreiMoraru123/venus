@@ -31,9 +31,9 @@ concept MDTensor = VenusTensor<std::remove_cvref_t<T>> &&
                    (std::remove_cvref_t<T>::Dimension > 0);
 
 template <typename T>
-concept BoolTensor =
+concept BooleanLikeTensor =
     VenusTensor<std::remove_cvref_t<T>> &&
-    std::is_same_v<typename std::remove_cvref_t<T>::ElementType, bool>;
+    std::is_convertible_v<typename std::remove_cvref_t<T>::ElementType, bool>;
 } // namespace venus
 
 #define REGISTER_BINARY_OP(op_name, std_op, op_symbol)                         \
@@ -177,6 +177,18 @@ REGISTER_BINARY_OP(lte, less_equal, <=)
 REGISTER_BINARY_OP(eq, equal_to, ==)
 REGISTER_BINARY_OP(neq, not_equal_to, !=)
 
+// Sort
+template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+          typename Dev, std::size_t Dim>
+  requires VenusTensor<Tensor<Elem, Dev, Dim>>
+auto sort(const Tensor<Elem, Dev, Dim> &tensor) {
+  static_assert(std::is_same_v<Dev, Device::CPU>,
+                "Sort is currently only supported on CPU");
+  auto copy = tensor.Clone();
+  std::ranges::sort(copy);
+  return copy;
+}
+
 // All equal
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
           typename Dev1, std::size_t Dim1, Scalar Elem2, typename Dev2,
@@ -229,16 +241,16 @@ auto fill(Tensor<Elem, Dev, Dim> tensor, Idx i) {
 #endif
 }
 
-template <template <typename, typename, std::size_t> class Tensor, typename Dev,
-          std::size_t Dim>
-  requires VenusTensor<Tensor<bool, Dev, Dim>>
-auto where(const Tensor<bool, Dev, Dim> &condition) {
+template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+          typename Dev, std::size_t Dim>
+  requires BooleanLikeTensor<Tensor<Elem, Dev, Dim>>
+auto where(const Tensor<Elem, Dev, Dim> &condition) {
   using ResultTensor = Tensor<std::size_t, Dev, Dim>;
   ResultTensor result(condition.Shape());
 
   std::size_t idx = 0;
   for (const auto &val : condition) {
-    if (val) {
+    if (static_cast<bool>(val)) {
       result.LowLevel().RawMemory()[idx] = idx;
     }
     ++idx;

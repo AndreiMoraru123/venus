@@ -177,6 +177,14 @@ public:
     }
   }
 
+  explicit Tensor(std::initializer_list<ElementType> init_list)
+      : m_shape(init_list.size()), m_mem(init_list.size()) {
+    static_assert(Dim == 1,
+                  "Initializer list constructor is only available for 1D "
+                  "tensors");
+    std::copy(init_list.begin(), init_list.end(), m_mem.RawMemory());
+  }
+
   template <typename... Dims>
     requires(sizeof...(Dims) == Dim) &&
             (std::is_convertible_v<Dims, std::size_t> && ...)
@@ -186,6 +194,12 @@ public:
   const auto &Shape() const noexcept { return m_shape; }
 
   auto HasUniqueMemory() const -> bool { return not m_mem.IsShared(); }
+
+  auto Clone() const -> Tensor {
+    Tensor copy_tensor(m_shape);
+    std::ranges::copy(*this, copy_tensor.begin());
+    return copy_tensor;
+  }
 
   // Addition
   template <typename OtherType> auto operator+(OtherType &&other) const {
