@@ -3,6 +3,7 @@
 #include "core/memory/device.hpp"
 #include <algorithm>
 #include <concepts>
+#include <cstddef>
 #include <functional>
 #include <numeric>
 #include <ranges>
@@ -27,6 +28,11 @@ concept ScalarTensor = VenusTensor<std::remove_cvref_t<T>> &&
 template <typename T>
 concept MDTensor = VenusTensor<std::remove_cvref_t<T>> &&
                    (std::remove_cvref_t<T>::Dimension > 0);
+
+template <typename T>
+concept BoolTensor =
+    VenusTensor<std::remove_cvref_t<T>> &&
+    std::is_same_v<typename std::remove_cvref_t<T>::ElementType, bool>;
 } // namespace venus
 
 namespace venus::ops {
@@ -223,6 +229,36 @@ auto div(T1 &&t1, T2 &&t2) {
   }
 }
 
+// Greater than
+template <typename T1, typename T2>
+  requires(Scalar<T1> || VenusTensor<T1>) && (Scalar<T2> || VenusTensor<T2>)
+auto gt(T1 &&t1, T2 &&t2) {
+  // Tensor / Tensor
+  if constexpr (MDTensor<T1> && MDTensor<T2>) {
+    return detail::binary_elementwise_op(std::greater{}, t1, t2);
+  }
+  // Tensor / Scalar
+  else if constexpr (MDTensor<T1> && Scalar<T2>) {
+    return transform(t1, [s = t2](auto &&t) { return t > s; });
+  }
+  // Scalar / Tensor
+  else if constexpr (Scalar<T1> && MDTensor<T2>) {
+    return transform(t2, [s = t1](auto &&t) { return s > t; });
+  }
+  // Tensor / ScalarTensor
+  else if constexpr (MDTensor<T1> && ScalarTensor<T2>) {
+    return gt(t1, t2.Value());
+  }
+  // ScalarTensor / Tensor
+  else if constexpr (ScalarTensor<T1> && MDTensor<T2>) {
+    return gt(t1.Value(), t2);
+  }
+  // ScalarTensor / ScalarTensor
+  else if constexpr (ScalarTensor<T1> && ScalarTensor<T2>) {
+    return detail::binary_elementwise_op(std::greater{}, t1, t2);
+  }
+}
+
 // Dot product
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
           typename Dev1, Scalar Elem2, typename Dev2, std::size_t Dim1,
@@ -248,4 +284,57 @@ auto iota(Tensor<Elem, Dev, Dim> tensor, Idx i) {
   std::iota(tensor.begin(), tensor.end(), i);
 #endif
 }
+
+template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+          Scalar Idx, typename Dev, std::size_t Dim>
+  requires VenusTensor<Tensor<Elem, Dev, Dim>>
+auto fill(Tensor<Elem, Dev, Dim> tensor, Idx i) {
+#if _cpp_lib_ranges >= 202110L
+  std::ranges::fill(tensor, i);
+#else
+  std::fill(tensor.begin(), tensor.end(), i);
+#endif
+}
+
+template <template <typename, typename, std::size_t> class Tensor, typename Dev,
+          std::size_t Dim>
+  requires VenusTensor<Tensor<bool, Dev, Dim>>
+auto where(const Tensor<bool, Dev, Dim> &condition) {
+  using ResultTensor = Tensor<std::size_t, Dev, Dim>;
+  ResultTensor result(condition.Shape());
+
+  std::size_t idx = 0;
+  for (const auto &val : condition) {
+    if (val) {
+      result.LowLevel().RawMemory()[idx] = idx;
+    }
+    ++idx;
+  }
+
+  return result;
+}
+
+template <template <typename, typename, std::size_t> class Tensor,
+          typename Dev1, std::size_t Dim1, typename Elem2, typename Dev2,
+          std::size_t Dim2, typename Elem3, typename Dev3, std::size_t Dim3>
+  requires VenusTensor<Tensor<bool, Dev1, Dim1>> &&
+           VenusTensor<Tensor<Elem2, Dev2, Dim2>> &&
+           VenusTensor<Tensor<Elem3, Dev3, Dim3>>
+auto where(const Tensor<bool, Dev1, Dim1> &condition,
+           const Tensor<Elem2, Dev2, Dim2> &t_true,
+           const Tensor<Elem3, Dev3, Dim3> &t_false) {
+  detail::validate_binary_op(condition, t_true);
+  detail::validate_binary_op(condition, t_false);
+  detail::validate_binary_op(t_true, t_false);
+
+  using ResultTensor = Tensor<Elem2, Dev2, Dim2>;
+  ResultTensor result(t_true.Shape());
+
+  result = std::transform(
+      condition.begin(), condition.end(), t_true.begin(), t_false.begin(),
+      result.begin(), [](bool cond, Elem2 t, Elem3 f) { return cond ? t : f; });
+
+  return result;
+}
+
 } // namespace venus::ops

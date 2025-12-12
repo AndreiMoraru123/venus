@@ -44,7 +44,7 @@
   }
 
 #define DEFINE_COMPOUND_OPERATOR(op)                                           \
-  ElementProxy &operator op##=(const ElementType & value) {                    \
+  ElementProxy &operator op## = (const ElementType &value) {                   \
     if (not m_tensor.HasUniqueMemory()) {                                      \
       throw std::runtime_error("Cannot write to shared tensor");               \
     }                                                                          \
@@ -212,6 +212,11 @@ public:
   // Division
   template <typename OtherType> auto operator/(OtherType &&other) const {
     return venus::ops::div(*this, std::forward<OtherType>(other));
+  }
+
+  // Greater than
+  template <typename OtherType> auto operator>(OtherType &&other) const {
+    return venus::ops::gt(*this, other);
   }
 
   // Dot product
