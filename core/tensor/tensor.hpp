@@ -18,13 +18,13 @@
 #include <type_traits>
 #include <utility>
 
-#define DEFINE_SCALAR_COMPARISON(op)                                           \
+#define REGISTER_SCALAR_OP(op)                                                 \
   auto operator op(const ElementType &element) const noexcept                  \
       -> Tensor<bool, DeviceType, 0> {                                         \
     return Tensor<bool, DeviceType, 0>(Value() op element);                    \
   }
 
-#define DEFINE_PRE_OPERATOR(op)                                                \
+#define REGISTER_PRE_OPERATOR(op)                                              \
   ElementProxy &operator op() {                                                \
     if (not m_tensor.HasUniqueMemory()) {                                      \
       throw std::runtime_error("Cannot write to shared tensor");               \
@@ -33,7 +33,7 @@
     return *this;                                                              \
   }
 
-#define DEFINE_POST_OPERATOR(op)                                               \
+#define REGISTER_POST_OPERATOR(op)                                             \
   ElementType operator op(int) {                                               \
     if (not m_tensor.HasUniqueMemory()) {                                      \
       throw std::runtime_error("Cannot write to shared tensor");               \
@@ -43,7 +43,7 @@
     return old_value;                                                          \
   }
 
-#define DEFINE_COMPOUND_OPERATOR(op)                                           \
+#define REGISTER_OPERATOR_EQUAL(op)                                            \
   ElementProxy &operator op## = (const ElementType &value) {                   \
     if (not m_tensor.HasUniqueMemory()) {                                      \
       throw std::runtime_error("Cannot write to shared tensor");               \
@@ -314,16 +314,16 @@ public:
       return static_cast<U>(m_element);
     }
 
-    DEFINE_COMPOUND_OPERATOR(+)
-    DEFINE_COMPOUND_OPERATOR(-)
-    DEFINE_COMPOUND_OPERATOR(*)
-    DEFINE_COMPOUND_OPERATOR(/)
-    DEFINE_COMPOUND_OPERATOR(%)
+    REGISTER_OPERATOR_EQUAL(+)
+    REGISTER_OPERATOR_EQUAL(-)
+    REGISTER_OPERATOR_EQUAL(*)
+    REGISTER_OPERATOR_EQUAL(/)
+    REGISTER_OPERATOR_EQUAL(%)
 
-    DEFINE_PRE_OPERATOR(++)
-    DEFINE_PRE_OPERATOR(--)
-    DEFINE_POST_OPERATOR(++)
-    DEFINE_POST_OPERATOR(--)
+    REGISTER_PRE_OPERATOR(++)
+    REGISTER_PRE_OPERATOR(--)
+    REGISTER_POST_OPERATOR(++)
+    REGISTER_POST_OPERATOR(--)
   };
 
   // Tensor indexing
@@ -455,12 +455,12 @@ public:
     }
   }
 
-  DEFINE_SCALAR_COMPARISON(==)
-  DEFINE_SCALAR_COMPARISON(!=)
-  DEFINE_SCALAR_COMPARISON(<)
-  DEFINE_SCALAR_COMPARISON(<=)
-  DEFINE_SCALAR_COMPARISON(>)
-  DEFINE_SCALAR_COMPARISON(>=)
+  REGISTER_SCALAR_OP(==)
+  REGISTER_SCALAR_OP(!=)
+  REGISTER_SCALAR_OP(<)
+  REGISTER_SCALAR_OP(<=)
+  REGISTER_SCALAR_OP(>)
+  REGISTER_SCALAR_OP(>=)
 
   auto EvalRegister() const;
 
@@ -590,7 +590,7 @@ auto operator/(const Scalar &scalar,
   return venus::ops::div(scalar, tensor);
 }
 
-#undef DEFINE_COMPOUND_OPERATOR
-#undef DEFINE_POST_OPERATOR
-#undef DEFINE_POST_OPERATOR
-#undef DEFINE_SCALAR_COMPARISON
+#undef REGISTER_OPERATOR_EQUAL
+#undef REGISTER_POST_OPERATOR
+#undef REGISTER_PRE_OPERATOR
+#undef REGISTER_SCALAR_OP
