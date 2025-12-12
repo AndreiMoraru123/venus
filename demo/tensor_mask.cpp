@@ -20,4 +20,10 @@ auto main() -> int {
 
   auto w = venus::ops::where(x > 3, x, y);
   std::println("{}", w);
+
+  auto k = venus::ops::where(x > 3, 2.0f, -1.0f);
+  std::println("{}", k);
+
+  auto l = venus::ops::where(x > 3, y, -1.0f);
+  std::println("{}", l);
 }

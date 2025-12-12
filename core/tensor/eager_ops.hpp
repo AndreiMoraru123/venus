@@ -9,6 +9,7 @@
 #include <ranges>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 
 namespace venus {
 template <typename T>
@@ -346,20 +347,56 @@ auto where(const Tensor<bool, Dev, Dim> &condition) {
   return result;
 }
 
-template <template <typename, typename, std::size_t> class Tensor,
-          typename Dev1, std::size_t Dim1, typename Elem2, typename Dev2,
-          std::size_t Dim2, typename Elem3, typename Dev3, std::size_t Dim3>
-  requires VenusTensor<Tensor<bool, Dev1, Dim1>> &&
-           VenusTensor<Tensor<Elem2, Dev2, Dim2>> &&
-           VenusTensor<Tensor<Elem3, Dev3, Dim3>>
-auto where(const Tensor<bool, Dev1, Dim1> &condition,
-           const Tensor<Elem2, Dev2, Dim2> &t_true,
-           const Tensor<Elem3, Dev3, Dim3> &t_false) {
-  return detail::ternary_elementwise_op(
-      [](bool cond, auto &&t_true, auto &&t_false) {
-        return cond ? t_true : t_false;
-      },
-      condition, t_true, t_false);
+template <typename T1, typename T2, typename T3>
+  requires VenusTensor<T1> && (VenusTensor<T2> || Scalar<T2>) &&
+           (VenusTensor<T3> || Scalar<T3>)
+auto where(T1 &&t1, T2 &&t2, T3 &&t3) {
+  auto v1 = [&] {
+    if constexpr (ScalarTensor<T1>) {
+      return t1.Value();
+    } else {
+      return std::forward<T1>(t1);
+    }
+  }();
+
+  auto v2 = [&] {
+    if constexpr (ScalarTensor<T2>) {
+      return t2.Value();
+    } else {
+      return std::forward<T2>(t2);
+    }
+  }();
+
+  auto v3 = [&] {
+    if constexpr (ScalarTensor<T3>) {
+      return t3.Value();
+    } else {
+      return std::forward<T3>(t3);
+    }
+  }();
+
+  // Tensor, Tensor, Tensor
+  if constexpr (MDTensor<T1> && MDTensor<T2> && MDTensor<T3>) {
+    return detail::ternary_elementwise_op(
+        [](auto &&a, auto &&b, auto &&c) { return a ? b : c; }, v1, v2, v3);
+  }
+
+  // Tensor, Scalar, Scalar
+  else if constexpr (MDTensor<T1> && Scalar<T2> && Scalar<T3>) {
+    return transform(v1, [s2 = v2, s3 = v3](auto &&a) { return a ? s2 : s3; });
+  }
+
+  // Tensor, Tensor, Scalar
+  else if constexpr (MDTensor<T1> && MDTensor<T2> && Scalar<T3>) {
+    return detail::binary_elementwise_op(
+        [s3 = v3](auto &&a, auto &&b) { return a ? b : s3; }, v1, v2);
+  }
+
+  // Tensor, Scalar, Tensor
+  else if constexpr (MDTensor<T1> && Scalar<T2> && MDTensor<T3>) {
+    return detail::binary_elementwise_op(
+        [s2 = v2](auto &&a, auto &&c) { return a ? s2 : c; }, v1, v3);
+  }
 }
 
 } // namespace venus::ops
