@@ -65,16 +65,16 @@ auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Dim1> &t1,
                            const Tensor<Elem2, Dev2, Dim2> &t2) {
 
   validate_binary_op(t1, t2);
+  using ResultElementType = std::common_type_t<Elem1, Elem2>;
 
   if constexpr (Dim1 == 0 && Dim2 == 0) {
-    using ResultElementType = std::common_type_t<Elem1, Elem2>;
     return Tensor<ResultElementType, Dev1, 0>(op(t1.Value(), t2.Value()));
   } else {
     if (t1.Shape() != t2.Shape()) {
       throw std::invalid_argument("Tensor shapes must match");
     }
 
-    using ResultTensor = Tensor<std::common_type_t<Elem1, Elem2>, Dev1, Dim1>;
+    using ResultTensor = Tensor<ResultElementType, Dev1, Dim1>;
     ResultTensor result(t1.Shape());
     auto computation =
         std::views::zip(t1, t2) | std::views::transform([op](auto &&tuple) {
@@ -327,13 +327,17 @@ auto where(const Tensor<bool, Dev1, Dim1> &condition,
   detail::validate_binary_op(condition, t_false);
   detail::validate_binary_op(t_true, t_false);
 
-  using ResultTensor = Tensor<Elem2, Dev2, Dim2>;
+  using ResultElementType = std::common_type_t<Elem2, Elem3>;
+  using ResultTensor = Tensor<ResultElementType, Dev2, Dim2>;
   ResultTensor result(t_true.Shape());
 
-  result = std::transform(
-      condition.begin(), condition.end(), t_true.begin(), t_false.begin(),
-      result.begin(), [](bool cond, Elem2 t, Elem3 f) { return cond ? t : f; });
+  auto computation = std::views::zip(condition, t_true, t_false) |
+                     std::views::transform([](auto &&tuple) {
+                       const auto &[cond, val_true, val_false] = tuple;
+                       return cond ? val_true : val_false;
+                     });
 
+  std::ranges::copy(computation, result.begin());
   return result;
 }
 

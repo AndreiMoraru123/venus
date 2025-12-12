@@ -17,4 +17,7 @@ auto main() -> int {
 
   auto z = venus::ops::where(x > 3);
   std::println("{}", z);
+
+  auto w = venus::ops::where(x > 3, x, y);
+  std::println("{}", w);
 }
