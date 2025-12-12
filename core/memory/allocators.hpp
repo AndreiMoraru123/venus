@@ -66,7 +66,14 @@ public:
       raw_buf = (T *)mem;
     }
 
-    std::memset(raw_buf, 0, p_elemSize);
+    if constexpr (std::is_trivially_constructible_v<T>) {
+      std::memset(raw_buf, 0, p_elemSize);
+    } else {
+      std::size_t count = p_elemSize / sizeof(T);
+      for (std::size_t i = 0; i < count; ++i) {
+        new (raw_buf + i) T();
+      }
+    }
     return std::shared_ptr<T>(raw_buf, Deleter(slot));
   }
 
