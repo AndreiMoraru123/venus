@@ -84,6 +84,38 @@ auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Dim1> &t1,
     return result;
   }
 }
+
+template <typename Op, template <typename, typename, std::size_t> class Tensor,
+          typename Elem1, typename Dev1, std::size_t Dim1, typename Elem2,
+          typename Dev2, std::size_t Dim2, typename Elem3, typename Dev3,
+          std::size_t Dim3>
+auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Dim1> &t1,
+                            const Tensor<Elem2, Dev2, Dim2> &t2,
+                            const Tensor<Elem3, Dev3, Dim3> &t3) {
+
+  validate_binary_op(t1, t2);
+  validate_binary_op(t2, t3);
+  using ResultElementType = std::common_type_t<Elem1, Elem2, Elem3>;
+
+  if constexpr (Dim1 == 0 && Dim2 == 0 && Dim3 == 0) {
+    return Tensor<ResultElementType, Dev1, 0>(
+        op(t1.Value(), t2.Value(), t3.Value()));
+  } else {
+    if (t1.Shape() != t2.Shape() || t2.Shape() != t3.Shape()) {
+      throw std::invalid_argument("Tensor shapes must match");
+    }
+
+    using ResultTensor = Tensor<ResultElementType, Dev1, Dim1>;
+    ResultTensor result(t1.Shape());
+    auto computation =
+        std::views::zip(t1, t2, t3) | std::views::transform([op](auto &&tuple) {
+          return std::apply(op, tuple);
+        });
+    std::ranges::copy(computation, result.begin());
+    return result;
+  }
+}
+
 } // namespace detail
 
 // Transform
@@ -323,22 +355,11 @@ template <template <typename, typename, std::size_t> class Tensor,
 auto where(const Tensor<bool, Dev1, Dim1> &condition,
            const Tensor<Elem2, Dev2, Dim2> &t_true,
            const Tensor<Elem3, Dev3, Dim3> &t_false) {
-  detail::validate_binary_op(condition, t_true);
-  detail::validate_binary_op(condition, t_false);
-  detail::validate_binary_op(t_true, t_false);
-
-  using ResultElementType = std::common_type_t<Elem2, Elem3>;
-  using ResultTensor = Tensor<ResultElementType, Dev2, Dim2>;
-  ResultTensor result(t_true.Shape());
-
-  auto computation = std::views::zip(condition, t_true, t_false) |
-                     std::views::transform([](auto &&tuple) {
-                       const auto &[cond, val_true, val_false] = tuple;
-                       return cond ? val_true : val_false;
-                     });
-
-  std::ranges::copy(computation, result.begin());
-  return result;
+  return detail::ternary_elementwise_op(
+      [](bool cond, auto &&t_true, auto &&t_false) {
+        return cond ? t_true : t_false;
+      },
+      condition, t_true, t_false);
 }
 
 } // namespace venus::ops
