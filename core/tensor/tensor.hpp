@@ -187,13 +187,6 @@ public:
 
   auto HasUniqueMemory() const -> bool { return not m_mem.IsShared(); }
 
-  auto operator==(const Tensor &other) const -> bool {
-    if (m_shape != other.Shape()) {
-      return false;
-    }
-    return std::ranges::equal(*this, other);
-  }
-
   // Addition
   template <typename OtherType> auto operator+(OtherType &&other) const {
     return venus::ops::add(*this, std::forward<OtherType>(other));
@@ -217,6 +210,31 @@ public:
   // Greater than
   template <typename OtherType> auto operator>(OtherType &&other) const {
     return venus::ops::gt(*this, other);
+  }
+
+  // Greater or equal
+  template <typename OtherType> auto operator>=(OtherType &&other) const {
+    return venus::ops::gte(*this, other);
+  }
+
+  // Less than
+  template <typename OtherType> auto operator<(OtherType &&other) const {
+    return venus::ops::lt(*this, other);
+  }
+
+  // Less or equal
+  template <typename OtherType> auto operator<=(OtherType &&other) const {
+    return venus::ops::lte(*this, other);
+  }
+
+  // Equal
+  template <typename OtherType> auto operator==(OtherType &&other) const {
+    return venus::ops::eq(*this, other);
+  }
+
+  // Not equal
+  template <typename OtherType> auto operator!=(OtherType &&other) const {
+    return venus::ops::neq(*this, other);
   }
 
   // Dot product

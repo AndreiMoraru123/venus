@@ -36,6 +36,30 @@ concept BoolTensor =
     std::is_same_v<typename std::remove_cvref_t<T>::ElementType, bool>;
 } // namespace venus
 
+#define REGISTER_BINARY_OP(op_name, std_op, op_symbol)                         \
+  template <typename T1, typename T2>                                          \
+    requires(Scalar<T1> || VenusTensor<T1>) && (Scalar<T2> || VenusTensor<T2>) \
+  auto op_name(T1 &&t1, T2 &&t2) {                                             \
+    /* Tensor op Tensor */                                                     \
+    if constexpr (MDTensor<T1> && MDTensor<T2>) {                              \
+      return detail::binary_elementwise_op(std::std_op{}, t1, t2);             \
+    } /* Tensor op Scalar */                                                   \
+    else if constexpr (MDTensor<T1> && Scalar<T2>) {                           \
+      return transform(t1, [s = t2](auto &&t) { return t op_symbol s; });      \
+    } /* Scalar op Tensor */                                                   \
+    else if constexpr (Scalar<T1> && MDTensor<T2>) {                           \
+      return transform(t2, [s = t1](auto &&t) { return s op_symbol t; });      \
+    } /* Tensor op ScalarTensor */                                             \
+    else if constexpr (MDTensor<T1> && ScalarTensor<T2>) {                     \
+      return op_name(t1, t2.Value());                                          \
+    } /* ScalarTensor op Tensor */                                             \
+    else if constexpr (ScalarTensor<T1> && MDTensor<T2>) {                     \
+      return op_name(t1.Value(), t2);                                          \
+    } /* ScalarTensor op ScalarTensor */                                       \
+    else if constexpr (ScalarTensor<T1> && ScalarTensor<T2>) {                 \
+      return detail::binary_elementwise_op(std::std_op{}, t1, t2);             \
+    }                                                                          \
+  }
 namespace venus::ops {
 
 // Details =====================================================
@@ -142,154 +166,30 @@ auto transform(const Tensor<Elem, Dev, Dim> &tensor, Fn &&fn) {
   }
 }
 
-// Addition
-template <typename T1, typename T2>
-  requires(Scalar<T1> || VenusTensor<T1>) && (Scalar<T2> || VenusTensor<T2>)
-auto add(T1 &&t1, T2 &&t2) {
-  // Tensor + Tensor
-  if constexpr (MDTensor<T1> && MDTensor<T2>) {
-    return detail::binary_elementwise_op(std::plus{}, t1, t2);
-  }
-  // Tensor + Scalar
-  else if constexpr (MDTensor<T1> && Scalar<T2>) {
-    return transform(t1, [s = t2](auto &&t) { return t + s; });
-  }
-  // Scalar + Tensor
-  else if constexpr (Scalar<T1> && MDTensor<T2>) {
-    return transform(t2, [s = t1](auto &&t) { return s + t; });
-  }
-  // Tensor + ScalarTensor
-  else if constexpr (MDTensor<T1> && ScalarTensor<T2>) {
-    return add(t1, t2.Value());
-  }
-  // ScalarTensor + Tensor
-  else if constexpr (ScalarTensor<T1> && MDTensor<T2>) {
-    return add(t1.Value(), t2);
-  }
-  // ScalarTensor + ScalarTensor
-  else if constexpr (ScalarTensor<T1> && ScalarTensor<T2>) {
-    return detail::binary_elementwise_op(std::plus{}, t1, t2);
-  }
-}
+REGISTER_BINARY_OP(add, plus, +)
+REGISTER_BINARY_OP(sub, minus, -)
+REGISTER_BINARY_OP(mul, multiplies, *)
+REGISTER_BINARY_OP(div, divides, /)
+REGISTER_BINARY_OP(gt, greater, >)
+REGISTER_BINARY_OP(gte, greater_equal, >=)
+REGISTER_BINARY_OP(lt, less, <)
+REGISTER_BINARY_OP(lte, less_equal, <=)
+REGISTER_BINARY_OP(eq, equal_to, ==)
+REGISTER_BINARY_OP(neq, not_equal_to, !=)
 
-// Subtraction
-template <typename T1, typename T2>
-  requires(Scalar<T1> || VenusTensor<T1>) && (Scalar<T2> || VenusTensor<T2>)
-auto sub(T1 &&t1, T2 &&t2) {
-  // Tensor - Tensor
-  if constexpr (MDTensor<T1> && MDTensor<T2>) {
-    return detail::binary_elementwise_op(std::minus{}, t1, t2);
+// All equal
+template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
+          typename Dev1, std::size_t Dim1, Scalar Elem2, typename Dev2,
+          std::size_t Dim2>
+  requires VenusTensor<Tensor<Elem1, Dev1, Dim1>> &&
+           VenusTensor<Tensor<Elem2, Dev2, Dim2>>
+auto all_equal(const Tensor<Elem1, Dev1, Dim1> &t1,
+               const Tensor<Elem2, Dev2, Dim2> &t2) -> bool {
+  detail::validate_binary_op(t1, t2);
+  if (t1.Shape() != t2.Shape()) {
+    return false;
   }
-  // Tensor - Scalar
-  else if constexpr (MDTensor<T1> && Scalar<T2>) {
-    return transform(t1, [s = t2](auto &&t) { return t - s; });
-  }
-  // Scalar - Tensor
-  else if constexpr (Scalar<T1> && MDTensor<T2>) {
-    return transform(t2, [s = t1](auto &&t) { return s - t; });
-  }
-  // Tensor - ScalarTensor
-  else if constexpr (MDTensor<T1> && ScalarTensor<T2>) {
-    return sub(t1, t2.Value());
-  }
-  // ScalarTensor - Tensor
-  else if constexpr (ScalarTensor<T1> && MDTensor<T2>) {
-    return sub(t1.Value(), t2);
-  }
-  // ScalarTensor - ScalarTensor
-  else if constexpr (ScalarTensor<T1> && ScalarTensor<T2>) {
-    return detail::binary_elementwise_op(std::minus{}, t1, t2);
-  }
-}
-
-// Multiplication
-template <typename T1, typename T2>
-  requires(Scalar<T1> || VenusTensor<T1>) && (Scalar<T2> || VenusTensor<T2>)
-auto mul(T1 &&t1, T2 &&t2) {
-  // Tensor * Tensor
-  if constexpr (MDTensor<T1> && MDTensor<T2>) {
-    return detail::binary_elementwise_op(std::multiplies{}, t1, t2);
-  }
-  // Tensor * Scalar
-  else if constexpr (MDTensor<T1> && Scalar<T2>) {
-    return transform(t1, [s = t2](auto &&t) { return t * s; });
-  }
-  // Scalar * Tensor
-  else if constexpr (Scalar<T1> && MDTensor<T2>) {
-    return transform(t2, [s = t1](auto &&t) { return s * t; });
-  }
-  // Tensor * ScalarTensor
-  else if constexpr (MDTensor<T1> && ScalarTensor<T2>) {
-    return mul(t1, t2.Value());
-  }
-  // ScalarTensor * Tensor
-  else if constexpr (ScalarTensor<T1> && MDTensor<T2>) {
-    return mul(t1.Value(), t2);
-  }
-  // ScalarTensor * ScalarTensor
-  else if constexpr (ScalarTensor<T1> && ScalarTensor<T2>) {
-    return detail::binary_elementwise_op(std::multiplies{}, t1, t2);
-  }
-}
-
-// Division
-template <typename T1, typename T2>
-  requires(Scalar<T1> || VenusTensor<T1>) && (Scalar<T2> || VenusTensor<T2>)
-auto div(T1 &&t1, T2 &&t2) {
-  // Tensor / Tensor
-  if constexpr (MDTensor<T1> && MDTensor<T2>) {
-    return detail::binary_elementwise_op(std::divides{}, t1, t2);
-  }
-  // Tensor / Scalar
-  else if constexpr (MDTensor<T1> && Scalar<T2>) {
-    return transform(t1, [s = t2](auto &&t) { return t / s; });
-  }
-  // Scalar / Tensor
-  else if constexpr (Scalar<T1> && MDTensor<T2>) {
-    return transform(t2, [s = t1](auto &&t) { return s / t; });
-  }
-  // Tensor / ScalarTensor
-  else if constexpr (MDTensor<T1> && ScalarTensor<T2>) {
-    return div(t1, t2.Value());
-  }
-  // ScalarTensor / Tensor
-  else if constexpr (ScalarTensor<T1> && MDTensor<T2>) {
-    return div(t1.Value(), t2);
-  }
-  // ScalarTensor / ScalarTensor
-  else if constexpr (ScalarTensor<T1> && ScalarTensor<T2>) {
-    return detail::binary_elementwise_op(std::divides{}, t1, t2);
-  }
-}
-
-// Greater than
-template <typename T1, typename T2>
-  requires(Scalar<T1> || VenusTensor<T1>) && (Scalar<T2> || VenusTensor<T2>)
-auto gt(T1 &&t1, T2 &&t2) {
-  // Tensor / Tensor
-  if constexpr (MDTensor<T1> && MDTensor<T2>) {
-    return detail::binary_elementwise_op(std::greater{}, t1, t2);
-  }
-  // Tensor / Scalar
-  else if constexpr (MDTensor<T1> && Scalar<T2>) {
-    return transform(t1, [s = t2](auto &&t) { return t > s; });
-  }
-  // Scalar / Tensor
-  else if constexpr (Scalar<T1> && MDTensor<T2>) {
-    return transform(t2, [s = t1](auto &&t) { return s > t; });
-  }
-  // Tensor / ScalarTensor
-  else if constexpr (MDTensor<T1> && ScalarTensor<T2>) {
-    return gt(t1, t2.Value());
-  }
-  // ScalarTensor / Tensor
-  else if constexpr (ScalarTensor<T1> && MDTensor<T2>) {
-    return gt(t1.Value(), t2);
-  }
-  // ScalarTensor / ScalarTensor
-  else if constexpr (ScalarTensor<T1> && ScalarTensor<T2>) {
-    return detail::binary_elementwise_op(std::greater{}, t1, t2);
-  }
+  return std::ranges::equal(t1, t2);
 }
 
 // Dot product

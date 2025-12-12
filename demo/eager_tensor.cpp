@@ -1,4 +1,5 @@
 
+#include "core/tensor/eager_ops.hpp"
 #include "core/tensor/tensor.hpp"
 #include <cassert>
 #include <print>
@@ -18,8 +19,8 @@ auto main() -> int {
   assert(z == y.dot(x));
   assert(z == venus::ops::dot(x, y));
 
-  assert(x + y == venus::ops::add(x, y));
-  assert(x - y == venus::ops::sub(x, y));
-  assert(x * y == venus::ops::mul(x, y));
-  assert(x / y == venus::ops::div(x, y));
+  assert(venus::ops::all_equal(x + y, venus::ops::add(x, y)));
+  assert(venus::ops::all_equal(x - y, venus::ops::sub(x, y)));
+  assert(venus::ops::all_equal(x * y, venus::ops::mul(x, y)));
+  assert(venus::ops::all_equal(x / y, venus::ops::div(x, y)));
 }
