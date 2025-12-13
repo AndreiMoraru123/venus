@@ -129,4 +129,42 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
     REQUIRE(z.Value() == 14.0f); // 1 * 1 + 2 * 2 + 3 * 3
     REQUIRE(z == y.dot(x));      // commutative
   }
+
+  SECTION("Where - Condition Only") {
+    auto x = Tensor<float, Device::CPU, 2>(3, 2);
+    auto y = Tensor<float, Device::CPU, 2>(3, 2);
+
+    venus::ops::iota(x, 1);
+    venus::ops::fill(y, 1);
+
+    auto z = venus::ops::where(x > 3);
+
+    STATIC_REQUIRE(std::is_same_v<decltype(z)::ElementType, std::size_t>);
+    for (std::size_t i = 0; i < z.Shape().Count(); ++i) {
+      if (x.LowLevel().RawMemory()[i] > 3) {
+        REQUIRE(z.LowLevel().RawMemory()[i] == i);
+      } else {
+        REQUIRE(z.LowLevel().RawMemory()[i] == 0);
+      }
+    }
+  }
+
+  SECTION("Where - Ternary") {
+    auto x = Tensor<float, Device::CPU, 2>(3, 2);
+    auto y = Tensor<float, Device::CPU, 2>(3, 2);
+
+    venus::ops::iota(x, 1);
+    venus::ops::fill(y, 1);
+
+    auto z = venus::ops::where(x > 3, x, y);
+
+    STATIC_REQUIRE(std::is_same_v<decltype(z)::ElementType, float>);
+    for (std::size_t i = 0; i < z.Shape().Count(); ++i) {
+      if (x.LowLevel().RawMemory()[i] > 3) {
+        REQUIRE(z.LowLevel().RawMemory()[i] == x.LowLevel().RawMemory()[i]);
+      } else {
+        REQUIRE(z.LowLevel().RawMemory()[i] == y.LowLevel().RawMemory()[i]);
+      }
+    }
+  }
 }
