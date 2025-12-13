@@ -249,13 +249,15 @@ auto where(const Tensor<Elem, Dev, Dim> &condition) {
   using ResultTensor = Tensor<std::size_t, Dev, Dim>;
   ResultTensor result(condition.Shape());
 
-  std::size_t idx = 0;
-  for (const auto &val : condition) {
-    if (static_cast<bool>(val)) {
-      result.LowLevel().RawMemory()[idx] = idx;
-    }
-    ++idx;
-  }
+  auto result_ptr = result.LowLevel().RawMemory();
+  auto indices = std::views::iota(std::size_t{0}, condition.size());
+  std::ranges::for_each(std::views::zip(condition, indices),
+                        [result_ptr](auto &&pair) {
+                          const auto &[cond_val, idx] = pair;
+                          if (static_cast<bool>(cond_val)) {
+                            result_ptr[idx] = idx;
+                          }
+                        });
 
   return result;
 }
