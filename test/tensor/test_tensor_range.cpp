@@ -4,7 +4,6 @@
 
 #include <cmath>
 #include <core/tensor/tensor.hpp>
-#include <numeric>
 #include <ranges>
 #include <vector>
 

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "null_param.hpp"
-#include "traits.hpp"
 #include <cstddef>
 #include <type_traits>
 

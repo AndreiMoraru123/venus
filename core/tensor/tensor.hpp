@@ -2,7 +2,6 @@
 #include "../memory/contiguous_memory.hpp"
 #include "../memory/device.hpp"
 #include "../memory/lower_access.hpp"
-#include "../traits.hpp"
 #include "eager_ops.hpp"
 #include "shape.hpp"
 #include <algorithm>

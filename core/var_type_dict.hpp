@@ -1,6 +1,5 @@
 #include "null_param.hpp"
 #include "sequential.hpp"
-#include "traits.hpp"
 #include <cstddef>
 #include <memory>
 #include <stdexcept>

@@ -3,11 +3,9 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include <functional>
-#include <print>
 
 #include <cmath>
 #include <core/tensor/tensor.hpp>
-#include <numeric>
 #include <tuple>
 
 using namespace venus;
