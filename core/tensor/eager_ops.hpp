@@ -31,7 +31,7 @@ concept MDTensor = VenusTensor<std::remove_cvref_t<T>> &&
                    (std::remove_cvref_t<T>::Dimension > 0);
 
 template <typename T>
-concept BooleanLikeTensor =
+concept BoolTensor =
     VenusTensor<std::remove_cvref_t<T>> &&
     std::is_convertible_v<typename std::remove_cvref_t<T>::ElementType, bool>;
 } // namespace venus
@@ -243,7 +243,7 @@ auto fill(Tensor<Elem, Dev, Dim> tensor, Idx i) {
 
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
           typename Dev, std::size_t Dim>
-  requires BooleanLikeTensor<Tensor<Elem, Dev, Dim>>
+  requires BoolTensor<Tensor<Elem, Dev, Dim>>
 auto where(const Tensor<Elem, Dev, Dim> &condition) {
   using ResultTensor = Tensor<std::size_t, Dev, Dim>;
   ResultTensor result(condition.Shape());
