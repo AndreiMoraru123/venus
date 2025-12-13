@@ -60,6 +60,7 @@ concept BoolTensor =
       return detail::binary_elementwise_op(std::std_op{}, t1, t2);             \
     }                                                                          \
   }
+
 namespace venus::ops {
 
 // Details =====================================================
@@ -312,3 +313,5 @@ auto where(T1 &&t1, T2 &&t2, T3 &&t3) {
 }
 
 } // namespace venus::ops
+
+#undef REGISTER_BINARY_OP
