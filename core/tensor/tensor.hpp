@@ -163,8 +163,8 @@ public:
 
   friend struct LowLevelAccess<Tensor>;
 
-  explicit Tensor(const venus::Shape<Dim> &shape)
-      : m_shape(shape), m_mem(shape.Count()) {}
+  explicit Tensor(venus::Shape<Dim> shape)
+      : m_shape(std::move(shape)), m_mem(shape.Count()) {}
 
   explicit Tensor(ContiguousMemory<ElementType, DeviceType> p_mem,
                   venus::Shape<Dim> p_shape)
