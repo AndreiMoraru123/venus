@@ -1,10 +1,14 @@
 # Venus: Zero-Cost Tensors for Modern Deep Learning
 
-Venus is a deep learning library written in and for C++23.
+### _A deep learning library, written in C++, for the love of C++_
 
-### Demo
+Venus leverages C++20 ranges, providing both powerful optimizations and beautiful mathematical expressiveness:
 
-Solving the problem from https://www.youtube.com/watch?v=EEwREnUdbFs
+```cpp
+// demo/tensor_range.cpp
+```
+
+#### Solving the problem from https://www.youtube.com/watch?v=EEwREnUdbFs
 
 in PyTorch:
 
