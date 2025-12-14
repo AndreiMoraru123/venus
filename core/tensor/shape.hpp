@@ -98,8 +98,7 @@ public:
       }
     }
 
-    int dummy = 0;
-    auto span = CreateMdSpan(&dummy, std::make_index_sequence<dimNum>{});
+    auto span = CreateMdSpan(std::make_index_sequence<dimNum>{});
     return span.mapping()(indices...);
   }
 
@@ -120,8 +119,8 @@ private:
   std::array<std::size_t, Dim> m_dims{};
 
   template <std::size_t... Is>
-  constexpr auto CreateMdSpan(int *data, std::index_sequence<Is...>) const {
-    return std::mdspan<int, std::dextents<std::size_t, dimNum>>(data,
+  constexpr auto CreateMdSpan(std::index_sequence<Is...>) const {
+    return std::mdspan<int, std::dextents<std::size_t, dimNum>>(0,
                                                                 m_dims[Is]...);
   }
 };
