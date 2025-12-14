@@ -1,6 +1,7 @@
 
 #include "core/memory/contiguous_memory.hpp"
 #include "core/memory/device.hpp"
+#include "core/memory/lower_access.hpp"
 #include <cassert>
 #include <catch2/catch_test_macros.hpp>
 
@@ -73,15 +74,7 @@ TEST_CASE("Tensor API", "[tensor][api]") {
 
     const auto lowLevelTensor = tensor.LowLevel();
     REQUIRE(*lowLevelTensor.RawMemory() == 10.0f);
-    REQUIRE_FALSE(tensor.HasUniqueMemory());
-  }
-
-  SECTION("Low Level Access Discard") {
-    const auto tensor = Tensor<float, Device::CPU, 0>(10.0f);
-    REQUIRE(tensor.HasUniqueMemory());
-
-    (void)tensor.LowLevel(); // discard
-    REQUIRE(tensor.HasUniqueMemory());
+    REQUIRE(tensor.HasUniqueMemory()); // non-owning access
   }
 
   SECTION("Low Level Access Memory") {

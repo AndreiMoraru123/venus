@@ -161,6 +161,7 @@ public:
   static constexpr std::size_t Dimension = Dim;
 
   friend struct LowLevelAccess<Tensor>;
+  friend struct LowLevelAccess<const Tensor>;
 
   explicit Tensor(venus::Shape<Dim> shape)
       : m_shape(std::move(shape)), m_mem(shape.Count()) {}
@@ -346,10 +347,8 @@ public:
 
   auto EvalRegister() const;
 
-  auto LowLevel() const {
-    using ThisType = std::remove_cvref_t<decltype(*this)>;
-    return LowLevelAccess<ThisType>(*this);
-  }
+  auto LowLevel() { return LowLevelAccess<Tensor>(*this); }
+  auto LowLevel() const { return LowLevelAccess<const Tensor>(*this); }
 
 private:
   ContiguousMemory<ElementType, DeviceType> m_mem;
@@ -396,6 +395,7 @@ public:
   static constexpr std::size_t Dimension = 0;
 
   friend struct LowLevelAccess<Tensor>;
+  friend struct LowLevelAccess<const Tensor>;
 
   explicit Tensor(ElementType value = ElementType()) : m_mem(1) {
     SetValue(value);
@@ -471,10 +471,8 @@ public:
 
   auto EvalRegister() const;
 
-  auto LowLevel() const {
-    using ThisType = std::remove_cvref_t<decltype(*this)>;
-    return LowLevelAccess<ThisType>(*this);
-  }
+  auto LowLevel() { return LowLevelAccess<Tensor>(*this); }
+  auto LowLevel() const { return LowLevelAccess<const Tensor>(*this); }
 
 private:
   ContiguousMemory<ElementType, DeviceType> m_mem;
@@ -482,14 +480,22 @@ private:
 
 template <typename TElem, typename TDevice, std::size_t Dim>
 struct LowLevelAccess<Tensor<TElem, TDevice, Dim>> {
-  LowLevelAccess(Tensor<TElem, TDevice, Dim> p) : m_tensor(std::move(p)) {}
-
+  LowLevelAccess(Tensor<TElem, TDevice, Dim> &p) : m_tensor(p) {}
   auto RawMemory() -> TElem * { return m_tensor.m_mem.RawMemory(); }
+  auto SharedMemory() const { return m_tensor.m_mem; }
+
+private:
+  Tensor<TElem, TDevice, Dim> &m_tensor;
+};
+
+template <typename TElem, typename TDevice, std::size_t Dim>
+struct LowLevelAccess<const Tensor<TElem, TDevice, Dim>> {
+  LowLevelAccess(const Tensor<TElem, TDevice, Dim> &p) : m_tensor(p) {}
   auto RawMemory() const -> const TElem * { return m_tensor.m_mem.RawMemory(); }
   auto SharedMemory() const { return m_tensor.m_mem; }
 
 private:
-  Tensor<TElem, TDevice, Dim> m_tensor;
+  const Tensor<TElem, TDevice, Dim> &m_tensor;
 };
 
 // difference_type + iterator (for random_access_range | addition commutative)
