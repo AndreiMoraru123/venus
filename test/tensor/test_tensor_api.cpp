@@ -1,7 +1,6 @@
 
 #include "core/memory/contiguous_memory.hpp"
 #include "core/memory/device.hpp"
-#include "core/memory/lower_access.hpp"
 #include <cassert>
 #include <catch2/catch_test_macros.hpp>
 
