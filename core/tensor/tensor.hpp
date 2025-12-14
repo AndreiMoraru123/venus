@@ -176,13 +176,16 @@ public:
     }
   }
 
+  template <std::size_t D = Dim>
+    requires(D == 1)
   explicit Tensor(std::initializer_list<ElementType> init_list)
       : m_shape(init_list.size()), m_mem(init_list.size()) {
-    static_assert(Dim == 1,
-                  "Initializer list constructor is only available for 1D "
-                  "tensors");
     std::copy(init_list.begin(), init_list.end(), m_mem.RawMemory());
   }
+
+  template <std::size_t D = Dim>
+    requires(D != 1)
+  explicit Tensor(std::initializer_list<ElementType>) = delete;
 
   template <typename... Dims>
     requires(sizeof...(Dims) == Dim) &&
