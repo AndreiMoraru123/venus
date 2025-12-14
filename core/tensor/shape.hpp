@@ -37,10 +37,14 @@ public:
   constexpr explicit Shape() = default;
 
   template <SizeTLike... TIntTypes>
+    requires(sizeof...(TIntTypes) == Dim)
   constexpr explicit Shape(TIntTypes... shapes) {
-    static_assert(sizeof...(TIntTypes) == Dim);
     detail::Fill<0>(m_dims, shapes...);
   }
+
+  template <SizeTLike... TIntTypes>
+    requires(sizeof...(TIntTypes) != Dim)
+  constexpr explicit Shape(TIntTypes...) = delete;
 
   constexpr auto operator==(const Shape &val) const -> bool {
     return m_dims == val.m_dims;
