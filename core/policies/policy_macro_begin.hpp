@@ -1,3 +1,5 @@
+#pragma once
+
 #define EnumValuePolicyObj(PolicyName, Ma, Mi, Val)                            \
   struct PolicyName : virtual public Ma {                                      \
     using MinorClass = Ma::Mi##TypeCate;                                       \
