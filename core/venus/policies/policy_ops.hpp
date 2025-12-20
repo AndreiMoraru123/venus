@@ -1,9 +1,9 @@
 #pragma once
-#include "../sequential.hpp"
-#include "../traits.hpp"
-#include "policy_concepts.hpp"
-#include "policy_container.hpp"
 #include <type_traits>
+#include <venus/policies/policy_concepts.hpp>
+#include <venus/policies/policy_container.hpp>
+#include <venus/sequential.hpp>
+#include <venus/traits.hpp>
 
 namespace venus {
 

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/memory/device.hpp"
 #include <algorithm>
 #include <concepts>
 #include <cstddef>
@@ -10,6 +9,7 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <venus/memory/device.hpp>
 
 namespace venus {
 template <typename T>

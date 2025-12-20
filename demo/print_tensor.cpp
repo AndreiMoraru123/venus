@@ -1,7 +1,7 @@
 
-#include "core/memory/device.hpp"
-#include "core/tensor/tensor.hpp"
 #include <print>
+#include <venus/memory/device.hpp>
+#include <venus/tensor/tensor.hpp>
 
 using namespace venus;
 

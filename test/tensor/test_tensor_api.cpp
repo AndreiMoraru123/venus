@@ -1,12 +1,12 @@
 
-#include "core/memory/contiguous_memory.hpp"
-#include "core/memory/device.hpp"
 #include <cassert>
 #include <catch2/catch_test_macros.hpp>
+#include <venus/memory/contiguous_memory.hpp>
+#include <venus/memory/device.hpp>
 
 #include <cmath>
-#include <core/tensor/tensor.hpp>
 #include <stdexcept>
+#include <venus/tensor/tensor.hpp>
 
 using namespace venus;
 

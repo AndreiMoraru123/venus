@@ -4,8 +4,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <numeric>
 
-#include <core/tensor/shape.hpp>
 #include <ranges>
+#include <venus/tensor/shape.hpp>
 
 using namespace venus;
 

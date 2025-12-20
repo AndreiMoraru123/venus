@@ -1,8 +1,8 @@
 
-#include "core/tensor/eager_ops.hpp"
-#include "core/tensor/tensor.hpp"
 #include <cassert>
 #include <print>
+#include <venus/tensor/eager_ops.hpp>
+#include <venus/tensor/tensor.hpp>
 
 using namespace venus;
 

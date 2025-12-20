@@ -1,7 +1,7 @@
 #include <print>
 #include <string>
 
-#include "core/tensor/tensor.hpp"
+#include <venus/tensor/tensor.hpp>
 
 using namespace venus;
 

@@ -19,9 +19,20 @@ FetchContent_MakeAvailable(mdspan)
 
 add_library(venus INTERFACE)
 target_include_directories(venus INTERFACE
-     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/core>
      $<INSTALL_INTERFACE:include>
-     $<BUILD_INTERFACE:${mdspan_SOURCE_DIR}/include>)
+     $<BUILD_INTERFACE:${mdspan_SOURCE_DIR}/include>
+)
+
+file(GLOB_RECURSE VENUS_HEADERS CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/core/*.hpp"
+)
+ 
+target_sources(venus INTERFACE
+    FILE_SET HEADERS
+    BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/core
+    FILES ${VENUS_HEADERS}
+) 
 
 target_link_libraries(venus INTERFACE)
 

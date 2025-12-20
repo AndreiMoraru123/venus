@@ -1,12 +1,12 @@
-#include "core/memory/device.hpp"
 #include <cassert>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include <functional>
+#include <venus/memory/device.hpp>
 
 #include <cmath>
-#include <core/tensor/tensor.hpp>
 #include <tuple>
+#include <venus/tensor/tensor.hpp>
 
 using namespace venus;
 

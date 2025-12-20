@@ -1,5 +1,5 @@
-#include "core/tensor/tensor.hpp"
 #include <print>
+#include <venus/tensor/tensor.hpp>
 
 using namespace venus;
 

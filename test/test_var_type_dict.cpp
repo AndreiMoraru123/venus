@@ -1,6 +1,6 @@
 
 #include <catch2/catch_test_macros.hpp>
-#include <core/var_type_dict.hpp>
+#include <venus/var_type_dict.hpp>
 
 using namespace venus;
 

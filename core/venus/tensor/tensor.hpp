@@ -1,9 +1,4 @@
 #pragma once
-#include "../memory/contiguous_memory.hpp"
-#include "../memory/device.hpp"
-#include "../memory/lower_access.hpp"
-#include "eager_ops.hpp"
-#include "shape.hpp"
 #include <algorithm>
 #include <cassert>
 #include <compare>
@@ -16,6 +11,11 @@
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
+#include <venus/memory/contiguous_memory.hpp>
+#include <venus/memory/device.hpp>
+#include <venus/memory/lower_access.hpp>
+#include <venus/tensor/eager_ops.hpp>
+#include <venus/tensor/shape.hpp>
 
 #define REGISTER_SCALAR_OP(op)                                                 \
   auto operator op(const ElementType &element) const noexcept                  \

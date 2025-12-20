@@ -1,7 +1,7 @@
 
-#include "core/tensor/tensor.hpp"
 #include <cassert>
 #include <ranges>
+#include <venus/tensor/tensor.hpp>
 
 using namespace venus;
 

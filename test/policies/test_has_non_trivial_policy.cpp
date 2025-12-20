@@ -2,9 +2,9 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <cmath>
-#include <core/policies/policy_container.hpp>
-#include <core/policies/policy_macro_begin.hpp>
-#include <core/policies/policy_ops.hpp>
+#include <venus/policies/policy_container.hpp>
+#include <venus/policies/policy_macro_begin.hpp>
+#include <venus/policies/policy_ops.hpp>
 
 using namespace venus;
 
@@ -44,4 +44,4 @@ TEST_CASE("HasNonTrivialPolicy correctly evaluates the result", "[policy]") {
   }
 }
 
-#include <core/policies/policy_macro_end.hpp>
+#include <venus/policies/policy_macro_end.hpp>

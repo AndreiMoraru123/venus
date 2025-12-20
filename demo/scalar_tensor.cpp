@@ -1,6 +1,6 @@
 
-#include "core/tensor/tensor.hpp"
 #include <cassert>
+#include <venus/tensor/tensor.hpp>
 
 using namespace venus;
 

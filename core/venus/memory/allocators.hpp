@@ -1,12 +1,12 @@
 #pragma once
 
-#include "device.hpp"
 #include <cstddef>
 #include <cstring>
 #include <deque>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
+#include <venus/memory/device.hpp>
 
 namespace venus {
 template <typename TDevice> struct Allocator;

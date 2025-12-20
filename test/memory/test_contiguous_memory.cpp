@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include <core/memory/contiguous_memory.hpp>
+#include <venus/memory/contiguous_memory.hpp>
 
 using namespace venus;
 
