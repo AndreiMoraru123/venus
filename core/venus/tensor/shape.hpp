@@ -9,21 +9,8 @@
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
+
 namespace venus {
-
-namespace detail {
-template <std::size_t idx, typename TShape> constexpr void Fill(TShape &shape) {
-  return;
-}
-
-template <std::size_t idx, typename TShape, typename TCurrParam,
-          typename... TShapeParameter>
-constexpr void Fill(TShape &shape, TCurrParam currParam,
-                    TShapeParameter... shapes) {
-  shape[idx] = static_cast<std::size_t>(currParam);
-  Fill<idx + 1>(shape, shapes...);
-}
-} // namespace detail
 
 template <typename... TIntTypes>
 concept SizeTLike = (std::is_convertible_v<TIntTypes, std::size_t> and ...);
@@ -38,9 +25,8 @@ public:
 
   template <SizeTLike... TIntTypes>
     requires(sizeof...(TIntTypes) == Dim)
-  constexpr explicit Shape(TIntTypes... shapes) {
-    detail::Fill<0>(m_dims, shapes...);
-  }
+  constexpr explicit Shape(TIntTypes... shapes)
+      : m_dims({static_cast<std::size_t>(shapes)...}) {}
 
   template <SizeTLike... TIntTypes>
     requires(sizeof...(TIntTypes) != Dim)
@@ -56,8 +42,14 @@ public:
   }
 
   constexpr std::size_t Count() const {
+#if __cplusplus >= 202302L
     return std::ranges::fold_left(m_dims, static_cast<std::size_t>(1),
                                   std::multiplies<>());
+#else
+    return std::accumulate(m_dims.begin(), m_dims.end(),
+                           static_cast<std::size_t>(1),
+                           std::multiplies<std::size_t>());
+#endif
   }
 
   constexpr auto operator[](size_t idx) const -> std::size_t {
