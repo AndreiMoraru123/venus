@@ -18,5 +18,5 @@ auto main() -> int {
       std::views::take(2);                                   // 4, 16
 
   auto result = std::ranges::fold_left(pipeline, 0, std::plus{}); // 20
-  assert(result == 20);
+  assert(result == 20); // lazy eval
 }

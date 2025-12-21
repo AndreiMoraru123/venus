@@ -27,12 +27,10 @@ jobs:
       - name: Update README
         run: embedme README.md
 
-      - name: Commit changes
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add README.md
-          git diff --staged --quiet || git commit -m "Auto-update README with latest code"
-
-      - name: Push changes
-        run: git push
+      - name: Commit and push README
+        uses: stefanzweifel/git-auto-commit-action@v6
+        with:
+          commit_message: Auto-update README with latest code
+          file_pattern: README.md
+          commit_user_name: GitHub Actions Bot
+          commit_user_email: action@github.com
