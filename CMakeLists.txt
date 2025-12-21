@@ -17,11 +17,18 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(mdspan)
 
+FetchContent_Declare(
+    range-v3
+    GIT_REPOSITORY https://github.com/ericniebler/range-v3.git
+    GIT_TAG 0.12.0
+)
+
+FetchContent_MakeAvailable(range-v3)
+
 add_library(venus INTERFACE)
 target_include_directories(venus INTERFACE
      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/core>
      $<INSTALL_INTERFACE:include>
-     $<BUILD_INTERFACE:${mdspan_SOURCE_DIR}/include>
 )
 
 file(GLOB_RECURSE VENUS_HEADERS CONFIGURE_DEPENDS
@@ -34,7 +41,10 @@ target_sources(venus INTERFACE
     FILES ${VENUS_HEADERS}
 ) 
 
-target_link_libraries(venus INTERFACE)
+target_link_libraries(venus INTERFACE
+    mdspan
+    range-v3::range-v3
+)
 
 if(BUILD_TESTING)
     FetchContent_Declare(
@@ -52,3 +62,21 @@ if(BUILD_DEMO AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/demo")
     add_subdirectory(demo)
 endif()
 
+find_program(CLING_EXECUTABLE cling PATHS /opt/cling/bin)
+
+if(CLING_EXECUTABLE)
+    message(STATUS "Found Cling: ${CLING_EXECUTABLE}")
+    
+    add_custom_target(cling-interactive
+        COMMAND ${CLING_EXECUTABLE} -std=c++2a 
+                -DVENUS_INTERPRETER
+                -I ${CMAKE_BINARY_DIR}/_deps/mdspan-src/include
+                -I ${CMAKE_BINARY_DIR}/_deps/range-v3-src/include
+        DEPENDS venus
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Starting interactive Cling session with Venus dependencies"
+        USES_TERMINAL
+    )
+else()
+    message(WARNING "Cling not found - target 'cling-interactive' will not be available")
+endif()
