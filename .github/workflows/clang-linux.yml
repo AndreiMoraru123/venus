@@ -33,7 +33,7 @@ jobs:
 
       - name: Configure with CMake
         working-directory: build
-        run: cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++-19 -DCMAKE_C_COMPILER=clang-19 -DBUILD_TESTING=ON -DBUILD_DEMO=OFF
+        run: cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++-19 -DCMAKE_C_COMPILER=clang-19 -DBUILD_TESTING=ON -DBUILD_DEMO=OFF  -DBUILD_SINGLE_HEADER=OFF
 
       - name: Build
         working-directory: build

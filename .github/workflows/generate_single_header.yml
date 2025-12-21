@@ -1,0 +1,47 @@
+name: "Generate Single Header"
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  run:
+    name: Generate
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@master
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v1.14
+        with:
+          cmake-version: "3.25.1"
+
+      - name: Create build directory
+        run: mkdir -p build
+
+      - name: Configure with CMake
+        working-directory: build
+        run: cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_DEMO=OFF -DBUILD_SINGLE_HEADER=ON
+
+      - name: Build
+        working-directory: build
+        run: cmake --build . -j$(nproc)
+
+      - name: Run
+        working-directory: ${{github.workspace}}/build
+        run: |
+          ./scripts/make_single_header ${GITHUB_WORKSPACE}/core/venus.hpp ${GITHUB_WORKSPACE}/single_include/venus.hpp
+
+      - name: Upload
+        uses: stefanzweifel/git-auto-commit-action@v6
+        with:
+          commit_message: Update single header
+          file_pattern: "single_include/*"
+          commit_user_name: Github Actions Bot

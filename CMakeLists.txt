@@ -57,9 +57,14 @@ if(BUILD_TESTING)
 endif()
 
 option(BUILD_DEMO "Build demo executable" ON)
+option(BUILD_SINGLE_HEADER "Build single-header generator tool" ON)
 
 if(BUILD_DEMO AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/demo")
     add_subdirectory(demo)
+endif()
+
+if (BUILD_SINGLE_HEADER AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
+    add_subdirectory(scripts)
 endif()
 
 find_program(CLING_EXECUTABLE cling PATHS /opt/cling/bin)
