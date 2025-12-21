@@ -2,17 +2,50 @@
 
 // Auto-generated main header
 
+#if __cplusplus >= 202302L
+// C++23: use std::views::zip
+#include <ranges>
+namespace venus::compat {
+using std::views::zip;
+}
+#else
+// C++17/20: use range-v3
+#include <range/v3/view/zip.hpp>
+namespace venus::compat {
+using ranges::views::zip;
+}
+#endif
 #include <cstddef>
-#include <cstring>
-#include <deque>
 #include <memory>
-#include <mutex>
-#include <unordered_map>
 namespace venus {
 namespace Device {
 struct CPU;
 }
 } // namespace venus
+
+#ifdef VENUS_INTERPRETER
+// Simple allocator for repl interpreter
+
+namespace venus {
+template <typename TDevice> struct Allocator;
+template <>
+
+struct Allocator<Device::CPU> {
+  template <typename TElem>
+  static std::shared_ptr<TElem> Allocate(std::size_t p_elemSize) {
+    return std::shared_ptr<TElem>(new TElem[p_elemSize],
+                                  [](TElem *ptr) { delete[] ptr; });
+  }
+};
+} // namespace venus
+#else
+
+// Memory pool allocator for compiled venus
+
+#include <cstring>
+#include <deque>
+#include <mutex>
+#include <unordered_map>
 
 namespace venus {
 template <typename TDevice> struct Allocator;
@@ -89,6 +122,7 @@ private:
 };
 }; // namespace venus
 
+#endif
 #include <cassert>
 #include <cstddef>
 #include <memory>
@@ -731,7 +765,7 @@ auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Dim1> &t1,
     using ResultTensor = Tensor<ResultElementType, Dev1, Dim1>;
     ResultTensor result(t1.Shape());
     auto computation =
-        std::views::zip(t1, t2) | std::views::transform([op](auto &&tuple) {
+        venus::compat::zip(t1, t2) | std::views::transform([op](auto &&tuple) {
           return std::apply(op, tuple);
         });
     std::ranges::copy(computation, result.begin());
@@ -761,10 +795,10 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Dim1> &t1,
 
     using ResultTensor = Tensor<ResultElementType, Dev1, Dim1>;
     ResultTensor result(t1.Shape());
-    auto computation =
-        std::views::zip(t1, t2, t3) | std::views::transform([op](auto &&tuple) {
-          return std::apply(op, tuple);
-        });
+    auto computation = venus::compat::zip(t1, t2, t3) |
+                       std::views::transform([op](auto &&tuple) {
+                         return std::apply(op, tuple);
+                       });
     std::ranges::copy(computation, result.begin());
     return result;
   }
@@ -879,7 +913,7 @@ auto where(const Tensor<Elem, Dev, Dim> &condition) {
 
   auto result_ptr = result.LowLevel().RawMemory();
   auto indices = std::views::iota(std::size_t{0}, condition.size());
-  std::ranges::for_each(std::views::zip(condition, indices),
+  std::ranges::for_each(venus::compat::zip(condition, indices),
                         [result_ptr](auto &&pair) {
                           const auto &[cond_val, idx] = pair;
                           if (static_cast<bool>(cond_val)) {
@@ -954,21 +988,8 @@ auto where(T1 &&t1, T2 &&t2, T3 &&t3) {
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
+
 namespace venus {
-
-namespace detail {
-template <std::size_t idx, typename TShape> constexpr void Fill(TShape &shape) {
-  return;
-}
-
-template <std::size_t idx, typename TShape, typename TCurrParam,
-          typename... TShapeParameter>
-constexpr void Fill(TShape &shape, TCurrParam currParam,
-                    TShapeParameter... shapes) {
-  shape[idx] = static_cast<std::size_t>(currParam);
-  Fill<idx + 1>(shape, shapes...);
-}
-} // namespace detail
 
 template <typename... TIntTypes>
 concept SizeTLike = (std::is_convertible_v<TIntTypes, std::size_t> and ...);
@@ -983,9 +1004,8 @@ public:
 
   template <SizeTLike... TIntTypes>
     requires(sizeof...(TIntTypes) == Dim)
-  constexpr explicit Shape(TIntTypes... shapes) {
-    detail::Fill<0>(m_dims, shapes...);
-  }
+  constexpr explicit Shape(TIntTypes... shapes)
+      : m_dims({static_cast<std::size_t>(shapes)...}) {}
 
   template <SizeTLike... TIntTypes>
     requires(sizeof...(TIntTypes) != Dim)
@@ -1001,12 +1021,18 @@ public:
   }
 
   constexpr std::size_t Count() const {
+#if __cplusplus >= 202302L
     return std::ranges::fold_left(m_dims, static_cast<std::size_t>(1),
                                   std::multiplies<>());
+#else
+    return std::accumulate(m_dims.begin(), m_dims.end(),
+                           static_cast<std::size_t>(1),
+                           std::multiplies<std::size_t>());
+#endif
   }
 
   constexpr auto operator[](size_t idx) const -> std::size_t {
-    if constexpr (std::is_constant_evaluated()) {
+    if (std::is_constant_evaluated()) {
       if (idx >= dimNum) {
         // TODO: This won't actually throw, do I really need comptime? (shape)
         throw std::out_of_range("Index out of bounds for Shape");
