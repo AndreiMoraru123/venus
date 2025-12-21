@@ -9,7 +9,7 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
-#include <venus/compat/zip.hpp>
+#include <venus/compat/ops.hpp>
 #include <venus/memory/device.hpp>
 
 namespace venus {
@@ -103,10 +103,10 @@ auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Dim1> &t1,
 
     using ResultTensor = Tensor<ResultElementType, Dev1, Dim1>;
     ResultTensor result(t1.Shape());
-    auto computation =
-        venus::compat::zip(t1, t2) | std::views::transform([op](auto &&tuple) {
-          return std::apply(op, tuple);
-        });
+    auto computation = venus::compat::zip(t1, t2) |
+                       venus::compat::transform([op](auto &&tuple) {
+                         return std::apply(op, tuple);
+                       });
     std::ranges::copy(computation, result.begin());
     return result;
   }
@@ -135,7 +135,7 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Dim1> &t1,
     using ResultTensor = Tensor<ResultElementType, Dev1, Dim1>;
     ResultTensor result(t1.Shape());
     auto computation = venus::compat::zip(t1, t2, t3) |
-                       std::views::transform([op](auto &&tuple) {
+                       venus::compat::transform([op](auto &&tuple) {
                          return std::apply(op, tuple);
                        });
     std::ranges::copy(computation, result.begin());
@@ -161,7 +161,7 @@ auto transform(const Tensor<Elem, Dev, Dim> &tensor, Fn &&fn) {
     using ResultTensor = Tensor<ResultElementType, Dev, Dim>;
     ResultTensor result(tensor.Shape());
     auto computation =
-        tensor | std::views::transform(
+        tensor | venus::compat::transform(
                      [f = std::forward<Fn>(fn)](auto &&t) { return f(t); });
     std::ranges::copy(computation, result.begin());
     return result;
