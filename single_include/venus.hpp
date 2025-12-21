@@ -1500,8 +1500,8 @@ public:
     return ElementProxy(*this, (m_mem.RawMemory())[offset]);
   }
 
-#ifndef VENUS_INTERPRETER
-  // Tensor indexing
+#if __cplusplus >= 202302L
+  // C++23 Tensor indexing
   template <typename... Indices>
     requires(sizeof...(Indices) == Dim)
   constexpr auto operator[](Indices... indices) -> ElementProxy {
