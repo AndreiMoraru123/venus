@@ -74,7 +74,7 @@ if(CLING_EXECUTABLE)
                 -I ${CMAKE_BINARY_DIR}/_deps/range-v3-src/include
         DEPENDS venus
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        COMMENT "Starting interactive Cling session with Venus dependencies"
+        COMMENT "Starting Cling-based interactive Venus interpreter. Include <single_include/venus.hpp>, have fun!"
         USES_TERMINAL
     )
 else()
