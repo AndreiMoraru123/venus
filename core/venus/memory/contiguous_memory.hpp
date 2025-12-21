@@ -13,7 +13,13 @@ template <typename TElem, typename TDevice> class ContiguousMemory {
   static_assert(std::is_same_v<std::remove_cvref_t<TElem>, TElem>);
   using ElementType = TElem;
 
+#ifdef VENUS_INTERPRETER
+  template <typename, typename, std::size_t> friend class Tensor;
+
+private:
+#else
 public:
+#endif
   explicit ContiguousMemory(std::size_t p_size)
       : m_mem(Allocator<TDevice>::template Allocate<ElementType>(p_size)),
         m_size(p_size) {
@@ -28,6 +34,7 @@ public:
         std::shared_ptr<ElementType>(m_mem, m_mem.get() + pos), m_size - pos);
   }
 
+public:
   auto RawMemory() -> ElementType * { return m_mem.get(); }
   auto RawMemory() const -> const ElementType * { return m_mem.get(); }
   bool IsShared() const { return m_mem.use_count() > 1; }
