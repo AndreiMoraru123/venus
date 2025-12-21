@@ -1489,6 +1489,18 @@ public:
     REGISTER_POST_OPERATOR(--)
   };
 
+  // C++20 Tensor indexing
+  template <typename... Indices>
+    requires(sizeof...(Indices) == Dim)
+  constexpr auto operator()(Indices... indices) -> ElementProxy {
+    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+                  "Indexing is currently only supported on CPU");
+    const auto offset =
+        m_shape.IndexToOffset(static_cast<std::size_t>(indices)...);
+    return ElementProxy(*this, (m_mem.RawMemory())[offset]);
+  }
+
+#ifndef VENUS_INTERPRETER
   // Tensor indexing
   template <typename... Indices>
     requires(sizeof...(Indices) == Dim)
@@ -1499,6 +1511,7 @@ public:
         m_shape.IndexToOffset(static_cast<std::size_t>(indices)...);
     return ElementProxy(*this, (m_mem.RawMemory())[offset]);
   }
+#endif
 
   auto EvalRegister() const;
 
