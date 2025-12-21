@@ -3,23 +3,28 @@
 // Auto-generated main header
 
 #if defined(_MSC_VER)
-// Always use range-v3 zip for MSVC
+// Always use range-v3 for MSVC
+#include <range/v3/view/transform.hpp>
 #include <range/v3/view/zip.hpp>
 namespace venus::compat {
+using ranges::views::transform;
 using ranges::views::zip;
-}
+} // namespace venus::compat
 #elif __cplusplus >= 202302L
-// C++23: use std::views::zip
+// C++23: use std::views
 #include <ranges>
 namespace venus::compat {
+using std::views::transform;
 using std::views::zip;
-}
+} // namespace venus::compat
 #else
 // C++17/20: use range-v3
+#include <range/v3/view/transform.hpp>
 #include <range/v3/view/zip.hpp>
 namespace venus::compat {
+using ranges::views::transform;
 using ranges::views::zip;
-}
+} // namespace venus::compat
 #endif
 #include <cstddef>
 #include <cstring>
@@ -790,10 +795,10 @@ auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Dim1> &t1,
 
     using ResultTensor = Tensor<ResultElementType, Dev1, Dim1>;
     ResultTensor result(t1.Shape());
-    auto computation =
-        venus::compat::zip(t1, t2) | std::views::transform([op](auto &&tuple) {
-          return std::apply(op, tuple);
-        });
+    auto computation = venus::compat::zip(t1, t2) |
+                       venus::compat::transform([op](auto &&tuple) {
+                         return std::apply(op, tuple);
+                       });
     std::ranges::copy(computation, result.begin());
     return result;
   }
@@ -822,7 +827,7 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Dim1> &t1,
     using ResultTensor = Tensor<ResultElementType, Dev1, Dim1>;
     ResultTensor result(t1.Shape());
     auto computation = venus::compat::zip(t1, t2, t3) |
-                       std::views::transform([op](auto &&tuple) {
+                       venus::compat::transform([op](auto &&tuple) {
                          return std::apply(op, tuple);
                        });
     std::ranges::copy(computation, result.begin());
@@ -848,7 +853,7 @@ auto transform(const Tensor<Elem, Dev, Dim> &tensor, Fn &&fn) {
     using ResultTensor = Tensor<ResultElementType, Dev, Dim>;
     ResultTensor result(tensor.Shape());
     auto computation =
-        tensor | std::views::transform(
+        tensor | venus::compat::transform(
                      [f = std::forward<Fn>(fn)](auto &&t) { return f(t); });
     std::ranges::copy(computation, result.begin());
     return result;
@@ -1900,3 +1905,4 @@ template <typename... TParameters> struct VarTypeDict {
 };
 
 }; // namespace venus
+
