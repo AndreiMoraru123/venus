@@ -345,7 +345,7 @@ public:
     return ElementProxy(*this, (m_mem.RawMemory())[offset]);
   }
 
-#if __cplusplus >= 202302L
+#ifndef VENUS_INTERPRETER
   // C++23 Tensor indexing
   template <typename... Indices>
     requires(sizeof...(Indices) == Dim)
