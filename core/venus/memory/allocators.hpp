@@ -1,12 +1,32 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
+#include <venus/memory/device.hpp>
+
+#ifdef VENUS_INTERPRETER
+// Simple allocator for repl interpreter
+
+namespace venus {
+template <typename TDevice> struct Allocator;
+template <>
+
+struct Allocator<Device::CPU> {
+  template <typename TElem>
+  static std::shared_ptr<TElem> Allocate(std::size_t p_elemSize) {
+    return std::shared_ptr<TElem>(new TElem[p_elemSize],
+                                  [](TElem *ptr) { delete[] ptr; });
+  }
+};
+} // namespace venus
+#else
+
+// Memory pool allocator for compiled venus
+
 #include <cstring>
 #include <deque>
-#include <memory>
 #include <mutex>
 #include <unordered_map>
-#include <venus/memory/device.hpp>
 
 namespace venus {
 template <typename TDevice> struct Allocator;
@@ -82,3 +102,5 @@ private:
   inline static MemoryPool m_pool;
 };
 }; // namespace venus
+
+#endif
