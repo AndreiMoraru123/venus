@@ -16,6 +16,7 @@ using ranges::views::zip;
 }
 #endif
 #include <cstddef>
+#include <cstring>
 #include <memory>
 namespace venus {
 namespace Device {
@@ -33,8 +34,16 @@ template <>
 struct Allocator<Device::CPU> {
   template <typename TElem>
   static std::shared_ptr<TElem> Allocate(std::size_t p_elemSize) {
-    return std::shared_ptr<TElem>(new TElem[p_elemSize],
-                                  [](TElem *ptr) { delete[] ptr; });
+    TElem *raw_buf = new TElem[p_elemSize];
+
+    if constexpr (std::is_trivially_constructible_v<TElem>) {
+      std::memset(raw_buf, 0, p_elemSize * sizeof(TElem));
+    } else {
+      for (std::size_t i = 0; i < p_elemSize; ++i) {
+        new (raw_buf + i) TElem();
+      }
+    }
+    return std::shared_ptr<TElem>(raw_buf, [](TElem *ptr) { delete[] ptr; });
   }
 };
 } // namespace venus
@@ -42,7 +51,6 @@ struct Allocator<Device::CPU> {
 
 // Memory pool allocator for compiled venus
 
-#include <cstring>
 #include <deque>
 #include <mutex>
 #include <unordered_map>
