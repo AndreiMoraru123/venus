@@ -53,4 +53,3 @@ jobs:
             core/venus.hpp
           commit_user_name: GitHub Actions Bot
           commit_user_email: action@github.com
-          commit_options: "--allow-empty"
