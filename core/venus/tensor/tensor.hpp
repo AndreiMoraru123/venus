@@ -338,7 +338,7 @@ public:
   // Simple direct indexing for interpreter mode (no proxy)
   template <typename... Indices>
     requires(sizeof...(Indices) == Dim)
-  constexpr auto operator()(Indices... indices) -> ElementType {
+  constexpr auto operator[](Indices... indices) -> ElementType {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Indexing is currently only supported on CPU");
     const auto offset =
@@ -346,18 +346,7 @@ public:
     return m_mem.RawMemory()[offset];
   }
 #else
-  // C++20 Tensor indexing
-  template <typename... Indices>
-    requires(sizeof...(Indices) == Dim)
-  constexpr auto operator()(Indices... indices) -> ElementProxy {
-    static_assert(std::is_same_v<DeviceType, Device::CPU>,
-                  "Indexing is currently only supported on CPU");
-    const auto offset =
-        m_shape.IndexToOffset(static_cast<std::size_t>(indices)...);
-    return ElementProxy(*this, (m_mem.RawMemory())[offset]);
-  }
-
-  // C++23 Tensor indexing
+  // Tensor indexing
   template <typename... Indices>
     requires(sizeof...(Indices) == Dim)
   constexpr auto operator[](Indices... indices) -> ElementProxy {
