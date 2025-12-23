@@ -2,7 +2,6 @@
 
 // Auto-generated main header
 
-#include <venus/compat/ops.hpp>
 #include <venus/memory/allocators.hpp>
 #include <venus/memory/contiguous_memory.hpp>
 #include <venus/memory/device.hpp>

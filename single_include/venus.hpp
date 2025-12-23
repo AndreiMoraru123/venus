@@ -2,22 +2,6 @@
 
 // Auto-generated main header
 
-#ifdef VENUS_INTERPRETER
-// C++17/20: use range-v3
-#include <range/v3/view/transform.hpp>
-#include <range/v3/view/zip.hpp>
-namespace venus::compat {
-using ranges::views::transform;
-using ranges::views::zip;
-} // namespace venus::compat
-#else
-// C++23: use std::views
-#include <ranges>
-namespace venus::compat {
-using std::views::transform;
-using std::views::zip;
-} // namespace venus::compat
-#endif
 #include <cstddef>
 #include <cstring>
 #include <memory>
@@ -695,7 +679,6 @@ static constexpr bool HasNonTrivialPolicy =
 #include <utility>
 
 
-
 namespace venus {
 template <typename T>
 concept VenusTensor = requires {
@@ -787,10 +770,10 @@ auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Dim1> &t1,
 
     using ResultTensor = Tensor<ResultElementType, Dev1, Dim1>;
     ResultTensor result(t1.Shape());
-    auto computation = venus::compat::zip(t1, t2) |
-                       venus::compat::transform([op](auto &&tuple) {
-                         return std::apply(op, tuple);
-                       });
+    auto computation =
+        std::views::zip(t1, t2) | std::views::transform([op](auto &&tuple) {
+          return std::apply(op, tuple);
+        });
     std::ranges::copy(computation, result.begin());
     return result;
   }
@@ -818,10 +801,10 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Dim1> &t1,
 
     using ResultTensor = Tensor<ResultElementType, Dev1, Dim1>;
     ResultTensor result(t1.Shape());
-    auto computation = venus::compat::zip(t1, t2, t3) |
-                       venus::compat::transform([op](auto &&tuple) {
-                         return std::apply(op, tuple);
-                       });
+    auto computation =
+        std::views::zip(t1, t2, t3) | std::views::transform([op](auto &&tuple) {
+          return std::apply(op, tuple);
+        });
     std::ranges::copy(computation, result.begin());
     return result;
   }
@@ -845,7 +828,7 @@ auto transform(const Tensor<Elem, Dev, Dim> &tensor, Fn &&fn) {
     using ResultTensor = Tensor<ResultElementType, Dev, Dim>;
     ResultTensor result(tensor.Shape());
     auto computation =
-        tensor | venus::compat::transform(
+        tensor | std::views::transform(
                      [f = std::forward<Fn>(fn)](auto &&t) { return f(t); });
     std::ranges::copy(computation, result.begin());
     return result;
@@ -936,7 +919,7 @@ auto where(const Tensor<Elem, Dev, Dim> &condition) {
 
   auto result_ptr = result.LowLevel().RawMemory();
   auto indices = std::views::iota(std::size_t{0}, condition.size());
-  std::ranges::for_each(venus::compat::zip(condition, indices),
+  std::ranges::for_each(std::views::zip(condition, indices),
                         [result_ptr](auto &&pair) {
                           const auto &[cond_val, idx] = pair;
                           if (static_cast<bool>(cond_val)) {
@@ -1496,7 +1479,7 @@ public:
   // Simple direct indexing for interpreter mode (no proxy)
   template <typename... Indices>
     requires(sizeof...(Indices) == Dim)
-  constexpr auto operator()(Indices... indices) -> ElementType {
+  constexpr auto operator[](Indices... indices) -> ElementType {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Indexing is currently only supported on CPU");
     const auto offset =
@@ -1504,18 +1487,7 @@ public:
     return m_mem.RawMemory()[offset];
   }
 #else
-  // C++20 Tensor indexing
-  template <typename... Indices>
-    requires(sizeof...(Indices) == Dim)
-  constexpr auto operator()(Indices... indices) -> ElementProxy {
-    static_assert(std::is_same_v<DeviceType, Device::CPU>,
-                  "Indexing is currently only supported on CPU");
-    const auto offset =
-        m_shape.IndexToOffset(static_cast<std::size_t>(indices)...);
-    return ElementProxy(*this, (m_mem.RawMemory())[offset]);
-  }
-
-  // C++23 Tensor indexing
+  // Tensor indexing
   template <typename... Indices>
     requires(sizeof...(Indices) == Dim)
   constexpr auto operator[](Indices... indices) -> ElementProxy {
