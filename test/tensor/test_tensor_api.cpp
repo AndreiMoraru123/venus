@@ -68,12 +68,15 @@ TEST_CASE("Tensor API", "[tensor][api]") {
   }
 
   SECTION("Low Level Access") {
-    const auto tensor = Tensor<float, Device::CPU, 0>(10.0f);
+    auto tensor = Tensor<float, Device::CPU, 0>(10.0f);
     REQUIRE(tensor.HasUniqueMemory());
 
-    const auto lowLevelTensor = tensor.LowLevel();
+    auto lowLevelTensor = tensor.LowLevel();
     REQUIRE(*lowLevelTensor.RawMemory() == 10.0f);
     REQUIRE(tensor.HasUniqueMemory()); // non-owning access
+
+    *lowLevelTensor.RawMemory() = 20.0f; // mutating is allowed
+    REQUIRE(tensor.Value() == 20.0f);
   }
 
   SECTION("Low Level Access Memory") {
