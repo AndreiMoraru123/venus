@@ -334,6 +334,18 @@ public:
     REGISTER_POST_OPERATOR(--)
   };
 
+#ifdef VENUS_INTERPRETER
+  // Simple direct indexing for interpreter mode (no proxy)
+  template <typename... Indices>
+    requires(sizeof...(Indices) == Dim)
+  constexpr auto operator()(Indices... indices) -> ElementType {
+    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+                  "Indexing is currently only supported on CPU");
+    const auto offset =
+        m_shape.IndexToOffset(static_cast<std::size_t>(indices)...);
+    return m_mem.RawMemory()[offset];
+  }
+#else
   // C++20 Tensor indexing
   template <typename... Indices>
     requires(sizeof...(Indices) == Dim)
@@ -345,7 +357,6 @@ public:
     return ElementProxy(*this, (m_mem.RawMemory())[offset]);
   }
 
-#ifndef VENUS_INTERPRETER
   // C++23 Tensor indexing
   template <typename... Indices>
     requires(sizeof...(Indices) == Dim)
