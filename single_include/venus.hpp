@@ -1027,14 +1027,8 @@ public:
   }
 
   constexpr std::size_t Count() const {
-#if __cplusplus >= 202302L
     return std::ranges::fold_left(m_dims, static_cast<std::size_t>(1),
                                   std::multiplies<>());
-#else
-    return std::accumulate(m_dims.begin(), m_dims.end(),
-                           static_cast<std::size_t>(1),
-                           std::multiplies<std::size_t>());
-#endif
   }
 
   constexpr auto operator[](size_t idx) const -> std::size_t {
