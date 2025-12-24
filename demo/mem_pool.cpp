@@ -19,7 +19,7 @@ auto main() -> int {
     auto tensor2 = Tensor<float, Device::CPU, 2>(2, 3);
     assert(tensor2.HasUniqueMemory());
 
-    std::println("{}", tensor); // venus::Tensor([0.00, 0.00, 0.00, 0.00, 0.00, 0.00], shape=(2, 3))
+    std::println("{}", tensor2); // venus::Tensor([0.00, 0.00, 0.00, 0.00, 0.00, 0.00], shape=(2, 3))
   }
   {
     const auto memo = ContiguousMemory<float, Device::CPU>(6);
