@@ -218,7 +218,7 @@ public:
                       "Tensor size is {}, while the size of a scalar is 1.",
                       size()));
     }
-    return Tensor<TElem, TDevice, 0>(LowLevel().RawMemory()[0]);
+    return Tensor<TElem, TDevice, 0>(*std::ranges::data(*this));
   }
 
   // Addition
