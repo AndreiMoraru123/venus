@@ -1344,6 +1344,18 @@ public:
     return copy_tensor;
   }
 
+  auto ToScalar() const -> Tensor<TElem, TDevice, 0> {
+    static_assert(Dim == 1,
+                  "ToScalar can only be called on 1D tensors with 1 element.");
+    if (size() != 1) {
+      throw std::runtime_error(
+          std::format("Cannot convert non-scalar tensor to scalar tensor: "
+                      "Tensor size is {}, while the size of a scalar is 1.",
+                      size()));
+    }
+    return Tensor<TElem, TDevice, 0>(LowLevel().RawMemory()[0]);
+  }
+
   // Addition
   template <typename OtherType> auto operator+(OtherType &&other) const {
     return venus::ops::add(*this, std::forward<OtherType>(other));
@@ -1621,6 +1633,8 @@ public:
 
   auto LowLevel() { return LowLevelAccess<Tensor>(*this); }
   auto LowLevel() const { return LowLevelAccess<const Tensor>(*this); }
+
+  constexpr std::size_t size() const { return 1; }
 
 private:
   ContiguousMemory<ElementType, DeviceType> m_mem;
