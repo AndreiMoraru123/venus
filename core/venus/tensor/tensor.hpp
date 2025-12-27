@@ -55,7 +55,7 @@ namespace venus {
 
 template <typename T> class tensor_iterator {
 public:
-  using iterator_category = std::contiguous_iterator_tag; // do I need this?
+  using iterator_category = std::contiguous_iterator_tag;
   using value_type = T::ElementType;
   using difference_type = std::ptrdiff_t;
   using pointer =
