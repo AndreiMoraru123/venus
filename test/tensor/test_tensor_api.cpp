@@ -16,7 +16,7 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     auto scalar = Tensor<float, Device::CPU, 0>(10.0f);
     REQUIRE(scalar.Value() == 10.0f);
     REQUIRE(bool(scalar) == true);
-    REQUIRE(scalar.HasUniqueMemory());
+    REQUIRE(scalar.Unique());
 
     scalar.SetValue(100.0f);
     REQUIRE(scalar.Value() == 100.0f);
@@ -46,8 +46,8 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     REQUIRE(scalar1.Value() == 1.0f);
     REQUIRE(scalar2.Value() == 1.0f);
 
-    REQUIRE_FALSE(scalar1.HasUniqueMemory());
-    REQUIRE_FALSE(scalar2.HasUniqueMemory());
+    REQUIRE_FALSE(scalar1.Unique());
+    REQUIRE_FALSE(scalar2.Unique());
   }
 
   SECTION("Shared Shifted Memory") {
@@ -63,17 +63,17 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     REQUIRE(scalar1.Value() == 1.0f);
     REQUIRE(scalar2.Value() == 3.0f);
 
-    REQUIRE_FALSE(scalar1.HasUniqueMemory());
-    REQUIRE_FALSE(scalar2.HasUniqueMemory());
+    REQUIRE_FALSE(scalar1.Unique());
+    REQUIRE_FALSE(scalar2.Unique());
   }
 
   SECTION("Low Level Access") {
     auto tensor = Tensor<float, Device::CPU, 0>(10.0f);
-    REQUIRE(tensor.HasUniqueMemory());
+    REQUIRE(tensor.Unique());
 
     auto lowLevelTensor = tensor.LowLevel();
     REQUIRE(*lowLevelTensor.RawMemory() == 10.0f);
-    REQUIRE(tensor.HasUniqueMemory()); // non-owning access
+    REQUIRE(tensor.Unique()); // non-owning access
 
     *lowLevelTensor.RawMemory() = 20.0f; // mutating is allowed
     REQUIRE(tensor.Value() == 20.0f);
@@ -85,7 +85,7 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     rawPtr[0] = 10.0f;
 
     const auto tensor = Tensor<float, Device::CPU, 0>(memo);
-    REQUIRE_FALSE(tensor.HasUniqueMemory()); // internal copy of memo
+    REQUIRE_FALSE(tensor.Unique()); // internal copy of memo
 
     const auto lowLevelTensor = tensor.LowLevel();
     REQUIRE(lowLevelTensor.SharedMemory() == memo);
@@ -112,7 +112,7 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     const auto memo = ContiguousMemory<float, Device::CPU>(12);
 
     const auto tensor = Tensor<float, Device::CPU, NUM_DIMS>(memo, shape);
-    REQUIRE_FALSE(tensor.HasUniqueMemory());
+    REQUIRE_FALSE(tensor.Unique());
     REQUIRE(tensor.Shape() == shape);
   }
 
@@ -122,7 +122,7 @@ TEST_CASE("Tensor API", "[tensor][api]") {
 
     // memory layout is deduced automatically
     const auto tensor = Tensor<float, Device::CPU, NUM_DIMS>(shape);
-    REQUIRE(tensor.HasUniqueMemory());
+    REQUIRE(tensor.Unique());
     REQUIRE(tensor.Shape() == shape);
   }
 
@@ -132,7 +132,7 @@ TEST_CASE("Tensor API", "[tensor][api]") {
 
     auto memo = ContiguousMemory<float, Device::CPU>(12);
     auto tensor = Tensor<float, Device::CPU, NUM_DIMS>(std::move(memo), shape);
-    REQUIRE(tensor.HasUniqueMemory());
+    REQUIRE(tensor.Unique());
 
     for (int i = 0; i < 3; ++i) {
       for (int j = 0; j < 2; ++j) {
@@ -171,7 +171,7 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     std::fill_n(memo.RawMemory(), 12, 0.0f);
 
     auto tensor = Tensor<float, Device::CPU, NUM_DIMS>(memo, shape);
-    REQUIRE_FALSE(tensor.HasUniqueMemory());
+    REQUIRE_FALSE(tensor.Unique());
 
     // writing is forbidden
     for (int i = 0; i < 3; ++i) {
@@ -202,8 +202,8 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     auto tensor1 = Tensor<float, Device::CPU, NUM_DIMS>(memo, shape);
     auto tensor2 = Tensor<float, Device::CPU, NUM_DIMS>(memo, shape);
 
-    REQUIRE_FALSE(tensor1.HasUniqueMemory());
-    REQUIRE_FALSE(tensor2.HasUniqueMemory());
+    REQUIRE_FALSE(tensor1.Unique());
+    REQUIRE_FALSE(tensor2.Unique());
 
     REQUIRE(tensor1[0, 0, 0] == 0.0f);
     REQUIRE(tensor2[0, 0, 0] == 0.0f);
