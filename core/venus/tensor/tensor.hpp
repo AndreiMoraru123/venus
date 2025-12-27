@@ -408,6 +408,9 @@ public:
   constexpr auto cend() const { return end(); }
 
   constexpr std::size_t size() const { return m_shape.Count(); }
+
+  ElementType *data() { return m_mem.RawMemory(); }
+  const ElementType *data() const { return m_mem.RawMemory(); }
 };
 
 // Scalar Tensor ===============================================
