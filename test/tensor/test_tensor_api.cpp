@@ -208,4 +208,20 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     REQUIRE(tensor1[0, 0, 0] == 0.0f);
     REQUIRE(tensor2[0, 0, 0] == 0.0f);
   }
+
+  SECTION("Tensor To Scalar") {
+    auto x = Tensor<float, Device::CPU, 1>(1);
+    auto y = Tensor<float, Device::CPU, 1>(2);
+
+    venus::ops::iota(x, 1);
+    venus::ops::iota(y, 1);
+
+    REQUIRE_THROWS_AS(y.ToScalar(), std::runtime_error);
+
+    auto scalar = x.ToScalar();
+
+    REQUIRE(x.Unique());
+    REQUIRE(scalar.Unique());
+    REQUIRE(scalar.Value() == x[0]);
+  }
 }
