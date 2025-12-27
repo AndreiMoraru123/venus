@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 echo '#pragma once'
 echo ''
 echo '// Auto-generated main header'
