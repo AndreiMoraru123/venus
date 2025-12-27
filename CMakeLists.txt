@@ -48,7 +48,7 @@ if(BUILD_TESTING)
 endif()
 
 option(BUILD_DEMO "Build demo executable" ON)
-option(BUILD_SINGLE_HEADER "Build single-header generator tool" ON)
+option(BUILD_SINGLE_HEADER "Build single-header generator tool" OFF)
 
 if(BUILD_DEMO AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/demo")
     add_subdirectory(demo)
