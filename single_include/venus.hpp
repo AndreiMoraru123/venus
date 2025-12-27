@@ -1160,7 +1160,7 @@ explicit Shape(TShapeParameter...) -> Shape<sizeof...(TShapeParameter)>;
 
 #define REGISTER_PRE_OPERATOR(op)                                              \
   ElementProxy &operator op() {                                                \
-    if (not m_tensor.HasUniqueMemory()) {                                      \
+    if (not m_tensor.Unique()) {                                               \
       throw std::runtime_error("Cannot write to shared tensor");               \
     }                                                                          \
     op m_element;                                                              \
@@ -1169,7 +1169,7 @@ explicit Shape(TShapeParameter...) -> Shape<sizeof...(TShapeParameter)>;
 
 #define REGISTER_POST_OPERATOR(op)                                             \
   ElementType operator op(int) {                                               \
-    if (not m_tensor.HasUniqueMemory()) {                                      \
+    if (not m_tensor.Unique()) {                                               \
       throw std::runtime_error("Cannot write to shared tensor");               \
     }                                                                          \
     ElementType old_value = m_element;                                         \
@@ -1179,7 +1179,7 @@ explicit Shape(TShapeParameter...) -> Shape<sizeof...(TShapeParameter)>;
 
 #define REGISTER_OPERATOR_EQUAL(op)                                            \
   ElementProxy &operator op## = (const ElementType &value) {                   \
-    if (not m_tensor.HasUniqueMemory()) {                                      \
+    if (not m_tensor.Unique()) {                                               \
       throw std::runtime_error("Cannot write to shared tensor");               \
     }                                                                          \
     m_element op## = value;                                                    \
@@ -1336,7 +1336,7 @@ public:
 
   const auto &Shape() const noexcept { return m_shape; }
 
-  auto HasUniqueMemory() const -> bool { return not m_mem.IsShared(); }
+  auto Unique() const -> bool { return not m_mem.IsShared(); }
 
   auto Clone() const -> Tensor {
     Tensor copy_tensor(m_shape);
@@ -1416,7 +1416,7 @@ public:
 
     // writing
     const ElementProxy &operator=(const ElementType &value) const {
-      if (not m_tensor.HasUniqueMemory()) {
+      if (not m_tensor.Unique()) {
         // TODO: Do I want to throw here or do I want copy on write (cow)
         throw std::runtime_error("Cannot write to shared tensor");
         //     const std::size_t offset = &m_element -
@@ -1434,7 +1434,7 @@ public:
     }
 
     const ElementProxy &operator=(ElementType &&value) const {
-      if (not m_tensor.HasUniqueMemory()) {
+      if (not m_tensor.Unique()) {
         throw std::runtime_error("Cannot write to shared tensor");
       }
       m_element = std::move(value);
@@ -1445,7 +1445,7 @@ public:
     template <typename U>
       requires std::convertible_to<U, ElementType>
     const ElementProxy &operator=(U &&value) const {
-      if (not m_tensor.HasUniqueMemory()) {
+      if (not m_tensor.Unique()) {
         throw std::runtime_error("Cannot write to shared tensor");
       }
       m_element = std::forward<U>(value);
@@ -1559,12 +1559,12 @@ public:
     return shape;
   }
 
-  auto HasUniqueMemory() const -> bool { return not m_mem.IsShared(); }
+  auto Unique() const -> bool { return not m_mem.IsShared(); }
 
   void SetValue(ElementType value) const = delete;
 
   void SetValue(ElementType value) {
-    if (not HasUniqueMemory()) {
+    if (not Unique()) {
       throw std::runtime_error("Cannot write to shared scalar tensor.");
     }
     m_mem.RawMemory()[0] = value;
