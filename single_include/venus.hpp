@@ -917,7 +917,7 @@ auto where(const Tensor<Elem, Dev, Dim> &condition) {
   using ResultTensor = Tensor<std::size_t, Dev, Dim>;
   ResultTensor result(condition.Shape());
 
-  auto result_ptr = result.LowLevel().RawMemory();
+  auto result_ptr = std::ranges::data(result);
   auto indices = std::views::iota(std::size_t{0}, condition.size());
   std::ranges::for_each(std::views::zip(condition, indices),
                         [result_ptr](auto &&pair) {
@@ -1542,6 +1542,9 @@ public:
   constexpr auto cend() const { return end(); }
 
   constexpr std::size_t size() const { return m_shape.Count(); }
+
+  ElementType *data() { return m_mem.RawMemory(); }
+  const ElementType *data() const { return m_mem.RawMemory(); }
 };
 
 // Scalar Tensor ===============================================
