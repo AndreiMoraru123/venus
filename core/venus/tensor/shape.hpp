@@ -41,7 +41,7 @@ public:
     return false;
   }
 
-  constexpr std::size_t Count() const {
+  [[nodiscard]] constexpr auto Count() const -> std::size_t {
     return std::ranges::fold_left(m_dims, static_cast<std::size_t>(1),
                                   std::multiplies<>());
   }
@@ -77,7 +77,8 @@ public:
 
     // TODO: The accessor policy in mdspan should be able to perform this (???)
     // bounds checking
-    const std::size_t idx_array[] = {static_cast<std::size_t>(indices)...};
+    const std::array<std::size_t, dimNum> idx_array = {
+        static_cast<std::size_t>(indices)...};
     for (std::size_t i = 0; i < dimNum; ++i) {
       if (idx_array[i] >= m_dims[i]) {
         throw std::out_of_range("Index out of bounds in Shape::IndexToOffset");
@@ -116,7 +117,7 @@ public:
 
   explicit Shape() = default;
 
-  constexpr std::size_t Count() const { return 1; }
+  static constexpr auto Count() -> std::size_t { return 1; }
 
   constexpr auto operator==(const Shape &val) const -> bool { return true; }
 
@@ -127,7 +128,8 @@ public:
 };
 
 template <std::size_t Dim>
-std::ostream &operator<<(std::ostream &os, const venus::Shape<Dim> &shape) {
+auto operator<<(std::ostream &os, const venus::Shape<Dim> &shape)
+    -> std::ostream & {
   os << "(";
   std::size_t count = 0;
   for (auto dim : shape) {
@@ -140,7 +142,8 @@ std::ostream &operator<<(std::ostream &os, const venus::Shape<Dim> &shape) {
 }
 
 template <std::size_t Dim>
-std::ostream &operator<<(std::ostream &os, const venus::Shape<0> &shape) {
+auto operator<<(std::ostream &os, const venus::Shape<0> &shape)
+    -> std::ostream & {
   return os << "()";
 }
 
