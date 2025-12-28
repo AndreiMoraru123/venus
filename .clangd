@@ -2,7 +2,7 @@ CompileFlags:
   Add: ["-std=c++23", "-fmodules"]
 InlayHints:
   Enabled: Yes
-  BlockEnd: No
+  BlockEnd: Yes
   Designators: Yes
   ParameterNames: Yes
   DeducedTypes: Yes
