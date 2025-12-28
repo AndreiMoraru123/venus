@@ -1211,68 +1211,69 @@ public:
   constexpr tensor_iterator(T *tensor, std::size_t offset)
       : m_tensor(tensor), m_offset(offset) {}
 
-  constexpr reference operator*() const {
-    return m_tensor->LowLevel().RawMemory()[m_offset];
+  constexpr auto operator*() const -> reference {
+    return m_tensor->data()[m_offset];
   };
 
-  constexpr pointer operator->() const {
-    return &(m_tensor->LowLevel().RawMemory()[m_offset]);
+  constexpr auto operator->() const -> pointer {
+    return &(m_tensor->data()[m_offset]);
   }
 
-  constexpr tensor_iterator &operator++() {
+  constexpr auto operator++() -> tensor_iterator & {
     ++m_offset;
     return *this;
   }
 
-  constexpr tensor_iterator operator++(int) {
+  constexpr auto operator++(int) -> tensor_iterator {
     auto temp = *this;
     ++m_offset;
     return temp;
   }
 
-  constexpr tensor_iterator &operator--() {
+  constexpr auto operator--() -> tensor_iterator & {
     --m_offset;
     return *this;
   }
 
-  constexpr tensor_iterator operator--(int) {
+  constexpr auto operator--(int) -> tensor_iterator {
     auto temp = *this;
     --m_offset;
     return temp;
   }
 
-  constexpr tensor_iterator &operator+=(difference_type n) {
+  constexpr auto operator+=(difference_type n) -> tensor_iterator & {
     m_offset += n;
     return *this;
   }
 
-  constexpr tensor_iterator &operator-=(difference_type n) {
+  constexpr auto operator-=(difference_type n) -> tensor_iterator & {
     m_offset -= n;
     return *this;
   }
 
-  constexpr tensor_iterator operator+(difference_type n) {
+  constexpr auto operator+(difference_type n) -> tensor_iterator {
     return tensor_iterator(m_tensor, m_offset + n);
   }
 
-  constexpr tensor_iterator operator+(difference_type n) const {
+  constexpr auto operator+(difference_type n) const -> tensor_iterator {
     return tensor_iterator(m_tensor, m_offset + n);
   }
 
-  constexpr tensor_iterator operator-(difference_type n) {
+  constexpr auto operator-(difference_type n) -> tensor_iterator {
     return tensor_iterator(m_tensor, m_offset - n);
   }
 
-  constexpr tensor_iterator operator-(difference_type n) const {
+  constexpr auto operator-(difference_type n) const -> tensor_iterator {
     return tensor_iterator(m_tensor, m_offset - n);
   }
 
-  constexpr difference_type operator-(const tensor_iterator &other) const {
+  constexpr auto operator-(const tensor_iterator &other) const
+      -> difference_type {
     return static_cast<difference_type>(m_offset) -
            static_cast<difference_type>(other.m_offset);
   }
 
-  constexpr bool operator==(const tensor_iterator &other) const {
+  constexpr auto operator==(const tensor_iterator &other) const -> bool {
     return m_tensor == other.m_tensor && m_offset == other.m_offset;
   }
 
@@ -1285,7 +1286,7 @@ public:
     return m_offset <=> other.m_offset;
   }
 
-  constexpr reference operator[](difference_type n) const {
+  constexpr auto operator[](difference_type n) const -> reference {
     return *(*this + n);
   }
 };
@@ -1338,7 +1339,7 @@ public:
                 (std::is_convertible_v<Dims, std::size_t> && ...)
   explicit Tensor(Dims &&...) = delete;
 
-  auto Shape() const noexcept -> const auto & { return m_shape; }
+  auto Shape() const noexcept -> const venus::Shape<Dim> & { return m_shape; }
 
   [[nodiscard]] auto Unique() const -> bool { return not m_mem.IsShared(); }
 
@@ -1566,10 +1567,12 @@ public:
   constexpr auto cbegin() const { return begin(); }
   constexpr auto cend() const { return end(); }
 
-  constexpr std::size_t size() const { return m_shape.Count(); }
+  [[nodiscard]] constexpr auto size() const -> std::size_t {
+    return m_shape.Count();
+  }
 
-  ElementType *data() { return m_mem.RawMemory(); }
-  const ElementType *data() const { return m_mem.RawMemory(); }
+  auto data() -> ElementType * { return m_mem.RawMemory(); }
+  auto data() const -> const ElementType * { return m_mem.RawMemory(); }
 };
 
 // Scalar Tensor ===============================================
@@ -1593,12 +1596,12 @@ public:
   explicit Tensor(ContiguousMemory<ElementType, DeviceType> p_mem)
       : m_mem(std::move(p_mem)) {}
 
-  const auto &Shape() const noexcept {
+  auto Shape() const noexcept -> const auto & {
     static const venus::Shape<Dimension> shape;
     return shape;
   }
 
-  auto Unique() const -> bool { return not m_mem.IsShared(); }
+  [[nodiscard]] auto Unique() const -> bool { return not m_mem.IsShared(); }
 
   void SetValue(ElementType value) const = delete;
 
