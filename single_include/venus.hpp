@@ -1820,30 +1820,28 @@ template <typename... TParameters> struct VarTypeDict {
 
     Values() = default;
 
-    Values(Values &&val) {
+    Values(Values &&val) noexcept {
       for (size_t i = 0; i < sizeof...(Types); ++i) {
         m_tuple[i] = std::move(val.m_tuple[i]);
       }
     }
 
     Values(const Values &) = default;
-    Values &operator=(const Values &) = default;
-    Values &operator=(Values &&) = default;
+    auto operator=(const Values &) -> Values & = default;
+    auto operator=(Values &&) -> Values & = default;
+    ~Values() = default;
 
-    Values(std::shared_ptr<void> (&&input)[sizeof...(Types)]) {
-      for (size_t i = 0; i < sizeof...(Types); ++i) {
-        m_tuple[i] = std::move(input[i]);
-      }
-    }
+    Values(std::array<std::shared_ptr<void>, sizeof...(Types)> &&input)
+        : m_tuple(std::move(input)) {}
 
     template <typename TTag, typename... TParams>
     void Update(TParams &&...params) {
       static constexpr auto idx = Sequential::Order<VarTypeDict, TTag>;
       using RawType = Sequential::At<Values, idx>;
 
-      RawType *tmp = new RawType(std::forward<TParams>(params)...);
+      auto *tmp = new RawType(std::forward<TParams>(params)...);
       m_tuple[idx] = std::shared_ptr<void>(tmp, [](void *ptr) {
-        RawType *nptr = static_cast<RawType *>(ptr);
+        auto *nptr = static_cast<RawType *>(ptr);
         delete nptr;
       });
     }
@@ -1853,9 +1851,9 @@ template <typename... TParameters> struct VarTypeDict {
       static constexpr auto idx = Sequential::Order<VarTypeDict, TTag>;
       using RawType = Sequential::At<Values, idx>;
 
-      RawType *tmp = new RawType(std::forward<TParams>(params)...);
+      auto *tmp = new RawType(std::forward<TParams>(params)...);
       m_tuple[idx] = std::shared_ptr<void>(tmp, [](void *ptr) {
-        RawType *nptr = static_cast<RawType *>(ptr);
+        auto *nptr = static_cast<RawType *>(ptr);
         delete nptr;
       });
 
@@ -1866,9 +1864,9 @@ template <typename... TParameters> struct VarTypeDict {
       static constexpr auto idx = Sequential::Order<VarTypeDict, TTag>;
       using RawType = std::remove_cvref_t<TVal>;
 
-      RawType *tmp = new RawType(std::forward<TVal>(val));
+      auto *tmp = new RawType(std::forward<TVal>(val));
       m_tuple[idx] = std::shared_ptr<void>(tmp, [](void *ptr) {
-        RawType *nptr = static_cast<RawType *>(ptr);
+        auto *nptr = static_cast<RawType *>(ptr);
         delete nptr;
       });
 
@@ -1885,9 +1883,10 @@ template <typename... TParameters> struct VarTypeDict {
       using AimType = Sequential::At<Values, idx>;
 
       void *tmp = m_tuple[idx].get();
-      if (!tmp)
+      if (!tmp) {
         throw std::runtime_error("Empty Value.");
-      AimType *res = static_cast<AimType *>(tmp);
+      }
+      auto *res = static_cast<AimType *>(tmp);
       return *res;
     }
 
@@ -1896,14 +1895,17 @@ template <typename... TParameters> struct VarTypeDict {
       using AimType = Sequential::At<Values, idx>;
 
       void *tmp = m_tuple[idx].get();
-      if (!tmp)
+      if (!tmp) {
         throw std::runtime_error("Empty Value.");
-      AimType *res = static_cast<AimType *>(tmp);
+      }
+      auto *res = static_cast<AimType *>(tmp);
       return *res;
     }
 
   private:
-    std::shared_ptr<void> m_tuple[sizeof...(Types) == 0 ? 1 : sizeof...(Types)];
+    std::array<std::shared_ptr<void>,
+               sizeof...(Types) == 0 ? 1 : sizeof...(Types)>
+        m_tuple{};
   };
 
   static auto Create() {
