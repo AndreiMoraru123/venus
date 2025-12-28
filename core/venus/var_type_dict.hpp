@@ -12,7 +12,10 @@ template <typename... TParameters> struct VarTypeDict {
 
   template <typename... Types> struct Values {
 
-    using Keys = VarTypeDict;
+    static constexpr std::size_t TupleSize =
+        sizeof...(Types) == 0 ? 1 : sizeof...(Types);
+
+    using Tuple = std::array<std::shared_ptr<void>, TupleSize>;
 
     template <typename TKey>
     using ValueType =
@@ -35,8 +38,7 @@ template <typename... TParameters> struct VarTypeDict {
     auto operator=(Values &&) -> Values & = default;
     ~Values() = default;
 
-    Values(std::array<std::shared_ptr<void>, sizeof...(Types)> &&input)
-        : m_tuple(std::move(input)) {}
+    Values(Tuple &&input) : m_tuple(std::move(input)) {}
 
     template <typename TTag, typename... TParams>
     void Update(TParams &&...params) {
@@ -107,9 +109,7 @@ template <typename... TParameters> struct VarTypeDict {
     }
 
   private:
-    std::array<std::shared_ptr<void>,
-               sizeof...(Types) == 0 ? 1 : sizeof...(Types)>
-        m_tuple{};
+    Tuple m_tuple{};
   };
 
   static auto Create() {
