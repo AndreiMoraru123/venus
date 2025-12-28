@@ -1,6 +1,6 @@
 # Venus: Zero-Cost Tensors for Modern Deep Learning
 
-### _A deep learning library, written in C++, for the love of C++_
+### _A deep learning library, written in C++, for C++, out the love for C++_
 
 Venus leverages C++20 ranges, providing both powerful optimizations and beautiful mathematical expressiveness:
 
