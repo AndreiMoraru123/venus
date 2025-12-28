@@ -1161,7 +1161,7 @@ explicit Shape(TShapeParameter...) -> Shape<sizeof...(TShapeParameter)>;
   }
 
 #define REGISTER_PRE_OPERATOR(op)                                              \
-  ElementProxy &operator op() {                                                \
+  auto operator op()->ElementProxy & {                                         \
     if (not m_tensor.Unique()) {                                               \
       throw std::runtime_error("Cannot write to shared tensor");               \
     }                                                                          \
@@ -1170,7 +1170,7 @@ explicit Shape(TShapeParameter...) -> Shape<sizeof...(TShapeParameter)>;
   }
 
 #define REGISTER_POST_OPERATOR(op)                                             \
-  ElementType operator op(int) {                                               \
+  auto operator op(int)->ElementType {                                         \
     if (not m_tensor.Unique()) {                                               \
       throw std::runtime_error("Cannot write to shared tensor");               \
     }                                                                          \
@@ -1180,7 +1180,7 @@ explicit Shape(TShapeParameter...) -> Shape<sizeof...(TShapeParameter)>;
   }
 
 #define REGISTER_OPERATOR_EQUAL(op)                                            \
-  ElementProxy &operator op## = (const ElementType &value) {                   \
+  auto operator op## = (const ElementType &value)->ElementProxy & {            \
     if (not m_tensor.Unique()) {                                               \
       throw std::runtime_error("Cannot write to shared tensor");               \
     }                                                                          \
@@ -1336,9 +1336,9 @@ public:
                 (std::is_convertible_v<Dims, std::size_t> && ...)
   explicit Tensor(Dims &&...) = delete;
 
-  const auto &Shape() const noexcept { return m_shape; }
+  auto Shape() const noexcept -> const auto & { return m_shape; }
 
-  auto Unique() const -> bool { return not m_mem.IsShared(); }
+  [[nodiscard]] auto Unique() const -> bool { return not m_mem.IsShared(); }
 
   auto Clone() const -> Tensor {
     Tensor copy_tensor(m_shape);
@@ -1380,32 +1380,32 @@ public:
 
   // Greater than
   template <typename OtherType> auto operator>(OtherType &&other) const {
-    return venus::ops::gt(*this, other);
+    return venus::ops::gt(*this, std::forward<OtherType>(other));
   }
 
   // Greater or equal
   template <typename OtherType> auto operator>=(OtherType &&other) const {
-    return venus::ops::gte(*this, other);
+    return venus::ops::gte(*this, std::forward<OtherType>(other));
   }
 
   // Less than
   template <typename OtherType> auto operator<(OtherType &&other) const {
-    return venus::ops::lt(*this, other);
+    return venus::ops::lt(*this, std::forward<OtherType>(other));
   }
 
   // Less or equal
   template <typename OtherType> auto operator<=(OtherType &&other) const {
-    return venus::ops::lte(*this, other);
+    return venus::ops::lte(*this, std::forward<OtherType>(other));
   }
 
   // Equal
   template <typename OtherType> auto operator==(OtherType &&other) const {
-    return venus::ops::eq(*this, other);
+    return venus::ops::eq(*this, std::forward<OtherType>(other));
   }
 
   // Not equal
   template <typename OtherType> auto operator!=(OtherType &&other) const {
-    return venus::ops::neq(*this, other);
+    return venus::ops::neq(*this, std::forward<OtherType>(other));
   }
 
   // Dot product
@@ -1429,7 +1429,7 @@ public:
     operator ElementType() const { return m_element; }
 
     // writing
-    const ElementProxy &operator=(const ElementType &value) const {
+    auto operator=(const ElementType &value) -> ElementProxy & {
       if (not m_tensor.Unique()) {
         // TODO: Do I want to throw here or do I want copy on write (cow)
         throw std::runtime_error("Cannot write to shared tensor");
@@ -1447,7 +1447,7 @@ public:
       return *this;
     }
 
-    const ElementProxy &operator=(ElementType &&value) const {
+    auto operator=(ElementType &&value) -> ElementProxy & {
       if (not m_tensor.Unique()) {
         throw std::runtime_error("Cannot write to shared tensor");
       }
@@ -1458,7 +1458,7 @@ public:
     // Required for modifying the tensor through range algos
     template <typename U>
       requires std::convertible_to<U, ElementType>
-    const ElementProxy &operator=(U &&value) const {
+    auto operator=(U &&value) -> ElementProxy & {
       if (not m_tensor.Unique()) {
         throw std::runtime_error("Cannot write to shared tensor");
       }
@@ -1586,7 +1586,7 @@ public:
     SetValue(value);
   }
 
-  explicit Tensor(venus::Shape<0>) : Tensor() {};
+  explicit Tensor(venus::Shape<0> /*unused*/) : Tensor() {};
 
   explicit Tensor(ContiguousMemory<ElementType, DeviceType> p_mem)
       : m_mem(std::move(p_mem)) {}
@@ -1667,7 +1667,7 @@ private:
 
 template <typename TElem, typename TDevice, std::size_t Dim>
 struct LowLevelAccess<Tensor<TElem, TDevice, Dim>> {
-  LowLevelAccess(Tensor<TElem, TDevice, Dim> &p) : m_tensor(p) {}
+  LowLevelAccess(Tensor<TElem, TDevice, Dim> &tensor) : m_tensor(tensor) {}
   auto RawMemory() -> TElem * { return m_tensor.m_mem.RawMemory(); }
   auto SharedMemory() const { return m_tensor.m_mem; }
 
@@ -1677,7 +1677,8 @@ private:
 
 template <typename TElem, typename TDevice, std::size_t Dim>
 struct LowLevelAccess<const Tensor<TElem, TDevice, Dim>> {
-  LowLevelAccess(const Tensor<TElem, TDevice, Dim> &p) : m_tensor(p) {}
+  LowLevelAccess(const Tensor<TElem, TDevice, Dim> &tensor)
+      : m_tensor(tensor) {}
   auto RawMemory() const -> const TElem * { return m_tensor.m_mem.RawMemory(); }
   auto SharedMemory() const { return m_tensor.m_mem; }
 
@@ -1687,16 +1688,15 @@ private:
 
 // difference_type + iterator (for random_access_range | addition commutative)
 template <typename T>
-constexpr tensor_iterator<T>
-operator+(typename tensor_iterator<T>::difference_type n,
-          const tensor_iterator<T> &it) {
+constexpr auto operator+(typename tensor_iterator<T>::difference_type n,
+                         const tensor_iterator<T> &it) -> tensor_iterator<T> {
   return it + n;
 }
 
 // Print Tensor ================================================
 template <typename T>
-concept StringLike = requires(T t) {
-  { t.c_str() } -> std::convertible_to<const char *>;
+concept StringLike = requires(T str) {
+  { str.c_str() } -> std::convertible_to<const char *>;
 } or std::convertible_to<T, const char *>;
 
 template <typename T>
@@ -1706,8 +1706,8 @@ concept CharLike = std::same_as<T, char> || std::same_as<T, signed char> ||
                    std::same_as<T, char32_t>;
 
 template <typename TElem, typename TDevice, std::size_t Dim>
-std::ostream &operator<<(std::ostream &os,
-                         const Tensor<TElem, TDevice, Dim> &tensor) {
+auto operator<<(std::ostream &os, const Tensor<TElem, TDevice, Dim> &tensor)
+    -> std::ostream & {
   os << "venus::Tensor([";
 
   std::size_t count = 0;
@@ -1730,8 +1730,8 @@ std::ostream &operator<<(std::ostream &os,
 }
 
 template <typename TElem, typename TDevice>
-std::ostream &operator<<(std::ostream &os,
-                         const Tensor<TElem, TDevice, 0> &tensor) {
+auto operator<<(std::ostream &os, const Tensor<TElem, TDevice, 0> &tensor)
+    -> std::ostream & {
   if constexpr (StringLike<TElem>) {
     return os << "venus::Tensor(" << "\"" << tensor.Value() << "\"" << ")";
   } else if constexpr (CharLike<TElem>) {
