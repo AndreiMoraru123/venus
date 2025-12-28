@@ -182,7 +182,7 @@ public:
     requires(D == 1)
   explicit Tensor(std::initializer_list<ElementType> init_list)
       : m_shape(init_list.size()), m_mem(init_list.size()) {
-    std::copy(init_list.begin(), init_list.end(), m_mem.RawMemory());
+    std::ranges::copy(init_list, data());
   }
 
   template <std::size_t D = Dim>
@@ -356,7 +356,7 @@ public:
                   "Indexing is currently only supported on CPU");
     const auto offset =
         m_shape.IndexToOffset(static_cast<std::size_t>(indices)...);
-    return m_mem.RawMemory()[offset];
+    return data()[offset];
   }
 
   template <typename... Indices>
@@ -366,7 +366,7 @@ public:
                   "Indexing is currently only supported on CPU");
     const auto offset =
         m_shape.IndexToOffset(static_cast<std::size_t>(indices)...);
-    return m_mem.RawMemory()[offset];
+    return data()[offset];
   }
 #else
   // Tensor indexing
@@ -377,7 +377,7 @@ public:
                   "Indexing is currently only supported on CPU");
     const auto offset =
         m_shape.IndexToOffset(static_cast<std::size_t>(indices)...);
-    return ElementProxy(*this, (m_mem.RawMemory())[offset]);
+    return ElementProxy(*this, data()[offset]);
   }
 
   template <typename... Indices>
@@ -387,7 +387,7 @@ public:
                   "Indexing is currently only supported on CPU");
     const auto offset =
         m_shape.IndexToOffset(static_cast<std::size_t>(indices)...);
-    return m_mem.RawMemory()[offset];
+    return data()[offset];
   }
 #endif
 
@@ -470,10 +470,10 @@ public:
     if (not Unique()) {
       throw std::runtime_error("Cannot write to shared scalar tensor.");
     }
-    m_mem.RawMemory()[0] = value;
+    data()[0] = value;
   }
 
-  auto Value() const noexcept { return m_mem.RawMemory()[0]; }
+  auto Value() const noexcept { return data()[0]; }
 
   auto operator==(const Tensor &tensor) const noexcept -> bool {
     return Value() == tensor.Value();
@@ -525,7 +525,10 @@ public:
   auto LowLevel() { return LowLevelAccess<Tensor>(*this); }
   auto LowLevel() const { return LowLevelAccess<const Tensor>(*this); }
 
-  constexpr std::size_t size() const { return 1; }
+  [[nodiscard]] constexpr auto size() const -> std::size_t { return 1; }
+
+  auto data() -> ElementType * { return m_mem.RawMemory(); }
+  auto data() const -> const ElementType * { return m_mem.RawMemory(); }
 
 private:
   ContiguousMemory<ElementType, DeviceType> m_mem;
