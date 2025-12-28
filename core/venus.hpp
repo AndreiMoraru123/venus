@@ -6,6 +6,7 @@
 #include <venus/memory/contiguous_memory.hpp>
 #include <venus/memory/device.hpp>
 #include <venus/memory/lower_access.hpp>
+#include <venus/nested_initializer_list.hpp>
 #include <venus/null_param.hpp>
 #include <venus/policies/policy_concepts.hpp>
 #include <venus/policies/policy_container.hpp>

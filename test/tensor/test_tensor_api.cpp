@@ -224,4 +224,46 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     REQUIRE(scalar.Unique());
     REQUIRE(scalar.Value() == x[0]);
   }
+
+  SECTION("Tensor From Initializer List") {
+    auto tensor = Tensor<int, Device::CPU, 1>({1, 2, 3, 4, 5});
+
+    REQUIRE(tensor.Shape() == Shape<1>(5));
+    REQUIRE(tensor[0] == 1);
+    REQUIRE(tensor[1] == 2);
+    REQUIRE(tensor[2] == 3);
+    REQUIRE(tensor[3] == 4);
+    REQUIRE(tensor[4] == 5);
+  }
+
+  SECTION("2D Tensor From Nested Initializer List") {
+    auto tensor = Tensor<int, Device::CPU, 2>{{1, 2, 3}, {4, 5, 6}};
+
+    REQUIRE(tensor.Shape() == Shape<2>(2, 3));
+    REQUIRE(tensor[0, 0] == 1);
+    REQUIRE(tensor[0, 1] == 2);
+    REQUIRE(tensor[0, 2] == 3);
+    REQUIRE(tensor[1, 0] == 4);
+    REQUIRE(tensor[1, 1] == 5);
+    REQUIRE(tensor[1, 2] == 6);
+  }
+
+  SECTION("3D Tensor From Nested Initializer List") {
+    auto tensor = Tensor<int, Device::CPU, 3>{{{1, 2, 3}, {4, 5, 6}},
+                                              {{7, 8, 9}, {10, 11, 12}}};
+
+    REQUIRE(tensor.Shape() == Shape<3>(2, 2, 3));
+    REQUIRE(tensor[0, 0, 0] == 1);
+    REQUIRE(tensor[0, 0, 1] == 2);
+    REQUIRE(tensor[0, 0, 2] == 3);
+    REQUIRE(tensor[0, 1, 0] == 4);
+    REQUIRE(tensor[0, 1, 1] == 5);
+    REQUIRE(tensor[0, 1, 2] == 6);
+    REQUIRE(tensor[1, 0, 0] == 7);
+    REQUIRE(tensor[1, 0, 1] == 8);
+    REQUIRE(tensor[1, 0, 2] == 9);
+    REQUIRE(tensor[1, 1, 0] == 10);
+    REQUIRE(tensor[1, 1, 1] == 11);
+    REQUIRE(tensor[1, 1, 2] == 12);
+  }
 }

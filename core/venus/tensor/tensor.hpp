@@ -5,6 +5,7 @@
 #include <concepts>
 #include <cstddef>
 #include <format>
+#include <initializer_list>
 #include <iomanip>
 #include <ios>
 #include <iterator>
@@ -14,6 +15,7 @@
 #include <venus/memory/contiguous_memory.hpp>
 #include <venus/memory/device.hpp>
 #include <venus/memory/lower_access.hpp>
+#include <venus/nested_initializer_list.hpp>
 #include <venus/tensor/eager_ops.hpp>
 #include <venus/tensor/shape.hpp>
 
@@ -176,6 +178,26 @@ public:
                       "but only {} provided",
                       m_shape.Count(), m_mem.Size()));
     }
+  }
+
+  explicit Tensor(nested_initializer_list_t<ElementType, Dim> init_list)
+      : m_shape(venus::Shape<Dim>::FromNestedInitializerList(init_list)),
+        m_mem(m_shape.Count()) {
+
+    auto flatten = [](const auto &list, ElementType *output_ptr,
+                      const auto &self_ref) -> ElementType * {
+      if constexpr (std::same_as<std::decay_t<decltype(*list.begin())>,
+                                 ElementType>) {
+        return std::ranges::copy(list, output_ptr).out;
+      } else {
+        for (const auto &inner_list : list) {
+          output_ptr = self_ref(inner_list, output_ptr, self_ref);
+        }
+        return output_ptr;
+      }
+    };
+
+    flatten(init_list, data(), flatten);
   }
 
   template <std::size_t D = Dim>
@@ -397,8 +419,8 @@ public:
   auto LowLevel() const { return LowLevelAccess<const Tensor>(*this); }
 
 private:
-  ContiguousMemory<ElementType, DeviceType> m_mem;
   venus::Shape<Dim> m_shape;
+  ContiguousMemory<ElementType, DeviceType> m_mem;
 
 public:
   constexpr auto begin() {

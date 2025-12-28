@@ -89,6 +89,25 @@ public:
     return span.mapping()(indices...);
   }
 
+  constexpr static auto FromNestedInitializerList(auto nested_init_list)
+      -> Shape<dimNum> {
+    Shape<dimNum> shape;
+
+    auto ExtractDims = [](const auto &list, std::size_t level,
+                          std::array<std::size_t, dimNum> &dims,
+                          const auto &self_ref) -> void {
+      if constexpr (requires { list.size(); }) {
+        dims[level] = list.size();
+        if (level + 1 < dimNum && list.size() > 0) {
+          self_ref((*list.begin()), level + 1, dims, self_ref);
+        }
+      }
+    };
+
+    ExtractDims(nested_init_list, 0, shape.m_dims, ExtractDims);
+    return shape;
+  }
+
   // Range Ops
   constexpr auto begin() { return m_dims.begin(); }
   constexpr auto end() { return m_dims.end(); }
@@ -105,7 +124,7 @@ private:
   std::array<std::size_t, Dim> m_dims{};
 
   template <std::size_t... Is>
-  constexpr auto CreateMdSpan(std::index_sequence<Is...>) const {
+  constexpr auto CreateMdSpan(std::index_sequence<Is...> /*unused*/) const {
     return std::mdspan<int, std::dextents<std::size_t, dimNum>>(0,
                                                                 m_dims[Is]...);
   }
