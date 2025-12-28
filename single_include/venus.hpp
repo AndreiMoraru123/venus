@@ -176,6 +176,26 @@ private:
 namespace venus {
 template <typename TData> struct LowLevelAccess;
 } // namespace venus
+#include <cstddef>
+#include <initializer_list>
+
+template <class T, std::size_t Depth> struct nested_initializer_list {
+  using type = std::initializer_list<
+      typename nested_initializer_list<T, Depth - 1>::type>;
+};
+
+template <class T> struct nested_initializer_list<T, 1> {
+  using type = std::initializer_list<T>;
+};
+
+// template <class T> struct nested_initializer_list<T, 0> {
+//   using type = T;
+// };
+
+template <class T, std::size_t Depth>
+using nested_initializer_list_t =
+    typename nested_initializer_list<T, Depth>::type;
+
 namespace venus {
 struct NullParameter {};
 } // namespace venus
@@ -1076,6 +1096,25 @@ public:
     return span.mapping()(indices...);
   }
 
+  constexpr static auto FromNestedInitializerList(auto nested_init_list)
+      -> Shape<dimNum> {
+    Shape<dimNum> shape;
+
+    auto ExtractDims = [](const auto &list, std::size_t level,
+                          std::array<std::size_t, dimNum> &dims,
+                          const auto &self_ref) -> void {
+      if constexpr (requires { list.size(); }) {
+        dims[level] = list.size();
+        if (level + 1 < dimNum && list.size() > 0) {
+          self_ref((*list.begin()), level + 1, dims, self_ref);
+        }
+      }
+    };
+
+    ExtractDims(nested_init_list, 0, shape.m_dims, ExtractDims);
+    return shape;
+  }
+
   // Range Ops
   constexpr auto begin() { return m_dims.begin(); }
   constexpr auto end() { return m_dims.end(); }
@@ -1092,7 +1131,7 @@ private:
   std::array<std::size_t, Dim> m_dims{};
 
   template <std::size_t... Is>
-  constexpr auto CreateMdSpan(std::index_sequence<Is...>) const {
+  constexpr auto CreateMdSpan(std::index_sequence<Is...> /*unused*/) const {
     return std::mdspan<int, std::dextents<std::size_t, dimNum>>(0,
                                                                 m_dims[Is]...);
   }
@@ -1144,12 +1183,14 @@ explicit Shape(TShapeParameter...) -> Shape<sizeof...(TShapeParameter)>;
 #include <concepts>
 #include <cstddef>
 #include <format>
+#include <initializer_list>
 #include <iomanip>
 #include <ios>
 #include <iterator>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
+
 
 
 
@@ -1315,6 +1356,26 @@ public:
                       "but only {} provided",
                       m_shape.Count(), m_mem.Size()));
     }
+  }
+
+  explicit Tensor(nested_initializer_list_t<ElementType, Dim> init_list)
+      : m_shape(venus::Shape<Dim>::FromNestedInitializerList(init_list)),
+        m_mem(m_shape.Count()) {
+
+    auto flatten = [](const auto &list, ElementType *output_ptr,
+                      const auto &self_ref) -> ElementType * {
+      if constexpr (std::same_as<std::decay_t<decltype(*list.begin())>,
+                                 ElementType>) {
+        return std::ranges::copy(list, output_ptr).out;
+      } else {
+        for (const auto &inner_list : list) {
+          output_ptr = self_ref(inner_list, output_ptr, self_ref);
+        }
+        return output_ptr;
+      }
+    };
+
+    flatten(init_list, data(), flatten);
   }
 
   template <std::size_t D = Dim>
@@ -1536,8 +1597,8 @@ public:
   auto LowLevel() const { return LowLevelAccess<const Tensor>(*this); }
 
 private:
-  ContiguousMemory<ElementType, DeviceType> m_mem;
   venus::Shape<Dim> m_shape;
+  ContiguousMemory<ElementType, DeviceType> m_mem;
 
 public:
   constexpr auto begin() {
