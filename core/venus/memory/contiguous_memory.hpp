@@ -37,16 +37,16 @@ public:
 public:
   auto RawMemory() -> ElementType * { return m_mem.get(); }
   auto RawMemory() const -> const ElementType * { return m_mem.get(); }
-  bool IsShared() const { return m_mem.use_count() > 1; }
-  std::size_t Size() const { return m_size; }
+  [[nodiscard]] auto IsShared() const -> bool { return m_mem.use_count() > 1; }
+  [[nodiscard]] auto Size() const -> std::size_t { return m_size; }
 
-  bool operator==(const ContiguousMemory &val) const {
+  auto operator==(const ContiguousMemory &val) const -> bool {
     return (m_mem == val.m_mem) and (m_size == val.m_size);
   }
 
 private:
-  ContiguousMemory(std::shared_ptr<ElementType> ptr, std::size_t sz)
-      : m_mem(std::move(ptr)), m_size(sz) {}
+  ContiguousMemory(std::shared_ptr<ElementType> ptr, std::size_t size)
+      : m_mem(std::move(ptr)), m_size(size) {}
   std::shared_ptr<ElementType> m_mem;
   std::size_t m_size;
 };

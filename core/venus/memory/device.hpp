@@ -1,6 +1,5 @@
 #pragma once
-namespace venus {
-namespace Device {
+
+namespace venus::Device {
 struct CPU;
 }
-} // namespace venus

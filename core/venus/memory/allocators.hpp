@@ -30,6 +30,8 @@ struct Allocator<Device::CPU> {
 } // namespace venus
 #else
 
+constexpr auto BLOCK_SIZE = 1024;
+
 // Memory pool allocator for compiled venus
 
 #include <deque>
@@ -68,13 +70,14 @@ private:
   };
 
 public:
-  template <typename T, std::size_t BlockSize = 1024>
-  static std::shared_ptr<T> Allocate(std::size_t p_elemSize) {
+  template <typename T, std::size_t BlockSize = BLOCK_SIZE>
+  static auto Allocate(std::size_t p_elemSize) -> std::shared_ptr<T> {
     static_assert((BlockSize & (BlockSize - 1)) == 0,
                   "BlockSize must be a power of 2");
 
-    if (p_elemSize == 0)
+    if (p_elemSize == 0) {
       return nullptr;
+    }
 
     p_elemSize *= sizeof(T);
     if (p_elemSize & (BlockSize - 1)) {
@@ -83,7 +86,7 @@ public:
 
     std::lock_guard<std::mutex> guard(m_mutex);
 
-    T *raw_buf;
+    T *raw_buf = nullptr;
     auto &slot = m_pool.memBuffer[p_elemSize];
 
     if (slot.empty()) {
