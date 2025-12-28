@@ -188,10 +188,6 @@ template <class T> struct nested_initializer_list<T, 1> {
   using type = std::initializer_list<T>;
 };
 
-// template <class T> struct nested_initializer_list<T, 0> {
-//   using type = T;
-// };
-
 template <class T, std::size_t Depth>
 using nested_initializer_list_t =
     typename nested_initializer_list<T, Depth>::type;
