@@ -93,9 +93,9 @@ public:
       -> Shape<dimNum> {
     Shape<dimNum> shape;
 
-    auto ExtractDims = [](const auto &list, std::size_t level,
-                          std::array<std::size_t, dimNum> &dims,
-                          const auto &self_ref) -> void {
+    auto extract = [](const auto &list, std::size_t level,
+                      std::array<std::size_t, dimNum> &dims,
+                      const auto &self_ref) -> void {
       if constexpr (requires { list.size(); }) {
         dims[level] = list.size();
         if (level + 1 < dimNum && list.size() > 0) {
@@ -104,7 +104,7 @@ public:
       }
     };
 
-    ExtractDims(nested_init_list, 0, shape.m_dims, ExtractDims);
+    extract(nested_init_list, 0, shape.m_dims, extract);
     return shape;
   }
 
