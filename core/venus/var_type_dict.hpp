@@ -1,3 +1,4 @@
+#include <array>
 #include <cstddef>
 #include <memory>
 #include <stdexcept>
@@ -81,7 +82,7 @@ template <typename... TParameters> struct VarTypeDict {
       }
     }
 
-    template <typename TTag> const auto &Get() const {
+    template <typename TTag> auto Get() const -> const auto & {
       static constexpr auto idx = Sequential::Order<VarTypeDict, TTag>;
       using AimType = Sequential::At<Values, idx>;
 
@@ -93,7 +94,7 @@ template <typename... TParameters> struct VarTypeDict {
       return *res;
     }
 
-    template <typename TTag> auto &Get() {
+    template <typename TTag> auto Get() -> auto & {
       static constexpr auto idx = Sequential::Order<VarTypeDict, TTag>;
       using AimType = Sequential::At<Values, idx>;
 
