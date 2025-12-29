@@ -41,7 +41,7 @@ public:
     return false;
   }
 
-  [[nodiscard]] constexpr auto Count() const -> std::size_t {
+  [[nodiscard]] constexpr auto count() const -> std::size_t {
     return std::ranges::fold_left(m_dims, static_cast<std::size_t>(1),
                                   std::multiplies<>());
   }
@@ -58,7 +58,7 @@ public:
     return m_dims[idx];
   }
 
-  constexpr auto OffsetToIndex(std::size_t offset) const
+  constexpr auto offsetToIdx(std::size_t offset) const
       -> std::array<std::size_t, dimNum> {
     std::array<std::size_t, dimNum> result{};
     for (int i = (int)dimNum - 1; i >= 0 && offset > 0; --i) {
@@ -72,7 +72,7 @@ public:
   }
 
   template <SizeTLike... TIntTypes>
-  constexpr auto IndexToOffset(TIntTypes... indices) const -> std::size_t {
+  constexpr auto idxToOffset(TIntTypes... indices) const -> std::size_t {
     static_assert(sizeof...(TIntTypes) == dimNum, "Wrong number of indices");
 
     // TODO: The accessor policy in mdspan should be able to perform this (???)
@@ -85,11 +85,11 @@ public:
       }
     }
 
-    auto span = CreateMdSpan(std::make_index_sequence<dimNum>{});
+    auto span = createSpan(std::make_index_sequence<dimNum>{});
     return span.mapping()(indices...);
   }
 
-  constexpr static auto FromNestedInitializerList(auto nested_init_list)
+  constexpr static auto fromNestedInitializerList(auto nested_init_list)
       -> Shape<dimNum> {
     Shape<dimNum> shape;
 
@@ -141,7 +141,7 @@ private:
   std::array<std::size_t, Dim> m_dims{};
 
   template <std::size_t... Is>
-  constexpr auto CreateMdSpan(std::index_sequence<Is...> /*unused*/) const {
+  constexpr auto createSpan(std::index_sequence<Is...> /*unused*/) const {
     return std::mdspan<int, std::dextents<std::size_t, dimNum>>(0,
                                                                 m_dims[Is]...);
   }
@@ -153,7 +153,7 @@ public:
 
   explicit Shape() = default;
 
-  static constexpr auto Count() -> std::size_t { return 1; }
+  static constexpr auto count() -> std::size_t { return 1; }
 
   constexpr auto operator==(const Shape &val) const -> bool { return true; }
 
@@ -164,8 +164,7 @@ public:
 };
 
 template <std::size_t Dim>
-auto operator<<(std::ostream &os, const venus::Shape<Dim> &shape)
-    -> std::ostream & {
+auto operator<<(std::ostream &os, const Shape<Dim> &shape) -> std::ostream & {
   os << "(";
   std::size_t count = 0;
   for (auto dim : shape) {
@@ -178,8 +177,7 @@ auto operator<<(std::ostream &os, const venus::Shape<Dim> &shape)
 }
 
 template <std::size_t Dim>
-auto operator<<(std::ostream &os, const venus::Shape<0> &shape)
-    -> std::ostream & {
+auto operator<<(std::ostream &os, const Shape<0> &shape) -> std::ostream & {
   return os << "()";
 }
 

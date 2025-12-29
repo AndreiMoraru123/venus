@@ -14,82 +14,82 @@ TEST_CASE("Tensor API", "[tensor][api]") {
 
   SECTION("Scalar Tensor") {
     auto scalar = Tensor<float, Device::CPU, 0>(10.0f);
-    REQUIRE(scalar.Value() == 10.0f);
+    REQUIRE(scalar.value() == 10.0f);
     REQUIRE(bool(scalar) == true);
-    REQUIRE(scalar.Unique());
+    REQUIRE(scalar.unique());
 
-    scalar.SetValue(100.0f);
-    REQUIRE(scalar.Value() == 100.0f);
+    scalar.setValue(100.0f);
+    REQUIRE(scalar.value() == 100.0f);
 
-    scalar.SetValue(0.0f);
+    scalar.setValue(0.0f);
     REQUIRE(bool(scalar) == false);
   }
 
   SECTION("Scalar Boolean Tensor") {
     auto scalar = Tensor<bool, Device::CPU, 0>(true);
-    REQUIRE(scalar.Value() == true);
+    REQUIRE(scalar.value() == true);
     REQUIRE(scalar == true);
 
-    scalar.SetValue(false);
+    scalar.setValue(false);
     REQUIRE(scalar == false);
   }
 
   SECTION("Shared Memory") {
     auto shared_memo = ContiguousMemory<float, Device::CPU>(1);
 
-    float *rawPtr = shared_memo.RawMemory();
+    float *rawPtr = shared_memo.rawMemory();
     rawPtr[0] = 1.0f;
 
     const auto scalar1 = Tensor<float, Device::CPU, 0>(shared_memo);
     const auto scalar2 = Tensor<float, Device::CPU, 0>(shared_memo);
 
-    REQUIRE(scalar1.Value() == 1.0f);
-    REQUIRE(scalar2.Value() == 1.0f);
+    REQUIRE(scalar1.value() == 1.0f);
+    REQUIRE(scalar2.value() == 1.0f);
 
-    REQUIRE_FALSE(scalar1.Unique());
-    REQUIRE_FALSE(scalar2.Unique());
+    REQUIRE_FALSE(scalar1.unique());
+    REQUIRE_FALSE(scalar2.unique());
   }
 
   SECTION("Shared Shifted Memory") {
     auto shared_memo = ContiguousMemory<float, Device::CPU>(3);
 
-    float *rawPtr = shared_memo.RawMemory();
+    float *rawPtr = shared_memo.rawMemory();
     rawPtr[0] = 1.0f;
     rawPtr[2] = 3.0f;
 
     const auto scalar1 = Tensor<float, Device::CPU, 0>(shared_memo);
-    const auto scalar2 = Tensor<float, Device::CPU, 0>(shared_memo.Shift(2));
+    const auto scalar2 = Tensor<float, Device::CPU, 0>(shared_memo.shift(2));
 
-    REQUIRE(scalar1.Value() == 1.0f);
-    REQUIRE(scalar2.Value() == 3.0f);
+    REQUIRE(scalar1.value() == 1.0f);
+    REQUIRE(scalar2.value() == 3.0f);
 
-    REQUIRE_FALSE(scalar1.Unique());
-    REQUIRE_FALSE(scalar2.Unique());
+    REQUIRE_FALSE(scalar1.unique());
+    REQUIRE_FALSE(scalar2.unique());
   }
 
   SECTION("Low Level Access") {
     auto tensor = Tensor<float, Device::CPU, 0>(10.0f);
-    REQUIRE(tensor.Unique());
+    REQUIRE(tensor.unique());
 
-    auto lowLevelTensor = tensor.LowLevel();
-    REQUIRE(*lowLevelTensor.RawMemory() == 10.0f);
-    REQUIRE(tensor.Unique()); // non-owning access
+    auto lowLevelTensor = tensor.lowLevel();
+    REQUIRE(*lowLevelTensor.rawMemory() == 10.0f);
+    REQUIRE(tensor.unique()); // non-owning access
 
-    *lowLevelTensor.RawMemory() = 20.0f; // mutating is allowed
-    REQUIRE(tensor.Value() == 20.0f);
+    *lowLevelTensor.rawMemory() = 20.0f; // mutating is allowed
+    REQUIRE(tensor.value() == 20.0f);
   }
 
   SECTION("Low Level Access Memory") {
     auto memo = ContiguousMemory<float, Device::CPU>(1);
-    float *rawPtr = memo.RawMemory();
+    float *rawPtr = memo.rawMemory();
     rawPtr[0] = 10.0f;
 
     const auto tensor = Tensor<float, Device::CPU, 0>(memo);
-    REQUIRE_FALSE(tensor.Unique()); // internal copy of memo
+    REQUIRE_FALSE(tensor.unique()); // internal copy of memo
 
-    const auto lowLevelTensor = tensor.LowLevel();
-    REQUIRE(lowLevelTensor.SharedMemory() == memo);
-    REQUIRE(*lowLevelTensor.RawMemory() == 10.0f);
+    const auto lowLevelTensor = tensor.lowLevel();
+    REQUIRE(lowLevelTensor.sharedMemory() == memo);
+    REQUIRE(*lowLevelTensor.rawMemory() == 10.0f);
   }
 
   SECTION("Attempty to Build Tensor From Insufficient Memory") {
@@ -112,8 +112,8 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     const auto memo = ContiguousMemory<float, Device::CPU>(12);
 
     const auto tensor = Tensor<float, Device::CPU, NUM_DIMS>(memo, shape);
-    REQUIRE_FALSE(tensor.Unique());
-    REQUIRE(tensor.Shape() == shape);
+    REQUIRE_FALSE(tensor.unique());
+    REQUIRE(tensor.shape() == shape);
   }
 
   SECTION("Build Tensor From Shape") {
@@ -122,8 +122,8 @@ TEST_CASE("Tensor API", "[tensor][api]") {
 
     // memory layout is deduced automatically
     const auto tensor = Tensor<float, Device::CPU, NUM_DIMS>(shape);
-    REQUIRE(tensor.Unique());
-    REQUIRE(tensor.Shape() == shape);
+    REQUIRE(tensor.unique());
+    REQUIRE(tensor.shape() == shape);
   }
 
   SECTION("Tensor Indexing") {
@@ -132,7 +132,7 @@ TEST_CASE("Tensor API", "[tensor][api]") {
 
     auto memo = ContiguousMemory<float, Device::CPU>(12);
     auto tensor = Tensor<float, Device::CPU, NUM_DIMS>(std::move(memo), shape);
-    REQUIRE(tensor.Unique());
+    REQUIRE(tensor.unique());
 
     for (int i = 0; i < 3; ++i) {
       for (int j = 0; j < 2; ++j) {
@@ -168,10 +168,10 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     constexpr auto shape = Shape<NUM_DIMS>(3, 2, 2);
 
     auto memo = ContiguousMemory<float, Device::CPU>(12);
-    std::fill_n(memo.RawMemory(), 12, 0.0f);
+    std::fill_n(memo.rawMemory(), 12, 0.0f);
 
     auto tensor = Tensor<float, Device::CPU, NUM_DIMS>(memo, shape);
-    REQUIRE_FALSE(tensor.Unique());
+    REQUIRE_FALSE(tensor.unique());
 
     // writing is forbidden
     for (int i = 0; i < 3; ++i) {
@@ -197,13 +197,13 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     constexpr auto shape = Shape<NUM_DIMS>(3, 2, 2);
 
     auto memo = ContiguousMemory<float, Device::CPU>(12);
-    std::fill_n(memo.RawMemory(), 12, 0.0f);
+    std::fill_n(memo.rawMemory(), 12, 0.0f);
 
     auto tensor1 = Tensor<float, Device::CPU, NUM_DIMS>(memo, shape);
     auto tensor2 = Tensor<float, Device::CPU, NUM_DIMS>(memo, shape);
 
-    REQUIRE_FALSE(tensor1.Unique());
-    REQUIRE_FALSE(tensor2.Unique());
+    REQUIRE_FALSE(tensor1.unique());
+    REQUIRE_FALSE(tensor2.unique());
 
     REQUIRE(tensor1[0, 0, 0] == 0.0f);
     REQUIRE(tensor2[0, 0, 0] == 0.0f);
@@ -216,19 +216,19 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     venus::ops::iota(x, 1);
     venus::ops::iota(y, 1);
 
-    REQUIRE_THROWS_AS(y.ToScalar(), std::runtime_error);
+    REQUIRE_THROWS_AS(y.toScalar(), std::runtime_error);
 
-    auto scalar = x.ToScalar();
+    auto scalar = x.toScalar();
 
-    REQUIRE(x.Unique());
-    REQUIRE(scalar.Unique());
-    REQUIRE(scalar.Value() == x[0]);
+    REQUIRE(x.unique());
+    REQUIRE(scalar.unique());
+    REQUIRE(scalar.value() == x[0]);
   }
 
   SECTION("Tensor From Initializer List") {
     auto tensor = Tensor<int, Device::CPU, 1>({1, 2, 3, 4, 5});
 
-    REQUIRE(tensor.Shape() == Shape<1>(5));
+    REQUIRE(tensor.shape() == Shape<1>(5));
     REQUIRE(tensor[0] == 1);
     REQUIRE(tensor[1] == 2);
     REQUIRE(tensor[2] == 3);
@@ -239,7 +239,7 @@ TEST_CASE("Tensor API", "[tensor][api]") {
   SECTION("2D Tensor From Nested Initializer List") {
     auto tensor = Tensor<int, Device::CPU, 2>{{1, 2, 3}, {4, 5, 6}};
 
-    REQUIRE(tensor.Shape() == Shape<2>(2, 3));
+    REQUIRE(tensor.shape() == Shape<2>(2, 3));
     REQUIRE(tensor[0, 0] == 1);
     REQUIRE(tensor[0, 1] == 2);
     REQUIRE(tensor[0, 2] == 3);
@@ -259,7 +259,7 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     auto tensor = Tensor<int, Device::CPU, 3>{{{1, 2, 3}, {4, 5, 6}},
                                               {{7, 8, 9}, {10, 11, 12}}};
 
-    REQUIRE(tensor.Shape() == Shape<3>(2, 2, 3));
+    REQUIRE(tensor.shape() == Shape<3>(2, 2, 3));
     REQUIRE(tensor[0, 0, 0] == 1);
     REQUIRE(tensor[0, 0, 1] == 2);
     REQUIRE(tensor[0, 0, 2] == 3);

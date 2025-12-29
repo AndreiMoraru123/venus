@@ -31,7 +31,7 @@ TEST_CASE("Tensor as Range", "[tensor][range]") {
     REQUIRE(it[3] == 13);
 
     auto end_it = tensor.end();
-    REQUIRE(end_it - it == shape.Count());
+    REQUIRE(end_it - it == shape.count());
 
     auto back_it = end_it - 1;
     REQUIRE(*back_it == 15);

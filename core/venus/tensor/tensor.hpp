@@ -22,12 +22,12 @@
 #define REGISTER_SCALAR_OP(op)                                                 \
   auto operator op(const ElementType &element) const noexcept                  \
       -> Tensor<bool, DeviceType, 0> {                                         \
-    return Tensor<bool, DeviceType, 0>(Value() op element);                    \
+    return Tensor<bool, DeviceType, 0>(value() op element);                    \
   }
 
 #define REGISTER_PRE_OPERATOR(op)                                              \
   auto operator op()->ElementProxy & {                                         \
-    if (not m_tensor.Unique()) {                                               \
+    if (not m_tensor.unique()) {                                               \
       throw std::runtime_error("Cannot write to shared tensor");               \
     }                                                                          \
     op m_element;                                                              \
@@ -36,7 +36,7 @@
 
 #define REGISTER_POST_OPERATOR(op)                                             \
   auto operator op(int)->ElementType {                                         \
-    if (not m_tensor.Unique()) {                                               \
+    if (not m_tensor.unique()) {                                               \
       throw std::runtime_error("Cannot write to shared tensor");               \
     }                                                                          \
     ElementType old_value = m_element;                                         \
@@ -46,7 +46,7 @@
 
 #define REGISTER_OPERATOR_EQUAL(op)                                            \
   auto operator op## = (const ElementType &value)->ElementProxy & {            \
-    if (not m_tensor.Unique()) {                                               \
+    if (not m_tensor.unique()) {                                               \
       throw std::runtime_error("Cannot write to shared tensor");               \
     }                                                                          \
     m_element op## = value;                                                    \
@@ -166,23 +166,23 @@ public:
   friend struct LowLevelAccess<Tensor>;
   friend struct LowLevelAccess<const Tensor>;
 
-  explicit Tensor(venus::Shape<Dim> shape)
-      : m_shape(std::move(shape)), m_mem(shape.Count()) {}
+  explicit Tensor(Shape<Dim> shape)
+      : m_shape(std::move(shape)), m_mem(shape.count()) {}
 
   explicit Tensor(ContiguousMemory<ElementType, DeviceType> p_mem,
-                  venus::Shape<Dim> p_shape)
+                  Shape<Dim> p_shape)
       : m_shape(std::move(p_shape)), m_mem(std::move(p_mem)) {
-    if (m_mem.Size() < m_shape.Count()) {
+    if (m_mem.size() < m_shape.count()) {
       throw std::invalid_argument(
           std::format("Insufficient memory for tensor shape: need {} elements, "
                       "but only {} provided",
-                      m_shape.Count(), m_mem.Size()));
+                      m_shape.count(), m_mem.size()));
     }
   }
 
   explicit Tensor(nested_initializer_list_t<ElementType, Dim> init_list)
-      : m_shape(venus::Shape<Dim>::FromNestedInitializerList(init_list)),
-        m_mem(m_shape.Count()) {
+      : m_shape(Shape<Dim>::fromNestedInitializerList(init_list)),
+        m_mem(m_shape.count()) {
 
     auto flatten = [](const auto &list, ElementType *output_ptr,
                       const auto &self_ref) -> ElementType * {
@@ -215,24 +215,24 @@ public:
     requires(sizeof...(Dims) == Dim) &&
             (std::is_convertible_v<Dims, std::size_t> && ...)
   explicit Tensor(Dims &&...dimensions)
-      : Tensor(venus::Shape<Dim>(std::forward<Dims>(dimensions)...)) {}
+      : Tensor(Shape<Dim>(std::forward<Dims>(dimensions)...)) {}
 
   template <typename... Dims>
     requires(sizeof...(Dims) != Dim) &&
                 (std::is_convertible_v<Dims, std::size_t> && ...)
   explicit Tensor(Dims &&...) = delete;
 
-  auto Shape() const noexcept -> const venus::Shape<Dim> & { return m_shape; }
+  auto shape() const noexcept -> const Shape<Dim> & { return m_shape; }
 
-  [[nodiscard]] auto Unique() const -> bool { return not m_mem.IsShared(); }
+  [[nodiscard]] auto unique() const -> bool { return not m_mem.isShared(); }
 
-  auto Clone() const -> Tensor {
+  auto clone() const -> Tensor {
     Tensor copy_tensor(m_shape);
     std::ranges::copy(*this, copy_tensor.begin());
     return copy_tensor;
   }
 
-  auto ToScalar() const -> Tensor<TElem, TDevice, 0> {
+  auto toScalar() const -> Tensor<TElem, TDevice, 0> {
     static_assert(Dim == 1,
                   "ToScalar can only be called on 1D tensors with 1 element.");
     if (size() != 1) {
@@ -316,7 +316,7 @@ public:
 
     // writing
     auto operator=(const ElementType &value) -> ElementProxy & {
-      if (not m_tensor.Unique()) {
+      if (not m_tensor.unique()) {
         // TODO: Do I want to throw here or do I want copy on write (cow)
         throw std::runtime_error("Cannot write to shared tensor");
         //     const std::size_t offset = &m_element -
@@ -334,7 +334,7 @@ public:
     }
 
     auto operator=(ElementType &&value) -> ElementProxy & {
-      if (not m_tensor.Unique()) {
+      if (not m_tensor.unique()) {
         throw std::runtime_error("Cannot write to shared tensor");
       }
       m_element = std::move(value);
@@ -345,7 +345,7 @@ public:
     template <typename U>
       requires std::convertible_to<U, ElementType>
     auto operator=(U &&value) -> ElementProxy & {
-      if (not m_tensor.Unique()) {
+      if (not m_tensor.unique()) {
         throw std::runtime_error("Cannot write to shared tensor");
       }
       m_element = std::forward<U>(value);
@@ -398,7 +398,7 @@ public:
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Indexing is currently only supported on CPU");
     const auto offset =
-        m_shape.IndexToOffset(static_cast<std::size_t>(indices)...);
+        m_shape.idxToOffset(static_cast<std::size_t>(indices)...);
     return ElementProxy(*this, data()[offset]);
   }
 
@@ -408,18 +408,18 @@ public:
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Indexing is currently only supported on CPU");
     const auto offset =
-        m_shape.IndexToOffset(static_cast<std::size_t>(indices)...);
+        m_shape.idxToOffset(static_cast<std::size_t>(indices)...);
     return data()[offset];
   }
 #endif
 
-  auto EvalRegister() const;
+  auto evalRegister() const;
 
-  auto LowLevel() { return LowLevelAccess<Tensor>(*this); }
-  auto LowLevel() const { return LowLevelAccess<const Tensor>(*this); }
+  auto lowLevel() { return LowLevelAccess<Tensor>(*this); }
+  auto lowLevel() const { return LowLevelAccess<const Tensor>(*this); }
 
 private:
-  venus::Shape<Dim> m_shape;
+  Shape<Dim> m_shape;
   ContiguousMemory<ElementType, DeviceType> m_mem;
 
 public:
@@ -432,7 +432,7 @@ public:
   constexpr auto end() {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Range iteration is currently only supported on CPU");
-    return tensor_iterator<Tensor>(this, m_shape.Count());
+    return tensor_iterator<Tensor>(this, m_shape.count());
   }
 
   constexpr auto begin() const {
@@ -444,18 +444,18 @@ public:
   constexpr auto end() const {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Range iteration is currently only supported on CPU");
-    return tensor_iterator<const Tensor>(this, m_shape.Count());
+    return tensor_iterator<const Tensor>(this, m_shape.count());
   }
 
   constexpr auto cbegin() const { return begin(); }
   constexpr auto cend() const { return end(); }
 
   [[nodiscard]] constexpr auto size() const -> std::size_t {
-    return m_shape.Count();
+    return m_shape.count();
   }
 
-  auto data() -> ElementType * { return m_mem.RawMemory(); }
-  auto data() const -> const ElementType * { return m_mem.RawMemory(); }
+  auto data() -> ElementType * { return m_mem.rawMemory(); }
+  auto data() const -> const ElementType * { return m_mem.rawMemory(); }
 };
 
 // Scalar Tensor ===============================================
@@ -471,34 +471,34 @@ public:
   friend struct LowLevelAccess<const Tensor>;
 
   explicit Tensor(ElementType value = ElementType()) : m_mem(1) {
-    SetValue(value);
+    setValue(value);
   }
 
-  explicit Tensor(venus::Shape<0> /*unused*/) : Tensor() {};
+  explicit Tensor(Shape<0> /*unused*/) : Tensor() {};
 
   explicit Tensor(ContiguousMemory<ElementType, DeviceType> p_mem)
       : m_mem(std::move(p_mem)) {}
 
-  auto Shape() const noexcept -> const auto & {
-    static const venus::Shape<Dimension> shape;
+  auto shape() const noexcept -> const auto & {
+    static const Shape<Dimension> shape;
     return shape;
   }
 
-  [[nodiscard]] auto Unique() const -> bool { return not m_mem.IsShared(); }
+  [[nodiscard]] auto unique() const -> bool { return not m_mem.isShared(); }
 
-  void SetValue(ElementType value) const = delete;
+  void setValue(ElementType value) const = delete;
 
-  void SetValue(ElementType value) {
-    if (not Unique()) {
+  void setValue(ElementType value) {
+    if (not unique()) {
       throw std::runtime_error("Cannot write to shared scalar tensor.");
     }
     data()[0] = value;
   }
 
-  auto Value() const noexcept { return data()[0]; }
+  auto value() const noexcept { return data()[0]; }
 
   auto operator==(const Tensor &tensor) const noexcept -> bool {
-    return Value() == tensor.Value();
+    return value() == tensor.value();
   }
 
   // Addition
@@ -529,9 +529,9 @@ public:
 
   operator bool() const noexcept {
     if constexpr (std::is_same_v<ElementType, bool>) {
-      return Value();
+      return value();
     } else {
-      return Value() != ElementType{};
+      return value() != ElementType{};
     }
   }
 
@@ -542,15 +542,15 @@ public:
   REGISTER_SCALAR_OP(>)
   REGISTER_SCALAR_OP(>=)
 
-  auto EvalRegister() const;
+  auto evalRegister() const;
 
-  auto LowLevel() { return LowLevelAccess<Tensor>(*this); }
-  auto LowLevel() const { return LowLevelAccess<const Tensor>(*this); }
+  auto lowLevel() { return LowLevelAccess<Tensor>(*this); }
+  auto lowLevel() const { return LowLevelAccess<const Tensor>(*this); }
 
   [[nodiscard]] constexpr auto size() const -> std::size_t { return 1; }
 
-  auto data() -> ElementType * { return m_mem.RawMemory(); }
-  auto data() const -> const ElementType * { return m_mem.RawMemory(); }
+  auto data() -> ElementType * { return m_mem.rawMemory(); }
+  auto data() const -> const ElementType * { return m_mem.rawMemory(); }
 
 private:
   ContiguousMemory<ElementType, DeviceType> m_mem;
@@ -559,8 +559,8 @@ private:
 template <typename TElem, typename TDevice, std::size_t Dim>
 struct LowLevelAccess<Tensor<TElem, TDevice, Dim>> {
   LowLevelAccess(Tensor<TElem, TDevice, Dim> &tensor) : m_tensor(tensor) {}
-  auto RawMemory() -> TElem * { return m_tensor.m_mem.RawMemory(); }
-  auto SharedMemory() const { return m_tensor.m_mem; }
+  auto rawMemory() -> TElem * { return m_tensor.m_mem.rawMemory(); }
+  auto sharedMemory() const { return m_tensor.m_mem; }
 
 private:
   Tensor<TElem, TDevice, Dim> &m_tensor;
@@ -570,8 +570,8 @@ template <typename TElem, typename TDevice, std::size_t Dim>
 struct LowLevelAccess<const Tensor<TElem, TDevice, Dim>> {
   LowLevelAccess(const Tensor<TElem, TDevice, Dim> &tensor)
       : m_tensor(tensor) {}
-  auto RawMemory() const -> const TElem * { return m_tensor.m_mem.RawMemory(); }
-  auto SharedMemory() const { return m_tensor.m_mem; }
+  auto rawMemory() const -> const TElem * { return m_tensor.m_mem.rawMemory(); }
+  auto sharedMemory() const { return m_tensor.m_mem; }
 
 private:
   const Tensor<TElem, TDevice, Dim> &m_tensor;
@@ -617,21 +617,21 @@ auto operator<<(std::ostream &os, const Tensor<TElem, TDevice, Dim> &tensor)
     }
   }
 
-  return os << "], " << "shape=" << tensor.Shape() << ")";
+  return os << "], " << "shape=" << tensor.shape() << ")";
 }
 
 template <typename TElem, typename TDevice>
 auto operator<<(std::ostream &os, const Tensor<TElem, TDevice, 0> &tensor)
     -> std::ostream & {
   if constexpr (StringLike<TElem>) {
-    return os << "venus::Tensor(" << "\"" << tensor.Value() << "\"" << ")";
+    return os << "venus::Tensor(" << "\"" << tensor.value() << "\"" << ")";
   } else if constexpr (CharLike<TElem>) {
-    return os << "venus::Tensor(" << "'" << tensor.Value() << "'" << ")";
+    return os << "venus::Tensor(" << "'" << tensor.value() << "'" << ")";
   } else if constexpr (std::floating_point<TElem>) {
     return os << std::fixed << std::setprecision(2) << "venus::Tensor("
-              << tensor.Value() << ")";
+              << tensor.value() << ")";
   } else {
-    return os << "venus::Tensor(" << tensor.Value() << ")";
+    return os << "venus::Tensor(" << tensor.value() << ")";
   }
 }
 

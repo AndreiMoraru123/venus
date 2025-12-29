@@ -31,7 +31,7 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
       auto result = op(x, y);
 
       STATIC_REQUIRE(std::is_same_v<decltype(result)::ElementType, float>);
-      REQUIRE(result.Value() == expected);
+      REQUIRE(result.value() == expected);
     }
   }
 
@@ -67,8 +67,8 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
                                return scalar_op(x_val, y_val);
                              });
 
-      REQUIRE(result.Shape() == x.Shape());
-      REQUIRE(result.Shape() == y.Shape());
+      REQUIRE(result.shape() == x.shape());
+      REQUIRE(result.shape() == y.shape());
       REQUIRE(std::ranges::equal(result, expected));
     }
   }
@@ -97,7 +97,7 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
     auto res = venus::ops::transform(tensor, [](auto &&t) { return t * 3; });
 
     STATIC_REQUIRE(std::is_same_v<decltype(res)::ElementType, float>);
-    REQUIRE(res.Value() == 15.0f);
+    REQUIRE(res.value() == 15.0f);
   }
 
   SECTION("Tensor Transform") {
@@ -124,7 +124,7 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
 
     STATIC_REQUIRE(
         std::is_same_v<decltype(z)::ElementType, float>); // type promotion
-    REQUIRE(z.Value() == 14.0f); // 1 * 1 + 2 * 2 + 3 * 3
+    REQUIRE(z.value() == 14.0f); // 1 * 1 + 2 * 2 + 3 * 3
     REQUIRE(z == y.dot(x));      // commutative
   }
 
@@ -138,11 +138,11 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
     auto z = venus::ops::where(x > 3);
 
     STATIC_REQUIRE(std::is_same_v<decltype(z)::ElementType, std::size_t>);
-    for (std::size_t i = 0; i < z.Shape().Count(); ++i) {
-      if (x.LowLevel().RawMemory()[i] > 3) {
-        REQUIRE(z.LowLevel().RawMemory()[i] == i);
+    for (std::size_t i = 0; i < z.shape().count(); ++i) {
+      if (x.lowLevel().rawMemory()[i] > 3) {
+        REQUIRE(z.lowLevel().rawMemory()[i] == i);
       } else {
-        REQUIRE(z.LowLevel().RawMemory()[i] == 0);
+        REQUIRE(z.lowLevel().rawMemory()[i] == 0);
       }
     }
   }
@@ -157,11 +157,11 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
     auto z = venus::ops::where(x > 3, x, y);
 
     STATIC_REQUIRE(std::is_same_v<decltype(z)::ElementType, float>);
-    for (std::size_t i = 0; i < z.Shape().Count(); ++i) {
-      if (x.LowLevel().RawMemory()[i] > 3) {
-        REQUIRE(z.LowLevel().RawMemory()[i] == x.LowLevel().RawMemory()[i]);
+    for (std::size_t i = 0; i < z.shape().count(); ++i) {
+      if (x.lowLevel().rawMemory()[i] > 3) {
+        REQUIRE(z.lowLevel().rawMemory()[i] == x.lowLevel().rawMemory()[i]);
       } else {
-        REQUIRE(z.LowLevel().RawMemory()[i] == y.LowLevel().RawMemory()[i]);
+        REQUIRE(z.lowLevel().rawMemory()[i] == y.lowLevel().rawMemory()[i]);
       }
     }
   }

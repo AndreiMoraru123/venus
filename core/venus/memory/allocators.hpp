@@ -14,7 +14,7 @@ template <>
 
 struct Allocator<Device::CPU> {
   template <typename TElem>
-  static std::shared_ptr<TElem> Allocate(std::size_t p_elemSize) {
+  static std::shared_ptr<TElem> alloc(std::size_t p_elemSize) {
     TElem *raw_buf = new TElem[p_elemSize];
 
     if constexpr (std::is_trivially_constructible_v<TElem>) {
@@ -71,7 +71,7 @@ private:
 
 public:
   template <typename T, std::size_t BlockSize = BLOCK_SIZE>
-  static auto Allocate(std::size_t p_elemSize) -> std::shared_ptr<T> {
+  static auto alloc(std::size_t p_elemSize) -> std::shared_ptr<T> {
     static_assert((BlockSize & (BlockSize - 1)) == 0,
                   "BlockSize must be a power of 2");
 

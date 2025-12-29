@@ -51,10 +51,10 @@ concept BoolTensor =
       return transform(t2, [s = t1](auto &&t) { return s op_symbol t; });      \
     } /* Tensor op ScalarTensor */                                             \
     else if constexpr (MDTensor<T1> && ScalarTensor<T2>) {                     \
-      return op_name(t1, t2.Value());                                          \
+      return op_name(t1, t2.value());                                          \
     } /* ScalarTensor op Tensor */                                             \
     else if constexpr (ScalarTensor<T1> && MDTensor<T2>) {                     \
-      return op_name(t1.Value(), t2);                                          \
+      return op_name(t1.value(), t2);                                          \
     } /* ScalarTensor op ScalarTensor */                                       \
     else if constexpr (ScalarTensor<T1> && ScalarTensor<T2>) {                 \
       return detail::binary_elementwise_op(std::std_op{}, t1, t2);             \
@@ -78,7 +78,7 @@ void validate_binary_op(const Tensor<Elem1, Dev1, Dim1> &t1,
                 "Operation is currently only supported on CPU");
 
   if constexpr (Dim1 > 0) {
-    if (t1.Shape() != t2.Shape()) {
+    if (t1.shape() != t2.shape()) {
       throw std::invalid_argument("Tensor shapes must match");
     }
   }
@@ -94,14 +94,14 @@ auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Dim1> &t1,
   using ResultElementType = std::common_type_t<Elem1, Elem2>;
 
   if constexpr (Dim1 == 0 && Dim2 == 0) {
-    return Tensor<ResultElementType, Dev1, 0>(op(t1.Value(), t2.Value()));
+    return Tensor<ResultElementType, Dev1, 0>(op(t1.value(), t2.value()));
   } else {
-    if (t1.Shape() != t2.Shape()) {
+    if (t1.shape() != t2.shape()) {
       throw std::invalid_argument("Tensor shapes must match");
     }
 
     using ResultTensor = Tensor<ResultElementType, Dev1, Dim1>;
-    ResultTensor result(t1.Shape());
+    ResultTensor result(t1.shape());
     auto computation =
         std::views::zip(t1, t2) | std::views::transform([op](auto &&tuple) {
           return std::apply(op, tuple);
@@ -125,14 +125,14 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Dim1> &t1,
 
   if constexpr (Dim1 == 0 && Dim2 == 0 && Dim3 == 0) {
     return Tensor<ResultElementType, Dev1, 0>(
-        op(t1.Value(), t2.Value(), t3.Value()));
+        op(t1.value(), t2.value(), t3.value()));
   } else {
-    if (t1.Shape() != t2.Shape() || t2.Shape() != t3.Shape()) {
+    if (t1.shape() != t2.shape() || t2.shape() != t3.shape()) {
       throw std::invalid_argument("Tensor shapes must match");
     }
 
     using ResultTensor = Tensor<ResultElementType, Dev1, Dim1>;
-    ResultTensor result(t1.Shape());
+    ResultTensor result(t1.shape());
     auto computation =
         std::views::zip(t1, t2, t3) | std::views::transform([op](auto &&tuple) {
           return std::apply(op, tuple);
@@ -155,10 +155,10 @@ auto transform(const Tensor<Elem, Dev, Dim> &tensor, Fn &&fn) {
   using ResultElementType = std::invoke_result_t<Fn, Elem>;
 
   if constexpr (Dim == 0) {
-    return Tensor<ResultElementType, Dev, 0>(fn(tensor.Value()));
+    return Tensor<ResultElementType, Dev, 0>(fn(tensor.value()));
   } else {
     using ResultTensor = Tensor<ResultElementType, Dev, Dim>;
-    ResultTensor result(tensor.Shape());
+    ResultTensor result(tensor.shape());
     auto computation =
         tensor | std::views::transform(
                      [f = std::forward<Fn>(fn)](auto &&t) { return f(t); });
@@ -185,7 +185,7 @@ template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
 auto sort(const Tensor<Elem, Dev, Dim> &tensor) {
   static_assert(std::is_same_v<Dev, Device::CPU>,
                 "Sort is currently only supported on CPU");
-  auto copy = tensor.Clone();
+  auto copy = tensor.clone();
   std::ranges::sort(copy);
   return copy;
 }
@@ -199,7 +199,7 @@ template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
 auto all_equal(const Tensor<Elem1, Dev1, Dim1> &t1,
                const Tensor<Elem2, Dev2, Dim2> &t2) -> bool {
   detail::validate_binary_op(t1, t2);
-  if (t1.Shape() != t2.Shape()) {
+  if (t1.shape() != t2.shape()) {
     return false;
   }
   return std::ranges::equal(t1, t2);
@@ -247,7 +247,7 @@ template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
   requires BoolTensor<Tensor<Elem, Dev, Dim>>
 auto where(const Tensor<Elem, Dev, Dim> &condition) {
   using ResultTensor = Tensor<std::size_t, Dev, Dim>;
-  ResultTensor result(condition.Shape());
+  ResultTensor result(condition.shape());
 
   auto result_ptr = std::ranges::data(result);
   auto indices = std::views::iota(std::size_t{0}, condition.size());
@@ -268,7 +268,7 @@ template <typename T1, typename T2, typename T3>
 auto where(T1 &&t1, T2 &&t2, T3 &&t3) {
   auto v1 = [&] {
     if constexpr (ScalarTensor<T1>) {
-      return t1.Value();
+      return t1.value();
     } else {
       return std::forward<T1>(t1);
     }
@@ -276,7 +276,7 @@ auto where(T1 &&t1, T2 &&t2, T3 &&t3) {
 
   auto v2 = [&] {
     if constexpr (ScalarTensor<T2>) {
-      return t2.Value();
+      return t2.value();
     } else {
       return std::forward<T2>(t2);
     }
@@ -284,7 +284,7 @@ auto where(T1 &&t1, T2 &&t2, T3 &&t3) {
 
   auto v3 = [&] {
     if constexpr (ScalarTensor<T3>) {
-      return t3.Value();
+      return t3.value();
     } else {
       return std::forward<T3>(t3);
     }

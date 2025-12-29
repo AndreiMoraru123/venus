@@ -21,24 +21,24 @@ private:
 public:
 #endif
   explicit ContiguousMemory(std::size_t p_size)
-      : m_mem(Allocator<TDevice>::template Allocate<ElementType>(p_size)),
+      : m_mem(Allocator<TDevice>::template alloc<ElementType>(p_size)),
         m_size(p_size) {
     if (p_size == 0) {
       throw std::invalid_argument("Cannot allocate zero-sized memory.");
     }
   }
 
-  auto Shift(size_t pos) const {
+  auto shift(size_t pos) const {
     assert(pos < m_size);
     return ContiguousMemory(
         std::shared_ptr<ElementType>(m_mem, m_mem.get() + pos), m_size - pos);
   }
 
 public:
-  auto RawMemory() -> ElementType * { return m_mem.get(); }
-  auto RawMemory() const -> const ElementType * { return m_mem.get(); }
-  [[nodiscard]] auto IsShared() const -> bool { return m_mem.use_count() > 1; }
-  [[nodiscard]] auto Size() const -> std::size_t { return m_size; }
+  auto rawMemory() -> ElementType * { return m_mem.get(); }
+  auto rawMemory() const -> const ElementType * { return m_mem.get(); }
+  [[nodiscard]] auto isShared() const -> bool { return m_mem.use_count() > 1; }
+  [[nodiscard]] auto size() const -> std::size_t { return m_size; }
 
   auto operator==(const ContiguousMemory &val) const -> bool {
     return (m_mem == val.m_mem) and (m_size == val.m_size);

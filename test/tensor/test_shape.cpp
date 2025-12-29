@@ -29,9 +29,9 @@ TEST_CASE("Shape semantics", "[shape]") {
   }
 
   SECTION("Shape Count") {
-    STATIC_REQUIRE(Shape(0, 0, 0).Count() == 0);
-    STATIC_REQUIRE(Shape(1, 2, 3).Count() == 6);
-    STATIC_REQUIRE(Shape().Count() == 1); // scalar
+    STATIC_REQUIRE(Shape(0, 0, 0).count() == 0);
+    STATIC_REQUIRE(Shape(1, 2, 3).count() == 6);
+    STATIC_REQUIRE(Shape().count() == 1); // scalar
   }
 
   SECTION("Iterate Shape") {
@@ -54,17 +54,17 @@ TEST_CASE("Shape semantics", "[shape]") {
 
   SECTION("Index to Offset") {
     constexpr auto shape = Shape<3>(3, 2, 2);
-    STATIC_REQUIRE(shape.IndexToOffset(0, 0, 0) == 0);
-    STATIC_REQUIRE(shape.IndexToOffset(0, 0, 1) == 1);
-    STATIC_REQUIRE(shape.IndexToOffset(0, 1, 0) == 2);
-    STATIC_REQUIRE(shape.IndexToOffset(1, 0, 0) == 4);
-    STATIC_REQUIRE(shape.IndexToOffset(1, 0, 1) == 5);
-    STATIC_REQUIRE(shape.IndexToOffset(1, 1, 0) == 6);
-    STATIC_REQUIRE(shape.IndexToOffset(1, 1, 1) == 7);
-    STATIC_REQUIRE(shape.IndexToOffset(2, 0, 0) == 8);
-    STATIC_REQUIRE(shape.IndexToOffset(2, 0, 1) == 9);
-    STATIC_REQUIRE(shape.IndexToOffset(2, 1, 0) == 10);
-    STATIC_REQUIRE(shape.IndexToOffset(2, 1, 1) == 11);
+    STATIC_REQUIRE(shape.idxToOffset(0, 0, 0) == 0);
+    STATIC_REQUIRE(shape.idxToOffset(0, 0, 1) == 1);
+    STATIC_REQUIRE(shape.idxToOffset(0, 1, 0) == 2);
+    STATIC_REQUIRE(shape.idxToOffset(1, 0, 0) == 4);
+    STATIC_REQUIRE(shape.idxToOffset(1, 0, 1) == 5);
+    STATIC_REQUIRE(shape.idxToOffset(1, 1, 0) == 6);
+    STATIC_REQUIRE(shape.idxToOffset(1, 1, 1) == 7);
+    STATIC_REQUIRE(shape.idxToOffset(2, 0, 0) == 8);
+    STATIC_REQUIRE(shape.idxToOffset(2, 0, 1) == 9);
+    STATIC_REQUIRE(shape.idxToOffset(2, 1, 0) == 10);
+    STATIC_REQUIRE(shape.idxToOffset(2, 1, 1) == 11);
   }
 
   SECTION("Offset to Index") {
@@ -73,7 +73,7 @@ TEST_CASE("Shape semantics", "[shape]") {
     for (size_t i = 0; i < 3; ++i) {
       for (size_t j = 0; j < 2; ++j) {
         for (size_t k = 0; k < 2; ++k) {
-          auto res = shape.OffsetToIndex(input);
+          auto res = shape.offsetToIdx(input);
           assert(res[0] == i);
           assert(res[1] == j);
           assert(res[2] == k);
