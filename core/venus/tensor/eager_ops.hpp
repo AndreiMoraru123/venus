@@ -223,7 +223,7 @@ auto dot(const Tensor<Elem1, Dev1, Dim1> &t1,
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
           Scalar Idx, typename Dev, std::size_t Dim>
   requires VenusTensor<Tensor<Elem, Dev, Dim>>
-auto iota(Tensor<Elem, Dev, Dim> tensor, Idx i) {
+auto iota(Tensor<Elem, Dev, Dim> &tensor, Idx i) {
 #if _cpp_lib_ranges >= 202110L
   std::ranges::iota(tensor, i);
 #else
@@ -234,7 +234,7 @@ auto iota(Tensor<Elem, Dev, Dim> tensor, Idx i) {
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
           Scalar Idx, typename Dev, std::size_t Dim>
   requires VenusTensor<Tensor<Elem, Dev, Dim>>
-auto fill(Tensor<Elem, Dev, Dim> tensor, Idx i) {
+auto fill(Tensor<Elem, Dev, Dim> &tensor, Idx i) {
 #if _cpp_lib_ranges >= 202110L
   std::ranges::fill(tensor, i);
 #else

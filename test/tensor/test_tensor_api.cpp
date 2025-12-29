@@ -288,4 +288,66 @@ TEST_CASE("Tensor API", "[tensor][api]") {
                                                    {{7, 8, 9}, {10, 11}}}),
                       std::invalid_argument);
   }
+
+  SECTION("Scalar Rule of V") {
+    auto tensor = Tensor<float, Device::CPU, 0>(10.0f);
+    void *tensor_ptr = static_cast<void *>(tensor.data());
+    auto value = tensor.value();
+
+    auto copied_tensor(tensor);
+    REQUIRE(copied_tensor.unique());
+    REQUIRE(static_cast<void *>(copied_tensor.data()) != tensor_ptr);
+    REQUIRE(copied_tensor.value() == value);
+
+    auto moved_tensor(std::move(tensor));
+    REQUIRE(moved_tensor.unique());
+    REQUIRE(static_cast<void *>(moved_tensor.data()) == tensor_ptr);
+    REQUIRE(moved_tensor.value() == value);
+
+    auto x = Tensor<float, Device::CPU, 0>(10.0f);
+    void *x_ptr = static_cast<void *>(x.data());
+    auto x_value = x.value();
+
+    auto y = Tensor<float, Device::CPU, 0>(10.0f);
+    auto z = Tensor<float, Device::CPU, 0>(10.0f);
+
+    y = x;
+    REQUIRE(y.unique());
+    REQUIRE(static_cast<void *>(y.data()) != x_ptr);
+    REQUIRE(y.value() == x_value);
+
+    z = std::move(x);
+    REQUIRE(z.unique());
+    REQUIRE(static_cast<void *>(z.data()) == x_ptr);
+    REQUIRE(z.value() == x_value);
+  }
+
+  SECTION("Tensor Rule of V") {
+    auto tensor = Tensor<float, Device::CPU, 2>(2, 3);
+    venus::ops::iota(tensor, 1);
+    void *tensor_ptr = static_cast<void *>(tensor.data());
+
+    auto copied_tensor(tensor);
+    REQUIRE(copied_tensor.unique());
+    REQUIRE(static_cast<void *>(copied_tensor.data()) != tensor_ptr);
+
+    auto moved_tensor(std::move(tensor));
+    REQUIRE(moved_tensor.unique());
+    REQUIRE(static_cast<void *>(moved_tensor.data()) == tensor_ptr);
+
+    auto x = Tensor<float, Device::CPU, 2>(2, 3);
+    void *x_ptr = static_cast<void *>(x.data());
+    venus::ops::iota(x, 1);
+
+    auto y = Tensor<float, Device::CPU, 2>(2, 3);
+    auto z = Tensor<float, Device::CPU, 2>(2, 3);
+
+    y = x;
+    REQUIRE(y.unique());
+    REQUIRE(static_cast<void *>(y.data()) != x_ptr);
+
+    z = std::move(x);
+    REQUIRE(z.unique());
+    REQUIRE(static_cast<void *>(z.data()) == x_ptr);
+  }
 }

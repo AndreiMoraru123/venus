@@ -9,6 +9,7 @@
 #include <iomanip>
 #include <ios>
 #include <iterator>
+#include <print>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -222,15 +223,42 @@ public:
                 (std::is_convertible_v<Dims, std::size_t> && ...)
   explicit Tensor(Dims &&...) = delete;
 
+  auto operator=(const Tensor &other) -> Tensor & {
+    std::println("{}", "Copy assign operator");
+    if (this != &other) {
+      m_shape = other.m_shape;
+      m_mem = ContiguousMemory<ElementType, DeviceType>(m_shape.count());
+      std::ranges::copy(other, this->begin());
+    }
+    return *this;
+  }
+
+  auto operator=(Tensor &&other) noexcept -> Tensor & {
+    std::println("{}", "Move assign operator");
+    if (this != &other) {
+      m_shape = other.m_shape;
+      m_mem = std::move(other.m_mem);
+    }
+    return *this;
+  }
+
+  Tensor(const Tensor &other) : m_shape(other.m_shape), m_mem(m_shape.count()) {
+    std::println("{}", "Copy ctor");
+    std::ranges::copy(other, this->begin());
+  }
+
+  Tensor(Tensor &&other) noexcept
+      : m_shape(other.m_shape), m_mem(std::move(other.m_mem)) {
+    std::println("{}", "Move ctor");
+  }
+
+  ~Tensor() = default; // give back to mem-pool
+
   auto shape() const noexcept -> const Shape<Dim> & { return m_shape; }
 
   [[nodiscard]] auto unique() const -> bool { return not m_mem.isShared(); }
 
-  auto clone() const -> Tensor {
-    Tensor copy_tensor(m_shape);
-    std::ranges::copy(*this, copy_tensor.begin());
-    return copy_tensor;
-  }
+  auto clone() const -> Tensor { return Tensor(*this); }
 
   auto toScalar() const -> Tensor<TElem, TDevice, 0> {
     static_assert(Dim == 1,
@@ -478,6 +506,34 @@ public:
 
   explicit Tensor(ContiguousMemory<ElementType, DeviceType> p_mem)
       : m_mem(std::move(p_mem)) {}
+
+  auto operator=(const Tensor &other) -> Tensor & {
+    std::println("{}", "Copy assign operator");
+    if (this != &other) {
+      m_mem = ContiguousMemory<ElementType, DeviceType>(1);
+      setValue(other.value());
+    }
+    return *this;
+  }
+
+  auto operator=(Tensor &&other) noexcept -> Tensor & {
+    std::println("{}", "Move assign operator");
+    if (this != &other) {
+      m_mem = std::move(other.m_mem);
+    }
+    return *this;
+  }
+
+  Tensor(const Tensor &other) : m_mem(1) {
+    std::println("{}", "Copy ctor");
+    setValue(other.value());
+  }
+
+  Tensor(Tensor &&other) noexcept : m_mem(std::move(other.m_mem)) {
+    std::println("{}", "Move ctor");
+  }
+
+  ~Tensor() = default; // give back to mem-pool
 
   auto shape() const noexcept -> const auto & {
     static const Shape<Dimension> shape;
