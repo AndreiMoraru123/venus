@@ -248,6 +248,13 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     REQUIRE(tensor[1, 2] == 6);
   }
 
+  SECTION("2D Tensor From Uneven Nested Initializer List") {
+    REQUIRE_THROWS_AS((Tensor<int, Device::CPU, 2>{{1, 2}, {4, 5, 6}}),
+                      std::invalid_argument);
+    REQUIRE_THROWS_AS((Tensor<int, Device::CPU, 2>{{1, 2, 3}, {4, 5}}),
+                      std::invalid_argument);
+  }
+
   SECTION("3D Tensor From Nested Initializer List") {
     auto tensor = Tensor<int, Device::CPU, 3>{{{1, 2, 3}, {4, 5, 6}},
                                               {{7, 8, 9}, {10, 11, 12}}};
@@ -265,5 +272,20 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     REQUIRE(tensor[1, 1, 0] == 10);
     REQUIRE(tensor[1, 1, 1] == 11);
     REQUIRE(tensor[1, 1, 2] == 12);
+  }
+
+  SECTION("3D Tensor From Uneven Nested Initializer List") {
+    REQUIRE_THROWS_AS((Tensor<int, Device::CPU, 3>{{{1, 2}, {4, 5, 6}},
+                                                   {{7, 8, 9}, {10, 11, 12}}}),
+                      std::invalid_argument);
+    REQUIRE_THROWS_AS((Tensor<int, Device::CPU, 3>{{{1, 2, 3}, {4, 5}},
+                                                   {{7, 8, 9}, {10, 11, 12}}}),
+                      std::invalid_argument);
+    REQUIRE_THROWS_AS((Tensor<int, Device::CPU, 3>{{{1, 2, 3}, {4, 5, 6}},
+                                                   {{7, 8}, {10, 11, 12}}}),
+                      std::invalid_argument);
+    REQUIRE_THROWS_AS((Tensor<int, Device::CPU, 3>{{{1, 2, 3}, {4, 5, 6}},
+                                                   {{7, 8, 9}, {10, 11}}}),
+                      std::invalid_argument);
   }
 }
