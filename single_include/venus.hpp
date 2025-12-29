@@ -1101,8 +1101,25 @@ public:
                       const auto &self_ref) -> void {
       if constexpr (requires { list.size(); }) {
         dims[level] = list.size();
+
         if (level + 1 < dimNum && list.size() > 0) {
-          self_ref((*list.begin()), level + 1, dims, self_ref);
+          if constexpr (requires { (*list.begin()).size(); }) {
+            const auto expected_size = (*list.begin()).size();
+
+            // Horizontal: Check all sibling lists at this level
+            for (const auto &sublist : list) {
+              if (sublist.size() != expected_size) {
+                throw std::invalid_argument(
+                    std::format("Inconsistent dimensions at dimension {}: "
+                                "expected size {}, got {}",
+                                level + 2, expected_size, sublist.size()));
+              }
+            }
+            // Vertical: Go deeper into each sublist
+            for (const auto &sublist : list) {
+              self_ref(sublist, level + 1, dims, self_ref);
+            }
+          }
         }
       }
     };
