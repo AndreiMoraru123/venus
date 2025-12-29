@@ -66,8 +66,7 @@ auto main() -> int {
 
 #### Interactive Venus
 
-Venus offers a lightweight, alternative implementation that works via [Cling](https://github.com/root-project/cling),
-which means you can run it interactively in the shell or in a Jupyter Notebook:
+Venus offers a lightweight implementation that works via [Cling](https://github.com/root-project/cling), allowing it to run interactively in shell mode:
 
 ```sh
 cmake --build build --target cling-interactive
