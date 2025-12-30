@@ -165,7 +165,7 @@ public:
 
 template <std::size_t Dim>
 auto operator<<(std::ostream &os, const Shape<Dim> &shape) -> std::ostream & {
-  os << "(";
+  os << "venus::Shape([";
   std::size_t count = 0;
   for (auto dim : shape) {
     if (count > 0)
@@ -173,7 +173,7 @@ auto operator<<(std::ostream &os, const Shape<Dim> &shape) -> std::ostream & {
     count++;
     os << dim;
   }
-  return os << ")";
+  return os << "])";
 }
 
 template <std::size_t Dim>
@@ -185,3 +185,13 @@ template <SizeTLike... TShapeParameter>
 explicit Shape(TShapeParameter...) -> Shape<sizeof...(TShapeParameter)>;
 
 } // namespace venus
+
+template <std::size_t Dim> struct std::formatter<venus::Shape<Dim>> {
+  constexpr auto parse(std::format_parse_context &ctx) { return ctx.begin(); }
+
+  auto format(const venus::Shape<Dim> &shape, std::format_context &ctx) const {
+    ostringstream oss;
+    oss << shape;
+    return std::format_to(ctx.out(), "{}", oss.str());
+  }
+};
