@@ -1198,7 +1198,6 @@ explicit Shape(TShapeParameter...) -> Shape<sizeof...(TShapeParameter)>;
 #include <iomanip>
 #include <ios>
 #include <iterator>
-#include <print>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -1413,7 +1412,6 @@ public:
   explicit Tensor(Dims &&...) = delete;
 
   auto operator=(const Tensor &other) -> Tensor & {
-    std::println("{}", "Copy assign operator");
     if (this != &other) {
       m_shape = other.m_shape;
       m_mem = ContiguousMemory<ElementType, DeviceType>(m_shape.count());
@@ -1423,7 +1421,6 @@ public:
   }
 
   auto operator=(Tensor &&other) noexcept -> Tensor & {
-    std::println("{}", "Move assign operator");
     if (this != &other) {
       m_shape = other.m_shape;
       m_mem = std::move(other.m_mem);
@@ -1432,14 +1429,11 @@ public:
   }
 
   Tensor(const Tensor &other) : m_shape(other.m_shape), m_mem(m_shape.count()) {
-    std::println("{}", "Copy ctor");
     std::ranges::copy(other, this->begin());
   }
 
   Tensor(Tensor &&other) noexcept
-      : m_shape(other.m_shape), m_mem(std::move(other.m_mem)) {
-    std::println("{}", "Move ctor");
-  }
+      : m_shape(other.m_shape), m_mem(std::move(other.m_mem)) {}
 
   ~Tensor() = default; // give back to mem-pool
 
@@ -1697,7 +1691,6 @@ public:
       : m_mem(std::move(p_mem)) {}
 
   auto operator=(const Tensor &other) -> Tensor & {
-    std::println("{}", "Copy assign operator");
     if (this != &other) {
       m_mem = ContiguousMemory<ElementType, DeviceType>(1);
       setValue(other.value());
@@ -1706,21 +1699,15 @@ public:
   }
 
   auto operator=(Tensor &&other) noexcept -> Tensor & {
-    std::println("{}", "Move assign operator");
     if (this != &other) {
       m_mem = std::move(other.m_mem);
     }
     return *this;
   }
 
-  Tensor(const Tensor &other) : m_mem(1) {
-    std::println("{}", "Copy ctor");
-    setValue(other.value());
-  }
+  Tensor(const Tensor &other) : m_mem(1) { setValue(other.value()); }
 
-  Tensor(Tensor &&other) noexcept : m_mem(std::move(other.m_mem)) {
-    std::println("{}", "Move ctor");
-  }
+  Tensor(Tensor &&other) noexcept : m_mem(std::move(other.m_mem)) {}
 
   ~Tensor() = default; // give back to mem-pool
 
