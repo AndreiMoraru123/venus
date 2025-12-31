@@ -63,7 +63,7 @@ find_program(CLING_EXECUTABLE cling PATHS /opt/cling/bin)
 if(CLING_EXECUTABLE)
     message(STATUS "Found Cling: ${CLING_EXECUTABLE}")
     
-    add_custom_target(cling-interactive
+    add_custom_target(venus-interactive
         COMMAND ${CLING_EXECUTABLE} -std=c++23
                 -DVENUS_INTERPRETER
                 -I ${CMAKE_BINARY_DIR}/_deps/mdspan-src/include
@@ -73,5 +73,5 @@ if(CLING_EXECUTABLE)
         USES_TERMINAL
     )
 else()
-    message(WARNING "Cling not found - target 'cling-interactive' will not be available")
+    message(WARNING "Cling not found - target 'venus-interactive' will not be available")
 endif()

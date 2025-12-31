@@ -69,7 +69,7 @@ auto main() -> int {
 Venus offers a lightweight implementation that works via [Cling](https://github.com/root-project/cling), allowing it to run interactively in shell mode:
 
 ```sh
-cmake --build build --target cling-interactive
+cmake --build build --target venus-interactive
 ```
 
 ```cpp
