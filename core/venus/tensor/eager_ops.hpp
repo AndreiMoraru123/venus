@@ -196,8 +196,8 @@ template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
           std::size_t Dim2>
   requires VenusTensor<Tensor<Elem1, Dev1, Dim1>> &&
            VenusTensor<Tensor<Elem2, Dev2, Dim2>>
-auto all_equal(const Tensor<Elem1, Dev1, Dim1> &t1,
-               const Tensor<Elem2, Dev2, Dim2> &t2) -> bool {
+auto equal(const Tensor<Elem1, Dev1, Dim1> &t1,
+           const Tensor<Elem2, Dev2, Dim2> &t2) -> bool {
   detail::validate_binary_op(t1, t2);
   if (t1.shape() != t2.shape()) {
     return false;
