@@ -165,7 +165,7 @@ public:
 
 template <std::size_t Dim>
 auto operator<<(std::ostream &os, const Shape<Dim> &shape) -> std::ostream & {
-  os << "venus::Shape([";
+  os << "(";
   std::size_t count = 0;
   for (auto dim : shape) {
     if (count > 0)
@@ -173,7 +173,7 @@ auto operator<<(std::ostream &os, const Shape<Dim> &shape) -> std::ostream & {
     count++;
     os << dim;
   }
-  return os << "])";
+  return os << ")";
 }
 
 template <std::size_t Dim>
