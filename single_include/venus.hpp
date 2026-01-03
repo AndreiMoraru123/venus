@@ -701,19 +701,19 @@ template <typename T>
 concept VenusTensor = requires {
   typename std::remove_cvref_t<T>::ElementType;
   typename std::remove_cvref_t<T>::DeviceType;
-  { std::remove_cvref_t<T>::Dimension } -> std::convertible_to<std::size_t>;
+  { std::remove_cvref_t<T>::rank } -> std::convertible_to<std::size_t>;
 };
 
 template <typename T>
 concept Scalar = std::is_arithmetic_v<std::remove_cvref_t<T>>;
 
 template <typename T>
-concept ScalarTensor = VenusTensor<std::remove_cvref_t<T>> &&
-                       (std::remove_cvref_t<T>::Dimension == 0);
+concept ScalarTensor =
+    VenusTensor<std::remove_cvref_t<T>> && (std::remove_cvref_t<T>::rank == 0);
 
 template <typename T>
-concept MDTensor = VenusTensor<std::remove_cvref_t<T>> &&
-                   (std::remove_cvref_t<T>::Dimension > 0);
+concept MDTensor =
+    VenusTensor<std::remove_cvref_t<T>> && (std::remove_cvref_t<T>::rank > 0);
 
 template <typename T>
 concept BoolTensor =
@@ -752,17 +752,17 @@ namespace venus::ops {
 namespace detail {
 
 template <template <typename, typename, std::size_t> class Tensor,
-          typename Elem1, typename Dev1, std::size_t Dim1, typename Elem2,
-          typename Dev2, std::size_t Dim2>
-void validate_binary_op(const Tensor<Elem1, Dev1, Dim1> &t1,
-                        const Tensor<Elem2, Dev2, Dim2> &t2) {
-  static_assert(Dim1 == Dim2, "Tensor dimensions must match");
+          typename Elem1, typename Dev1, std::size_t Rank1, typename Elem2,
+          typename Dev2, std::size_t Rank2>
+void validate_binary_op(const Tensor<Elem1, Dev1, Rank1> &t1,
+                        const Tensor<Elem2, Dev2, Rank2> &t2) {
+  static_assert(Rank1 == Rank2, "Tensor ranks must match");
   static_assert(std::is_same_v<Dev1, Dev2>,
                 "Tensors must be on the same device");
   static_assert(std::is_same_v<Dev1, Device::CPU>,
                 "Operation is currently only supported on CPU");
 
-  if constexpr (Dim1 > 0) {
+  if constexpr (Rank1 > 0) {
     if (t1.shape() != t2.shape()) {
       throw std::invalid_argument("Tensor shapes must match");
     }
@@ -770,22 +770,22 @@ void validate_binary_op(const Tensor<Elem1, Dev1, Dim1> &t1,
 }
 
 template <typename Op, template <typename, typename, std::size_t> class Tensor,
-          typename Elem1, typename Dev1, std::size_t Dim1, typename Elem2,
-          typename Dev2, std::size_t Dim2>
-auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Dim1> &t1,
-                           const Tensor<Elem2, Dev2, Dim2> &t2) {
+          typename Elem1, typename Dev1, std::size_t Rank1, typename Elem2,
+          typename Dev2, std::size_t Rank2>
+auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
+                           const Tensor<Elem2, Dev2, Rank2> &t2) {
 
   validate_binary_op(t1, t2);
   using ResultElementType = std::common_type_t<Elem1, Elem2>;
 
-  if constexpr (Dim1 == 0 && Dim2 == 0) {
+  if constexpr (Rank1 == 0 && Rank2 == 0) {
     return Tensor<ResultElementType, Dev1, 0>(op(t1.value(), t2.value()));
   } else {
     if (t1.shape() != t2.shape()) {
       throw std::invalid_argument("Tensor shapes must match");
     }
 
-    using ResultTensor = Tensor<ResultElementType, Dev1, Dim1>;
+    using ResultTensor = Tensor<ResultElementType, Dev1, Rank1>;
     ResultTensor result(t1.shape());
     auto computation =
         std::views::zip(t1, t2) | std::views::transform([op](auto &&tuple) {
@@ -797,18 +797,18 @@ auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Dim1> &t1,
 }
 
 template <typename Op, template <typename, typename, std::size_t> class Tensor,
-          typename Elem1, typename Dev1, std::size_t Dim1, typename Elem2,
-          typename Dev2, std::size_t Dim2, typename Elem3, typename Dev3,
-          std::size_t Dim3>
-auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Dim1> &t1,
-                            const Tensor<Elem2, Dev2, Dim2> &t2,
-                            const Tensor<Elem3, Dev3, Dim3> &t3) {
+          typename Elem1, typename Dev1, std::size_t Rank1, typename Elem2,
+          typename Dev2, std::size_t Rank2, typename Elem3, typename Dev3,
+          std::size_t Rank3>
+auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
+                            const Tensor<Elem2, Dev2, Rank2> &t2,
+                            const Tensor<Elem3, Dev3, Rank3> &t3) {
 
   validate_binary_op(t1, t2);
   validate_binary_op(t2, t3);
   using ResultElementType = std::common_type_t<Elem1, Elem2, Elem3>;
 
-  if constexpr (Dim1 == 0 && Dim2 == 0 && Dim3 == 0) {
+  if constexpr (Rank1 == 0 && Rank2 == 0 && Rank3 == 0) {
     return Tensor<ResultElementType, Dev1, 0>(
         op(t1.value(), t2.value(), t3.value()));
   } else {
@@ -816,7 +816,7 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Dim1> &t1,
       throw std::invalid_argument("Tensor shapes must match");
     }
 
-    using ResultTensor = Tensor<ResultElementType, Dev1, Dim1>;
+    using ResultTensor = Tensor<ResultElementType, Dev1, Rank1>;
     ResultTensor result(t1.shape());
     auto computation =
         std::views::zip(t1, t2, t3) | std::views::transform([op](auto &&tuple) {
@@ -831,18 +831,18 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Dim1> &t1,
 
 // Transform
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
-          typename Dev, std::size_t Dim, typename Fn>
-  requires VenusTensor<Tensor<Elem, Dev, Dim>>
-auto transform(const Tensor<Elem, Dev, Dim> &tensor, Fn &&fn) {
+          typename Dev, std::size_t Rank, typename Fn>
+  requires VenusTensor<Tensor<Elem, Dev, Rank>>
+auto transform(const Tensor<Elem, Dev, Rank> &tensor, Fn &&fn) {
   static_assert(std::is_same_v<Dev, Device::CPU>,
                 "Transform is currently only supported on CPU");
 
   using ResultElementType = std::invoke_result_t<Fn, Elem>;
 
-  if constexpr (Dim == 0) {
+  if constexpr (Rank == 0) {
     return Tensor<ResultElementType, Dev, 0>(fn(tensor.value()));
   } else {
-    using ResultTensor = Tensor<ResultElementType, Dev, Dim>;
+    using ResultTensor = Tensor<ResultElementType, Dev, Rank>;
     ResultTensor result(tensor.shape());
     auto computation =
         tensor | std::views::transform(
@@ -865,9 +865,9 @@ REGISTER_BINARY_OP(neq, not_equal_to, !=)
 
 // Sort
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
-          typename Dev, std::size_t Dim>
-  requires VenusTensor<Tensor<Elem, Dev, Dim>>
-auto sort(const Tensor<Elem, Dev, Dim> &tensor) {
+          typename Dev, std::size_t Rank>
+  requires VenusTensor<Tensor<Elem, Dev, Rank>>
+auto sort(const Tensor<Elem, Dev, Rank> &tensor) {
   static_assert(std::is_same_v<Dev, Device::CPU>,
                 "Sort is currently only supported on CPU");
   auto copy = tensor.clone();
@@ -877,12 +877,12 @@ auto sort(const Tensor<Elem, Dev, Dim> &tensor) {
 
 // All equal
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
-          typename Dev1, std::size_t Dim1, Scalar Elem2, typename Dev2,
-          std::size_t Dim2>
-  requires VenusTensor<Tensor<Elem1, Dev1, Dim1>> &&
-           VenusTensor<Tensor<Elem2, Dev2, Dim2>>
-auto equal(const Tensor<Elem1, Dev1, Dim1> &t1,
-           const Tensor<Elem2, Dev2, Dim2> &t2) -> bool {
+          typename Dev1, std::size_t Rank1, Scalar Elem2, typename Dev2,
+          std::size_t Rank2>
+  requires VenusTensor<Tensor<Elem1, Dev1, Rank1>> &&
+           VenusTensor<Tensor<Elem2, Dev2, Rank2>>
+auto equal(const Tensor<Elem1, Dev1, Rank1> &t1,
+           const Tensor<Elem2, Dev2, Rank2> &t2) -> bool {
   detail::validate_binary_op(t1, t2);
   if (t1.shape() != t2.shape()) {
     return false;
@@ -892,12 +892,12 @@ auto equal(const Tensor<Elem1, Dev1, Dim1> &t1,
 
 // Dot product
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
-          typename Dev1, Scalar Elem2, typename Dev2, std::size_t Dim1,
-          std::size_t Dim2>
-  requires VenusTensor<Tensor<Elem1, Dev1, Dim1>> &&
-           VenusTensor<Tensor<Elem2, Dev2, Dim2>>
-auto dot(const Tensor<Elem1, Dev1, Dim1> &t1,
-         const Tensor<Elem2, Dev2, Dim2> &t2) {
+          typename Dev1, Scalar Elem2, typename Dev2, std::size_t Rank1,
+          std::size_t Rank2>
+  requires VenusTensor<Tensor<Elem1, Dev1, Rank1>> &&
+           VenusTensor<Tensor<Elem2, Dev2, Rank2>>
+auto dot(const Tensor<Elem1, Dev1, Rank1> &t1,
+         const Tensor<Elem2, Dev2, Rank2> &t2) {
   detail::validate_binary_op(t1, t2);
   using ResultElementType = std::common_type_t<Elem1, Elem2>;
   auto product =
@@ -906,9 +906,9 @@ auto dot(const Tensor<Elem1, Dev1, Dim1> &t1,
 }
 
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
-          Scalar Idx, typename Dev, std::size_t Dim>
-  requires VenusTensor<Tensor<Elem, Dev, Dim>>
-auto iota(Tensor<Elem, Dev, Dim> &tensor, Idx i) {
+          Scalar Idx, typename Dev, std::size_t Rank>
+  requires VenusTensor<Tensor<Elem, Dev, Rank>>
+auto iota(Tensor<Elem, Dev, Rank> &tensor, Idx i) {
 #if _cpp_lib_ranges >= 202110L
   std::ranges::iota(tensor, i);
 #else
@@ -917,9 +917,9 @@ auto iota(Tensor<Elem, Dev, Dim> &tensor, Idx i) {
 }
 
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
-          Scalar Idx, typename Dev, std::size_t Dim>
-  requires VenusTensor<Tensor<Elem, Dev, Dim>>
-auto fill(Tensor<Elem, Dev, Dim> &tensor, Idx i) {
+          Scalar Idx, typename Dev, std::size_t Rank>
+  requires VenusTensor<Tensor<Elem, Dev, Rank>>
+auto fill(Tensor<Elem, Dev, Rank> &tensor, Idx i) {
 #if _cpp_lib_ranges >= 202110L
   std::ranges::fill(tensor, i);
 #else
@@ -928,10 +928,10 @@ auto fill(Tensor<Elem, Dev, Dim> &tensor, Idx i) {
 }
 
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
-          typename Dev, std::size_t Dim>
-  requires BoolTensor<Tensor<Elem, Dev, Dim>>
-auto where(const Tensor<Elem, Dev, Dim> &condition) {
-  using ResultTensor = Tensor<std::size_t, Dev, Dim>;
+          typename Dev, std::size_t Rank>
+  requires BoolTensor<Tensor<Elem, Dev, Rank>>
+auto where(const Tensor<Elem, Dev, Rank> &condition) {
+  using ResultTensor = Tensor<std::size_t, Dev, Rank>;
   ResultTensor result(condition.shape());
 
   auto result_ptr = std::ranges::data(result);
@@ -1014,32 +1014,32 @@ auto where(T1 &&t1, T2 &&t2, T3 &&t3) {
 
 namespace venus {
 
-template <typename... TIntTypes>
-concept SizeTLike = (std::is_convertible_v<TIntTypes, std::size_t> and ...);
+template <typename... Dimensions>
+concept SizeTLike = (std::is_convertible_v<Dimensions, std::size_t> and ...);
 
-template <std::size_t Dim> class Shape {
-  static_assert(Dim > 0);
+template <std::size_t Rank> class Shape {
+  static_assert(Rank > 0);
 
 public:
-  static constexpr std::size_t dimNum = Dim;
+  static constexpr std::size_t rank = Rank;
 
   constexpr explicit Shape() = default;
 
-  template <SizeTLike... TIntTypes>
-    requires(sizeof...(TIntTypes) == Dim)
-  constexpr explicit Shape(TIntTypes... shapes)
+  template <SizeTLike... Dimensions>
+    requires(sizeof...(Dimensions) == Rank)
+  constexpr explicit Shape(Dimensions... shapes)
       : m_dims({static_cast<std::size_t>(shapes)...}) {}
 
-  template <SizeTLike... TIntTypes>
-    requires(sizeof...(TIntTypes) != Dim)
-  constexpr explicit Shape(TIntTypes...) = delete;
+  template <SizeTLike... Dimensions>
+    requires(sizeof...(Dimensions) != Rank)
+  constexpr explicit Shape(Dimensions...) = delete;
 
   constexpr auto operator==(const Shape &val) const -> bool {
     return m_dims == val.m_dims;
   }
 
-  template <size_t otherDim>
-  auto constexpr operator==(const Shape<otherDim> &) const -> bool {
+  template <size_t otherRank>
+  auto constexpr operator==(const Shape<otherRank> & /*unused*/) const -> bool {
     return false;
   }
 
@@ -1050,20 +1050,20 @@ public:
 
   constexpr auto operator[](size_t idx) const -> std::size_t {
     if (std::is_constant_evaluated()) {
-      if (idx >= dimNum) {
+      if (idx >= rank) {
         // TODO: This won't actually throw, do I really need comptime? (shape)
         throw std::out_of_range("Index out of bounds for Shape");
       }
     } else {
-      assert(idx < dimNum);
+      assert(idx < rank);
     }
     return m_dims[idx];
   }
 
   constexpr auto offsetToIdx(std::size_t offset) const
-      -> std::array<std::size_t, dimNum> {
-    std::array<std::size_t, dimNum> result{};
-    for (int i = (int)dimNum - 1; i >= 0 && offset > 0; --i) {
+      -> std::array<std::size_t, rank> {
+    std::array<std::size_t, rank> result{};
+    for (int i = (int)rank - 1; i >= 0 && offset > 0; --i) {
       result[i] = offset % m_dims[i];
       offset /= m_dims[i];
     }
@@ -1073,30 +1073,30 @@ public:
     return result;
   }
 
-  template <SizeTLike... TIntTypes>
-  constexpr auto idxToOffset(TIntTypes... indices) const -> std::size_t {
-    static_assert(sizeof...(TIntTypes) == dimNum, "Wrong number of indices");
+  template <SizeTLike... Dimensions>
+  constexpr auto idxToOffset(Dimensions... indices) const -> std::size_t {
+    static_assert(sizeof...(Dimensions) == rank, "Wrong number of indices");
 
     // TODO: The accessor policy in mdspan should be able to perform this (???)
     // bounds checking
-    const std::array<std::size_t, dimNum> idx_array = {
+    const std::array<std::size_t, rank> idx_array = {
         static_cast<std::size_t>(indices)...};
-    for (std::size_t i = 0; i < dimNum; ++i) {
+    for (std::size_t i = 0; i < rank; ++i) {
       if (idx_array[i] >= m_dims[i]) {
         throw std::out_of_range("Index out of bounds in Shape::IndexToOffset");
       }
     }
 
-    auto span = createSpan(std::make_index_sequence<dimNum>{});
+    auto span = createSpan(std::make_index_sequence<rank>{});
     return span.mapping()(indices...);
   }
 
   constexpr static auto fromNestedInitializerList(auto nested_init_list)
-      -> Shape<dimNum> {
-    Shape<dimNum> shape;
+      -> Shape<rank> {
+    Shape<rank> shape;
 
     auto extract = [](const auto &list, std::size_t level,
-                      std::array<std::size_t, dimNum> &dims,
+                      std::array<std::size_t, rank> &dims,
                       const auto &self_ref) -> void {
       if constexpr (requires {
                       list.size();
@@ -1104,7 +1104,7 @@ public:
                     }) {
         dims[level] = list.size();
 
-        if (level + 1 < dimNum) {
+        if (level + 1 < rank) {
           if constexpr (requires { (*list.begin()).size(); }) {
             const auto expected_size = (*list.begin()).size();
 
@@ -1143,18 +1143,17 @@ public:
   constexpr auto size() const { return m_dims.size(); }
 
 private:
-  std::array<std::size_t, Dim> m_dims{};
+  std::array<std::size_t, Rank> m_dims{};
 
   template <std::size_t... Is>
   constexpr auto createSpan(std::index_sequence<Is...> /*unused*/) const {
-    return std::mdspan<int, std::dextents<std::size_t, dimNum>>(0,
-                                                                m_dims[Is]...);
+    return std::mdspan<int, std::dextents<std::size_t, rank>>(0, m_dims[Is]...);
   }
 };
 
 template <> class Shape<0> {
 public:
-  static constexpr std::size_t dimNum = 0;
+  static constexpr std::size_t rank = 0;
 
   explicit Shape() = default;
 
@@ -1162,8 +1161,8 @@ public:
 
   constexpr auto operator==(const Shape &val) const -> bool { return true; }
 
-  template <size_t otherDim>
-  auto constexpr operator==(const Shape<otherDim> &) const -> bool {
+  template <size_t otherRank>
+  auto constexpr operator==(const Shape<otherRank> & /*unused*/) const -> bool {
     return false;
   }
 };
@@ -1355,23 +1354,23 @@ public:
   }
 };
 
-template <typename TElem, typename TDevice, std::size_t Dim> class Tensor {
+template <typename TElem, typename TDevice, std::size_t Rank> class Tensor {
   static_assert(std::is_same_v<std::remove_cvref_t<TElem>, TElem>);
-  static_assert(Dim > 0);
+  static_assert(Rank > 0);
 
 public:
   using ElementType = TElem;
   using DeviceType = TDevice;
-  static constexpr std::size_t Dimension = Dim;
+  static constexpr std::size_t rank = Rank;
 
   friend struct LowLevelAccess<Tensor>;
   friend struct LowLevelAccess<const Tensor>;
 
-  explicit Tensor(Shape<Dim> shape)
+  explicit Tensor(Shape<Rank> shape)
       : m_shape(std::move(shape)), m_mem(shape.count()) {}
 
   explicit Tensor(ContiguousMemory<ElementType, DeviceType> p_mem,
-                  Shape<Dim> p_shape)
+                  Shape<Rank> p_shape)
       : m_shape(std::move(p_shape)), m_mem(std::move(p_mem)) {
     if (m_mem.size() < m_shape.count()) {
       throw std::invalid_argument(
@@ -1381,8 +1380,8 @@ public:
     }
   }
 
-  explicit Tensor(nested_initializer_list_t<ElementType, Dim> init_list)
-      : m_shape(Shape<Dim>::fromNestedInitializerList(init_list)),
+  explicit Tensor(nested_initializer_list_t<ElementType, Rank> init_list)
+      : m_shape(Shape<Rank>::fromNestedInitializerList(init_list)),
         m_mem(m_shape.count()) {
 
     auto flatten = [](const auto &list, ElementType *output_ptr,
@@ -1401,25 +1400,25 @@ public:
     flatten(init_list, data(), flatten);
   }
 
-  template <std::size_t D = Dim>
+  template <std::size_t D = Rank>
     requires(D == 1)
   explicit Tensor(std::initializer_list<ElementType> init_list)
       : m_shape(init_list.size()), m_mem(init_list.size()) {
     std::ranges::copy(init_list, data());
   }
 
-  template <std::size_t D = Dim>
+  template <std::size_t D = Rank>
     requires(D != 1)
   explicit Tensor(std::initializer_list<ElementType>) = delete;
 
   template <typename... Dims>
-    requires(sizeof...(Dims) == Dim) &&
+    requires(sizeof...(Dims) == Rank) &&
             (std::is_convertible_v<Dims, std::size_t> && ...)
   explicit Tensor(Dims &&...dimensions)
-      : Tensor(Shape<Dim>(std::forward<Dims>(dimensions)...)) {}
+      : Tensor(Shape<Rank>(std::forward<Dims>(dimensions)...)) {}
 
   template <typename... Dims>
-    requires(sizeof...(Dims) != Dim) &&
+    requires(sizeof...(Dims) != Rank) &&
                 (std::is_convertible_v<Dims, std::size_t> && ...)
   explicit Tensor(Dims &&...) = delete;
 
@@ -1449,14 +1448,14 @@ public:
 
   ~Tensor() = default; // give back to mem-pool
 
-  auto shape() const noexcept -> const Shape<Dim> & { return m_shape; }
+  auto shape() const noexcept -> const Shape<Rank> & { return m_shape; }
 
   [[nodiscard]] auto unique() const -> bool { return not m_mem.isShared(); }
 
   auto clone() const -> Tensor { return Tensor(*this); }
 
   auto toScalar() const -> Tensor<TElem, TDevice, 0> {
-    static_assert(Dim == 1,
+    static_assert(Rank == 1,
                   "ToScalar can only be called on 1D tensors with 1 element.");
     if (size() != 1) {
       throw std::runtime_error(
@@ -1519,7 +1518,7 @@ public:
 
   // Dot product
   template <typename OtherElementType>
-  auto dot(const Tensor<OtherElementType, DeviceType, Dim> &other) const {
+  auto dot(const Tensor<OtherElementType, DeviceType, Rank> &other) const {
     return venus::ops::dot(*this, other);
   }
 
@@ -1595,7 +1594,7 @@ public:
 #ifdef VENUS_INTERPRETER
   // Simple direct indexing for interpreter mode (no proxy)
   template <typename... Indices>
-    requires(sizeof...(Indices) == Dim)
+    requires(sizeof...(Indices) == Rank)
   constexpr auto operator[](Indices... indices) -> ElementType {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Indexing is currently only supported on CPU");
@@ -1605,7 +1604,7 @@ public:
   }
 
   template <typename... Indices>
-    requires(sizeof...(Indices) == Dim)
+    requires(sizeof...(Indices) == Rank)
   constexpr auto operator[](Indices... indices) const -> ElementType {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Indexing is currently only supported on CPU");
@@ -1616,7 +1615,7 @@ public:
 #else
   // Tensor indexing
   template <typename... Indices>
-    requires(sizeof...(Indices) == Dim)
+    requires(sizeof...(Indices) == Rank)
   auto operator[](Indices... indices) -> ElementProxy {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Indexing is currently only supported on CPU");
@@ -1626,7 +1625,7 @@ public:
   }
 
   template <typename... Indices>
-    requires(sizeof...(Indices) == Dim)
+    requires(sizeof...(Indices) == Rank)
   auto operator[](Indices... indices) const -> ElementType {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Indexing is currently only supported on CPU");
@@ -1642,7 +1641,7 @@ public:
   auto lowLevel() const { return LowLevelAccess<const Tensor>(*this); }
 
 private:
-  Shape<Dim> m_shape;
+  Shape<Rank> m_shape;
   ContiguousMemory<ElementType, DeviceType> m_mem;
 
 public:
@@ -1688,7 +1687,7 @@ template <typename TElem, typename TDevice> class Tensor<TElem, TDevice, 0> {
 public:
   using ElementType = TElem;
   using DeviceType = TDevice;
-  static constexpr std::size_t Dimension = 0;
+  static constexpr std::size_t rank = 0;
 
   friend struct LowLevelAccess<Tensor>;
   friend struct LowLevelAccess<const Tensor>;
@@ -1724,7 +1723,7 @@ public:
   ~Tensor() = default; // give back to mem-pool
 
   auto shape() const noexcept -> const auto & {
-    static const Shape<Dimension> shape;
+    static const Shape<rank> shape;
     return shape;
   }
 
@@ -1767,7 +1766,7 @@ public:
 
   // Dot product
   template <typename OtherElementType>
-  auto dot(const Tensor<OtherElementType, DeviceType, Dimension> &other) const {
+  auto dot(const Tensor<OtherElementType, DeviceType, rank> &other) const {
     return venus::ops::dot(*this, other);
   }
 
@@ -1800,25 +1799,25 @@ private:
   ContiguousMemory<ElementType, DeviceType> m_mem;
 };
 
-template <typename TElem, typename TDevice, std::size_t Dim>
-struct LowLevelAccess<Tensor<TElem, TDevice, Dim>> {
-  LowLevelAccess(Tensor<TElem, TDevice, Dim> &tensor) : m_tensor(tensor) {}
+template <typename TElem, typename TDevice, std::size_t Rank>
+struct LowLevelAccess<Tensor<TElem, TDevice, Rank>> {
+  LowLevelAccess(Tensor<TElem, TDevice, Rank> &tensor) : m_tensor(tensor) {}
   auto rawMemory() -> TElem * { return m_tensor.m_mem.rawMemory(); }
   auto sharedMemory() const { return m_tensor.m_mem; }
 
 private:
-  Tensor<TElem, TDevice, Dim> &m_tensor;
+  Tensor<TElem, TDevice, Rank> &m_tensor;
 };
 
-template <typename TElem, typename TDevice, std::size_t Dim>
-struct LowLevelAccess<const Tensor<TElem, TDevice, Dim>> {
-  LowLevelAccess(const Tensor<TElem, TDevice, Dim> &tensor)
+template <typename TElem, typename TDevice, std::size_t Rank>
+struct LowLevelAccess<const Tensor<TElem, TDevice, Rank>> {
+  LowLevelAccess(const Tensor<TElem, TDevice, Rank> &tensor)
       : m_tensor(tensor) {}
   auto rawMemory() const -> const TElem * { return m_tensor.m_mem.rawMemory(); }
   auto sharedMemory() const { return m_tensor.m_mem; }
 
 private:
-  const Tensor<TElem, TDevice, Dim> &m_tensor;
+  const Tensor<TElem, TDevice, Rank> &m_tensor;
 };
 
 // difference_type + iterator (for random_access_range | addition commutative)
@@ -1840,8 +1839,8 @@ concept CharLike = std::same_as<T, char> || std::same_as<T, signed char> ||
                    std::same_as<T, char8_t> || std::same_as<T, char16_t> ||
                    std::same_as<T, char32_t>;
 
-template <typename TElem, typename TDevice, std::size_t Dim>
-auto operator<<(std::ostream &os, const Tensor<TElem, TDevice, Dim> &tensor)
+template <typename TElem, typename TDevice, std::size_t Rank>
+auto operator<<(std::ostream &os, const Tensor<TElem, TDevice, Rank> &tensor)
     -> std::ostream & {
   os << "venus::Tensor([";
 
@@ -1881,11 +1880,11 @@ auto operator<<(std::ostream &os, const Tensor<TElem, TDevice, 0> &tensor)
 
 } // namespace venus
 
-template <typename TElem, typename TDevice, std::size_t Dim>
-struct std::formatter<venus::Tensor<TElem, TDevice, Dim>> {
+template <typename TElem, typename TDevice, std::size_t Rank>
+struct std::formatter<venus::Tensor<TElem, TDevice, Rank>> {
   constexpr auto parse(std::format_parse_context &ctx) { return ctx.begin(); }
 
-  auto format(const venus::Tensor<TElem, TDevice, Dim> &tensor,
+  auto format(const venus::Tensor<TElem, TDevice, Rank> &tensor,
               std::format_context &ctx) const {
     ostringstream oss;
     oss << tensor;
@@ -1895,33 +1894,33 @@ struct std::formatter<venus::Tensor<TElem, TDevice, Dim>> {
 
 // Scalar-first Addition
 template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
-          std::size_t Dim>
+          std::size_t Rank>
 auto operator+(const Scalar &scalar,
-               const venus::Tensor<TElem, TDevice, Dim> &tensor) {
+               const venus::Tensor<TElem, TDevice, Rank> &tensor) {
   return venus::ops::add(scalar, tensor);
 }
 
 // Scalar-first Substraction
 template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
-          std::size_t Dim>
+          std::size_t Rank>
 auto operator-(const Scalar &scalar,
-               const venus::Tensor<TElem, TDevice, Dim> &tensor) {
+               const venus::Tensor<TElem, TDevice, Rank> &tensor) {
   return venus::ops::sub(scalar, tensor);
 }
 
 // Scalar-first Multiplication
 template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
-          std::size_t Dim>
+          std::size_t Rank>
 auto operator*(const Scalar &scalar,
-               const venus::Tensor<TElem, TDevice, Dim> &tensor) {
+               const venus::Tensor<TElem, TDevice, Rank> &tensor) {
   return venus::ops::mul(scalar, tensor);
 }
 
 // Scalar-fist Division
 template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
-          std::size_t Dim>
+          std::size_t Rank>
 auto operator/(const Scalar &scalar,
-               const venus::Tensor<TElem, TDevice, Dim> &tensor) {
+               const venus::Tensor<TElem, TDevice, Rank> &tensor) {
   return venus::ops::div(scalar, tensor);
 }
 
