@@ -16,19 +16,19 @@ template <typename T>
 concept VenusTensor = requires {
   typename std::remove_cvref_t<T>::ElementType;
   typename std::remove_cvref_t<T>::DeviceType;
-  { std::remove_cvref_t<T>::Dimension } -> std::convertible_to<std::size_t>;
+  { std::remove_cvref_t<T>::rank } -> std::convertible_to<std::size_t>;
 };
 
 template <typename T>
 concept Scalar = std::is_arithmetic_v<std::remove_cvref_t<T>>;
 
 template <typename T>
-concept ScalarTensor = VenusTensor<std::remove_cvref_t<T>> &&
-                       (std::remove_cvref_t<T>::Dimension == 0);
+concept ScalarTensor =
+    VenusTensor<std::remove_cvref_t<T>> && (std::remove_cvref_t<T>::rank == 0);
 
 template <typename T>
-concept MDTensor = VenusTensor<std::remove_cvref_t<T>> &&
-                   (std::remove_cvref_t<T>::Dimension > 0);
+concept MDTensor =
+    VenusTensor<std::remove_cvref_t<T>> && (std::remove_cvref_t<T>::rank > 0);
 
 template <typename T>
 concept BoolTensor =
@@ -67,17 +67,17 @@ namespace venus::ops {
 namespace detail {
 
 template <template <typename, typename, std::size_t> class Tensor,
-          typename Elem1, typename Dev1, std::size_t Dim1, typename Elem2,
-          typename Dev2, std::size_t Dim2>
-void validate_binary_op(const Tensor<Elem1, Dev1, Dim1> &t1,
-                        const Tensor<Elem2, Dev2, Dim2> &t2) {
-  static_assert(Dim1 == Dim2, "Tensor dimensions must match");
+          typename Elem1, typename Dev1, std::size_t Rank1, typename Elem2,
+          typename Dev2, std::size_t Rank2>
+void validate_binary_op(const Tensor<Elem1, Dev1, Rank1> &t1,
+                        const Tensor<Elem2, Dev2, Rank2> &t2) {
+  static_assert(Rank1 == Rank2, "Tensor ranks must match");
   static_assert(std::is_same_v<Dev1, Dev2>,
                 "Tensors must be on the same device");
   static_assert(std::is_same_v<Dev1, Device::CPU>,
                 "Operation is currently only supported on CPU");
 
-  if constexpr (Dim1 > 0) {
+  if constexpr (Rank1 > 0) {
     if (t1.shape() != t2.shape()) {
       throw std::invalid_argument("Tensor shapes must match");
     }
@@ -85,22 +85,22 @@ void validate_binary_op(const Tensor<Elem1, Dev1, Dim1> &t1,
 }
 
 template <typename Op, template <typename, typename, std::size_t> class Tensor,
-          typename Elem1, typename Dev1, std::size_t Dim1, typename Elem2,
-          typename Dev2, std::size_t Dim2>
-auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Dim1> &t1,
-                           const Tensor<Elem2, Dev2, Dim2> &t2) {
+          typename Elem1, typename Dev1, std::size_t Rank1, typename Elem2,
+          typename Dev2, std::size_t Rank2>
+auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
+                           const Tensor<Elem2, Dev2, Rank2> &t2) {
 
   validate_binary_op(t1, t2);
   using ResultElementType = std::common_type_t<Elem1, Elem2>;
 
-  if constexpr (Dim1 == 0 && Dim2 == 0) {
+  if constexpr (Rank1 == 0 && Rank2 == 0) {
     return Tensor<ResultElementType, Dev1, 0>(op(t1.value(), t2.value()));
   } else {
     if (t1.shape() != t2.shape()) {
       throw std::invalid_argument("Tensor shapes must match");
     }
 
-    using ResultTensor = Tensor<ResultElementType, Dev1, Dim1>;
+    using ResultTensor = Tensor<ResultElementType, Dev1, Rank1>;
     ResultTensor result(t1.shape());
     auto computation =
         std::views::zip(t1, t2) | std::views::transform([op](auto &&tuple) {
@@ -112,18 +112,18 @@ auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Dim1> &t1,
 }
 
 template <typename Op, template <typename, typename, std::size_t> class Tensor,
-          typename Elem1, typename Dev1, std::size_t Dim1, typename Elem2,
-          typename Dev2, std::size_t Dim2, typename Elem3, typename Dev3,
-          std::size_t Dim3>
-auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Dim1> &t1,
-                            const Tensor<Elem2, Dev2, Dim2> &t2,
-                            const Tensor<Elem3, Dev3, Dim3> &t3) {
+          typename Elem1, typename Dev1, std::size_t Rank1, typename Elem2,
+          typename Dev2, std::size_t Rank2, typename Elem3, typename Dev3,
+          std::size_t Rank3>
+auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
+                            const Tensor<Elem2, Dev2, Rank2> &t2,
+                            const Tensor<Elem3, Dev3, Rank3> &t3) {
 
   validate_binary_op(t1, t2);
   validate_binary_op(t2, t3);
   using ResultElementType = std::common_type_t<Elem1, Elem2, Elem3>;
 
-  if constexpr (Dim1 == 0 && Dim2 == 0 && Dim3 == 0) {
+  if constexpr (Rank1 == 0 && Rank2 == 0 && Rank3 == 0) {
     return Tensor<ResultElementType, Dev1, 0>(
         op(t1.value(), t2.value(), t3.value()));
   } else {
@@ -131,7 +131,7 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Dim1> &t1,
       throw std::invalid_argument("Tensor shapes must match");
     }
 
-    using ResultTensor = Tensor<ResultElementType, Dev1, Dim1>;
+    using ResultTensor = Tensor<ResultElementType, Dev1, Rank1>;
     ResultTensor result(t1.shape());
     auto computation =
         std::views::zip(t1, t2, t3) | std::views::transform([op](auto &&tuple) {
@@ -146,18 +146,18 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Dim1> &t1,
 
 // Transform
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
-          typename Dev, std::size_t Dim, typename Fn>
-  requires VenusTensor<Tensor<Elem, Dev, Dim>>
-auto transform(const Tensor<Elem, Dev, Dim> &tensor, Fn &&fn) {
+          typename Dev, std::size_t Rank, typename Fn>
+  requires VenusTensor<Tensor<Elem, Dev, Rank>>
+auto transform(const Tensor<Elem, Dev, Rank> &tensor, Fn &&fn) {
   static_assert(std::is_same_v<Dev, Device::CPU>,
                 "Transform is currently only supported on CPU");
 
   using ResultElementType = std::invoke_result_t<Fn, Elem>;
 
-  if constexpr (Dim == 0) {
+  if constexpr (Rank == 0) {
     return Tensor<ResultElementType, Dev, 0>(fn(tensor.value()));
   } else {
-    using ResultTensor = Tensor<ResultElementType, Dev, Dim>;
+    using ResultTensor = Tensor<ResultElementType, Dev, Rank>;
     ResultTensor result(tensor.shape());
     auto computation =
         tensor | std::views::transform(
@@ -180,9 +180,9 @@ REGISTER_BINARY_OP(neq, not_equal_to, !=)
 
 // Sort
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
-          typename Dev, std::size_t Dim>
-  requires VenusTensor<Tensor<Elem, Dev, Dim>>
-auto sort(const Tensor<Elem, Dev, Dim> &tensor) {
+          typename Dev, std::size_t Rank>
+  requires VenusTensor<Tensor<Elem, Dev, Rank>>
+auto sort(const Tensor<Elem, Dev, Rank> &tensor) {
   static_assert(std::is_same_v<Dev, Device::CPU>,
                 "Sort is currently only supported on CPU");
   auto copy = tensor.clone();
@@ -192,12 +192,12 @@ auto sort(const Tensor<Elem, Dev, Dim> &tensor) {
 
 // All equal
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
-          typename Dev1, std::size_t Dim1, Scalar Elem2, typename Dev2,
-          std::size_t Dim2>
-  requires VenusTensor<Tensor<Elem1, Dev1, Dim1>> &&
-           VenusTensor<Tensor<Elem2, Dev2, Dim2>>
-auto equal(const Tensor<Elem1, Dev1, Dim1> &t1,
-           const Tensor<Elem2, Dev2, Dim2> &t2) -> bool {
+          typename Dev1, std::size_t Rank1, Scalar Elem2, typename Dev2,
+          std::size_t Rank2>
+  requires VenusTensor<Tensor<Elem1, Dev1, Rank1>> &&
+           VenusTensor<Tensor<Elem2, Dev2, Rank2>>
+auto equal(const Tensor<Elem1, Dev1, Rank1> &t1,
+           const Tensor<Elem2, Dev2, Rank2> &t2) -> bool {
   detail::validate_binary_op(t1, t2);
   if (t1.shape() != t2.shape()) {
     return false;
@@ -207,12 +207,12 @@ auto equal(const Tensor<Elem1, Dev1, Dim1> &t1,
 
 // Dot product
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
-          typename Dev1, Scalar Elem2, typename Dev2, std::size_t Dim1,
-          std::size_t Dim2>
-  requires VenusTensor<Tensor<Elem1, Dev1, Dim1>> &&
-           VenusTensor<Tensor<Elem2, Dev2, Dim2>>
-auto dot(const Tensor<Elem1, Dev1, Dim1> &t1,
-         const Tensor<Elem2, Dev2, Dim2> &t2) {
+          typename Dev1, Scalar Elem2, typename Dev2, std::size_t Rank1,
+          std::size_t Rank2>
+  requires VenusTensor<Tensor<Elem1, Dev1, Rank1>> &&
+           VenusTensor<Tensor<Elem2, Dev2, Rank2>>
+auto dot(const Tensor<Elem1, Dev1, Rank1> &t1,
+         const Tensor<Elem2, Dev2, Rank2> &t2) {
   detail::validate_binary_op(t1, t2);
   using ResultElementType = std::common_type_t<Elem1, Elem2>;
   auto product =
@@ -221,9 +221,9 @@ auto dot(const Tensor<Elem1, Dev1, Dim1> &t1,
 }
 
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
-          Scalar Idx, typename Dev, std::size_t Dim>
-  requires VenusTensor<Tensor<Elem, Dev, Dim>>
-auto iota(Tensor<Elem, Dev, Dim> &tensor, Idx i) {
+          Scalar Idx, typename Dev, std::size_t Rank>
+  requires VenusTensor<Tensor<Elem, Dev, Rank>>
+auto iota(Tensor<Elem, Dev, Rank> &tensor, Idx i) {
 #if _cpp_lib_ranges >= 202110L
   std::ranges::iota(tensor, i);
 #else
@@ -232,9 +232,9 @@ auto iota(Tensor<Elem, Dev, Dim> &tensor, Idx i) {
 }
 
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
-          Scalar Idx, typename Dev, std::size_t Dim>
-  requires VenusTensor<Tensor<Elem, Dev, Dim>>
-auto fill(Tensor<Elem, Dev, Dim> &tensor, Idx i) {
+          Scalar Idx, typename Dev, std::size_t Rank>
+  requires VenusTensor<Tensor<Elem, Dev, Rank>>
+auto fill(Tensor<Elem, Dev, Rank> &tensor, Idx i) {
 #if _cpp_lib_ranges >= 202110L
   std::ranges::fill(tensor, i);
 #else
@@ -243,10 +243,10 @@ auto fill(Tensor<Elem, Dev, Dim> &tensor, Idx i) {
 }
 
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
-          typename Dev, std::size_t Dim>
-  requires BoolTensor<Tensor<Elem, Dev, Dim>>
-auto where(const Tensor<Elem, Dev, Dim> &condition) {
-  using ResultTensor = Tensor<std::size_t, Dev, Dim>;
+          typename Dev, std::size_t Rank>
+  requires BoolTensor<Tensor<Elem, Dev, Rank>>
+auto where(const Tensor<Elem, Dev, Rank> &condition) {
+  using ResultTensor = Tensor<std::size_t, Dev, Rank>;
   ResultTensor result(condition.shape());
 
   auto result_ptr = std::ranges::data(result);

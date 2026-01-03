@@ -12,32 +12,32 @@
 
 namespace venus {
 
-template <typename... TIntTypes>
-concept SizeTLike = (std::is_convertible_v<TIntTypes, std::size_t> and ...);
+template <typename... Dimensions>
+concept SizeTLike = (std::is_convertible_v<Dimensions, std::size_t> and ...);
 
-template <std::size_t Dim> class Shape {
-  static_assert(Dim > 0);
+template <std::size_t Rank> class Shape {
+  static_assert(Rank > 0);
 
 public:
-  static constexpr std::size_t dimNum = Dim;
+  static constexpr std::size_t rank = Rank;
 
   constexpr explicit Shape() = default;
 
-  template <SizeTLike... TIntTypes>
-    requires(sizeof...(TIntTypes) == Dim)
-  constexpr explicit Shape(TIntTypes... shapes)
+  template <SizeTLike... Dimensions>
+    requires(sizeof...(Dimensions) == Rank)
+  constexpr explicit Shape(Dimensions... shapes)
       : m_dims({static_cast<std::size_t>(shapes)...}) {}
 
-  template <SizeTLike... TIntTypes>
-    requires(sizeof...(TIntTypes) != Dim)
-  constexpr explicit Shape(TIntTypes...) = delete;
+  template <SizeTLike... Dimensions>
+    requires(sizeof...(Dimensions) != Rank)
+  constexpr explicit Shape(Dimensions...) = delete;
 
   constexpr auto operator==(const Shape &val) const -> bool {
     return m_dims == val.m_dims;
   }
 
-  template <size_t otherDim>
-  auto constexpr operator==(const Shape<otherDim> &) const -> bool {
+  template <size_t otherRank>
+  auto constexpr operator==(const Shape<otherRank> & /*unused*/) const -> bool {
     return false;
   }
 
@@ -48,20 +48,20 @@ public:
 
   constexpr auto operator[](size_t idx) const -> std::size_t {
     if (std::is_constant_evaluated()) {
-      if (idx >= dimNum) {
+      if (idx >= rank) {
         // TODO: This won't actually throw, do I really need comptime? (shape)
         throw std::out_of_range("Index out of bounds for Shape");
       }
     } else {
-      assert(idx < dimNum);
+      assert(idx < rank);
     }
     return m_dims[idx];
   }
 
   constexpr auto offsetToIdx(std::size_t offset) const
-      -> std::array<std::size_t, dimNum> {
-    std::array<std::size_t, dimNum> result{};
-    for (int i = (int)dimNum - 1; i >= 0 && offset > 0; --i) {
+      -> std::array<std::size_t, rank> {
+    std::array<std::size_t, rank> result{};
+    for (int i = (int)rank - 1; i >= 0 && offset > 0; --i) {
       result[i] = offset % m_dims[i];
       offset /= m_dims[i];
     }
@@ -71,30 +71,30 @@ public:
     return result;
   }
 
-  template <SizeTLike... TIntTypes>
-  constexpr auto idxToOffset(TIntTypes... indices) const -> std::size_t {
-    static_assert(sizeof...(TIntTypes) == dimNum, "Wrong number of indices");
+  template <SizeTLike... Dimensions>
+  constexpr auto idxToOffset(Dimensions... indices) const -> std::size_t {
+    static_assert(sizeof...(Dimensions) == rank, "Wrong number of indices");
 
     // TODO: The accessor policy in mdspan should be able to perform this (???)
     // bounds checking
-    const std::array<std::size_t, dimNum> idx_array = {
+    const std::array<std::size_t, rank> idx_array = {
         static_cast<std::size_t>(indices)...};
-    for (std::size_t i = 0; i < dimNum; ++i) {
+    for (std::size_t i = 0; i < rank; ++i) {
       if (idx_array[i] >= m_dims[i]) {
         throw std::out_of_range("Index out of bounds in Shape::IndexToOffset");
       }
     }
 
-    auto span = createSpan(std::make_index_sequence<dimNum>{});
+    auto span = createSpan(std::make_index_sequence<rank>{});
     return span.mapping()(indices...);
   }
 
   constexpr static auto fromNestedInitializerList(auto nested_init_list)
-      -> Shape<dimNum> {
-    Shape<dimNum> shape;
+      -> Shape<rank> {
+    Shape<rank> shape;
 
     auto extract = [](const auto &list, std::size_t level,
-                      std::array<std::size_t, dimNum> &dims,
+                      std::array<std::size_t, rank> &dims,
                       const auto &self_ref) -> void {
       if constexpr (requires {
                       list.size();
@@ -102,7 +102,7 @@ public:
                     }) {
         dims[level] = list.size();
 
-        if (level + 1 < dimNum) {
+        if (level + 1 < rank) {
           if constexpr (requires { (*list.begin()).size(); }) {
             const auto expected_size = (*list.begin()).size();
 
@@ -141,18 +141,17 @@ public:
   constexpr auto size() const { return m_dims.size(); }
 
 private:
-  std::array<std::size_t, Dim> m_dims{};
+  std::array<std::size_t, Rank> m_dims{};
 
   template <std::size_t... Is>
   constexpr auto createSpan(std::index_sequence<Is...> /*unused*/) const {
-    return std::mdspan<int, std::dextents<std::size_t, dimNum>>(0,
-                                                                m_dims[Is]...);
+    return std::mdspan<int, std::dextents<std::size_t, rank>>(0, m_dims[Is]...);
   }
 };
 
 template <> class Shape<0> {
 public:
-  static constexpr std::size_t dimNum = 0;
+  static constexpr std::size_t rank = 0;
 
   explicit Shape() = default;
 
@@ -160,8 +159,8 @@ public:
 
   constexpr auto operator==(const Shape &val) const -> bool { return true; }
 
-  template <size_t otherDim>
-  auto constexpr operator==(const Shape<otherDim> &) const -> bool {
+  template <size_t otherRank>
+  auto constexpr operator==(const Shape<otherRank> & /*unused*/) const -> bool {
     return false;
   }
 };

@@ -154,23 +154,23 @@ public:
   }
 };
 
-template <typename TElem, typename TDevice, std::size_t Dim> class Tensor {
+template <typename TElem, typename TDevice, std::size_t Rank> class Tensor {
   static_assert(std::is_same_v<std::remove_cvref_t<TElem>, TElem>);
-  static_assert(Dim > 0);
+  static_assert(Rank > 0);
 
 public:
   using ElementType = TElem;
   using DeviceType = TDevice;
-  static constexpr std::size_t Dimension = Dim;
+  static constexpr std::size_t rank = Rank;
 
   friend struct LowLevelAccess<Tensor>;
   friend struct LowLevelAccess<const Tensor>;
 
-  explicit Tensor(Shape<Dim> shape)
+  explicit Tensor(Shape<Rank> shape)
       : m_shape(std::move(shape)), m_mem(shape.count()) {}
 
   explicit Tensor(ContiguousMemory<ElementType, DeviceType> p_mem,
-                  Shape<Dim> p_shape)
+                  Shape<Rank> p_shape)
       : m_shape(std::move(p_shape)), m_mem(std::move(p_mem)) {
     if (m_mem.size() < m_shape.count()) {
       throw std::invalid_argument(
@@ -180,8 +180,8 @@ public:
     }
   }
 
-  explicit Tensor(nested_initializer_list_t<ElementType, Dim> init_list)
-      : m_shape(Shape<Dim>::fromNestedInitializerList(init_list)),
+  explicit Tensor(nested_initializer_list_t<ElementType, Rank> init_list)
+      : m_shape(Shape<Rank>::fromNestedInitializerList(init_list)),
         m_mem(m_shape.count()) {
 
     auto flatten = [](const auto &list, ElementType *output_ptr,
@@ -200,25 +200,25 @@ public:
     flatten(init_list, data(), flatten);
   }
 
-  template <std::size_t D = Dim>
+  template <std::size_t D = Rank>
     requires(D == 1)
   explicit Tensor(std::initializer_list<ElementType> init_list)
       : m_shape(init_list.size()), m_mem(init_list.size()) {
     std::ranges::copy(init_list, data());
   }
 
-  template <std::size_t D = Dim>
+  template <std::size_t D = Rank>
     requires(D != 1)
   explicit Tensor(std::initializer_list<ElementType>) = delete;
 
   template <typename... Dims>
-    requires(sizeof...(Dims) == Dim) &&
+    requires(sizeof...(Dims) == Rank) &&
             (std::is_convertible_v<Dims, std::size_t> && ...)
   explicit Tensor(Dims &&...dimensions)
-      : Tensor(Shape<Dim>(std::forward<Dims>(dimensions)...)) {}
+      : Tensor(Shape<Rank>(std::forward<Dims>(dimensions)...)) {}
 
   template <typename... Dims>
-    requires(sizeof...(Dims) != Dim) &&
+    requires(sizeof...(Dims) != Rank) &&
                 (std::is_convertible_v<Dims, std::size_t> && ...)
   explicit Tensor(Dims &&...) = delete;
 
@@ -248,14 +248,14 @@ public:
 
   ~Tensor() = default; // give back to mem-pool
 
-  auto shape() const noexcept -> const Shape<Dim> & { return m_shape; }
+  auto shape() const noexcept -> const Shape<Rank> & { return m_shape; }
 
   [[nodiscard]] auto unique() const -> bool { return not m_mem.isShared(); }
 
   auto clone() const -> Tensor { return Tensor(*this); }
 
   auto toScalar() const -> Tensor<TElem, TDevice, 0> {
-    static_assert(Dim == 1,
+    static_assert(Rank == 1,
                   "ToScalar can only be called on 1D tensors with 1 element.");
     if (size() != 1) {
       throw std::runtime_error(
@@ -318,7 +318,7 @@ public:
 
   // Dot product
   template <typename OtherElementType>
-  auto dot(const Tensor<OtherElementType, DeviceType, Dim> &other) const {
+  auto dot(const Tensor<OtherElementType, DeviceType, Rank> &other) const {
     return venus::ops::dot(*this, other);
   }
 
@@ -394,7 +394,7 @@ public:
 #ifdef VENUS_INTERPRETER
   // Simple direct indexing for interpreter mode (no proxy)
   template <typename... Indices>
-    requires(sizeof...(Indices) == Dim)
+    requires(sizeof...(Indices) == Rank)
   constexpr auto operator[](Indices... indices) -> ElementType {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Indexing is currently only supported on CPU");
@@ -404,7 +404,7 @@ public:
   }
 
   template <typename... Indices>
-    requires(sizeof...(Indices) == Dim)
+    requires(sizeof...(Indices) == Rank)
   constexpr auto operator[](Indices... indices) const -> ElementType {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Indexing is currently only supported on CPU");
@@ -415,7 +415,7 @@ public:
 #else
   // Tensor indexing
   template <typename... Indices>
-    requires(sizeof...(Indices) == Dim)
+    requires(sizeof...(Indices) == Rank)
   auto operator[](Indices... indices) -> ElementProxy {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Indexing is currently only supported on CPU");
@@ -425,7 +425,7 @@ public:
   }
 
   template <typename... Indices>
-    requires(sizeof...(Indices) == Dim)
+    requires(sizeof...(Indices) == Rank)
   auto operator[](Indices... indices) const -> ElementType {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Indexing is currently only supported on CPU");
@@ -441,7 +441,7 @@ public:
   auto lowLevel() const { return LowLevelAccess<const Tensor>(*this); }
 
 private:
-  Shape<Dim> m_shape;
+  Shape<Rank> m_shape;
   ContiguousMemory<ElementType, DeviceType> m_mem;
 
 public:
@@ -487,7 +487,7 @@ template <typename TElem, typename TDevice> class Tensor<TElem, TDevice, 0> {
 public:
   using ElementType = TElem;
   using DeviceType = TDevice;
-  static constexpr std::size_t Dimension = 0;
+  static constexpr std::size_t rank = 0;
 
   friend struct LowLevelAccess<Tensor>;
   friend struct LowLevelAccess<const Tensor>;
@@ -523,7 +523,7 @@ public:
   ~Tensor() = default; // give back to mem-pool
 
   auto shape() const noexcept -> const auto & {
-    static const Shape<Dimension> shape;
+    static const Shape<rank> shape;
     return shape;
   }
 
@@ -566,7 +566,7 @@ public:
 
   // Dot product
   template <typename OtherElementType>
-  auto dot(const Tensor<OtherElementType, DeviceType, Dimension> &other) const {
+  auto dot(const Tensor<OtherElementType, DeviceType, rank> &other) const {
     return venus::ops::dot(*this, other);
   }
 
@@ -599,25 +599,25 @@ private:
   ContiguousMemory<ElementType, DeviceType> m_mem;
 };
 
-template <typename TElem, typename TDevice, std::size_t Dim>
-struct LowLevelAccess<Tensor<TElem, TDevice, Dim>> {
-  LowLevelAccess(Tensor<TElem, TDevice, Dim> &tensor) : m_tensor(tensor) {}
+template <typename TElem, typename TDevice, std::size_t Rank>
+struct LowLevelAccess<Tensor<TElem, TDevice, Rank>> {
+  LowLevelAccess(Tensor<TElem, TDevice, Rank> &tensor) : m_tensor(tensor) {}
   auto rawMemory() -> TElem * { return m_tensor.m_mem.rawMemory(); }
   auto sharedMemory() const { return m_tensor.m_mem; }
 
 private:
-  Tensor<TElem, TDevice, Dim> &m_tensor;
+  Tensor<TElem, TDevice, Rank> &m_tensor;
 };
 
-template <typename TElem, typename TDevice, std::size_t Dim>
-struct LowLevelAccess<const Tensor<TElem, TDevice, Dim>> {
-  LowLevelAccess(const Tensor<TElem, TDevice, Dim> &tensor)
+template <typename TElem, typename TDevice, std::size_t Rank>
+struct LowLevelAccess<const Tensor<TElem, TDevice, Rank>> {
+  LowLevelAccess(const Tensor<TElem, TDevice, Rank> &tensor)
       : m_tensor(tensor) {}
   auto rawMemory() const -> const TElem * { return m_tensor.m_mem.rawMemory(); }
   auto sharedMemory() const { return m_tensor.m_mem; }
 
 private:
-  const Tensor<TElem, TDevice, Dim> &m_tensor;
+  const Tensor<TElem, TDevice, Rank> &m_tensor;
 };
 
 // difference_type + iterator (for random_access_range | addition commutative)
@@ -639,8 +639,8 @@ concept CharLike = std::same_as<T, char> || std::same_as<T, signed char> ||
                    std::same_as<T, char8_t> || std::same_as<T, char16_t> ||
                    std::same_as<T, char32_t>;
 
-template <typename TElem, typename TDevice, std::size_t Dim>
-auto operator<<(std::ostream &os, const Tensor<TElem, TDevice, Dim> &tensor)
+template <typename TElem, typename TDevice, std::size_t Rank>
+auto operator<<(std::ostream &os, const Tensor<TElem, TDevice, Rank> &tensor)
     -> std::ostream & {
   os << "venus::Tensor([";
 
@@ -680,11 +680,11 @@ auto operator<<(std::ostream &os, const Tensor<TElem, TDevice, 0> &tensor)
 
 } // namespace venus
 
-template <typename TElem, typename TDevice, std::size_t Dim>
-struct std::formatter<venus::Tensor<TElem, TDevice, Dim>> {
+template <typename TElem, typename TDevice, std::size_t Rank>
+struct std::formatter<venus::Tensor<TElem, TDevice, Rank>> {
   constexpr auto parse(std::format_parse_context &ctx) { return ctx.begin(); }
 
-  auto format(const venus::Tensor<TElem, TDevice, Dim> &tensor,
+  auto format(const venus::Tensor<TElem, TDevice, Rank> &tensor,
               std::format_context &ctx) const {
     ostringstream oss;
     oss << tensor;
@@ -694,33 +694,33 @@ struct std::formatter<venus::Tensor<TElem, TDevice, Dim>> {
 
 // Scalar-first Addition
 template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
-          std::size_t Dim>
+          std::size_t Rank>
 auto operator+(const Scalar &scalar,
-               const venus::Tensor<TElem, TDevice, Dim> &tensor) {
+               const venus::Tensor<TElem, TDevice, Rank> &tensor) {
   return venus::ops::add(scalar, tensor);
 }
 
 // Scalar-first Substraction
 template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
-          std::size_t Dim>
+          std::size_t Rank>
 auto operator-(const Scalar &scalar,
-               const venus::Tensor<TElem, TDevice, Dim> &tensor) {
+               const venus::Tensor<TElem, TDevice, Rank> &tensor) {
   return venus::ops::sub(scalar, tensor);
 }
 
 // Scalar-first Multiplication
 template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
-          std::size_t Dim>
+          std::size_t Rank>
 auto operator*(const Scalar &scalar,
-               const venus::Tensor<TElem, TDevice, Dim> &tensor) {
+               const venus::Tensor<TElem, TDevice, Rank> &tensor) {
   return venus::ops::mul(scalar, tensor);
 }
 
 // Scalar-fist Division
 template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
-          std::size_t Dim>
+          std::size_t Rank>
 auto operator/(const Scalar &scalar,
-               const venus::Tensor<TElem, TDevice, Dim> &tensor) {
+               const venus::Tensor<TElem, TDevice, Rank> &tensor) {
   return venus::ops::div(scalar, tensor);
 }
 

@@ -93,17 +93,17 @@ TEST_CASE("Tensor API", "[tensor][api]") {
   }
 
   SECTION("Attempty to Build Tensor From Insufficient Memory") {
-    constexpr auto NUM_DIMS = 3;
-    constexpr auto shape = Shape<NUM_DIMS>(3, 2, 2);
+    constexpr auto rank = 3;
+    constexpr auto shape = Shape<rank>(3, 2, 2);
 
     const auto memo = ContiguousMemory<float, Device::CPU>(10);
-    REQUIRE_THROWS_AS((Tensor<float, Device::CPU, NUM_DIMS>(memo, shape)),
+    REQUIRE_THROWS_AS((Tensor<float, Device::CPU, rank>(memo, shape)),
                       std::invalid_argument);
   }
 
   SECTION("Build Tensor From Memory and Shape") {
-    constexpr auto NUM_DIMS = 3;
-    constexpr auto shape = Shape<NUM_DIMS>(3, 2, 2);
+    constexpr auto rank = 3;
+    constexpr auto shape = Shape<rank>(3, 2, 2);
 
     /** NOTE: shallow (bitwise) constness (can't point to different memory, but
      * has no control/restrictions over the thing it points to), so the tensor
@@ -111,27 +111,27 @@ TEST_CASE("Tensor API", "[tensor][api]") {
      */
     const auto memo = ContiguousMemory<float, Device::CPU>(12);
 
-    const auto tensor = Tensor<float, Device::CPU, NUM_DIMS>(memo, shape);
+    const auto tensor = Tensor<float, Device::CPU, rank>(memo, shape);
     REQUIRE_FALSE(tensor.unique());
     REQUIRE(tensor.shape() == shape);
   }
 
   SECTION("Build Tensor From Shape") {
-    constexpr auto NUM_DIMS = 3;
-    constexpr auto shape = Shape<NUM_DIMS>(3, 2, 2);
+    constexpr auto rank = 3;
+    constexpr auto shape = Shape<rank>(3, 2, 2);
 
     // memory layout is deduced automatically
-    const auto tensor = Tensor<float, Device::CPU, NUM_DIMS>(shape);
+    const auto tensor = Tensor<float, Device::CPU, rank>(shape);
     REQUIRE(tensor.unique());
     REQUIRE(tensor.shape() == shape);
   }
 
   SECTION("Tensor Indexing") {
-    constexpr auto NUM_DIMS = 3;
-    constexpr auto shape = Shape<NUM_DIMS>(3, 2, 2);
+    constexpr auto rank = 3;
+    constexpr auto shape = Shape<rank>(3, 2, 2);
 
     auto memo = ContiguousMemory<float, Device::CPU>(12);
-    auto tensor = Tensor<float, Device::CPU, NUM_DIMS>(std::move(memo), shape);
+    auto tensor = Tensor<float, Device::CPU, rank>(std::move(memo), shape);
     REQUIRE(tensor.unique());
 
     for (int i = 0; i < 3; ++i) {
@@ -164,13 +164,13 @@ TEST_CASE("Tensor API", "[tensor][api]") {
   }
 
   SECTION("Attempting To Write To Shared Tensor") {
-    constexpr auto NUM_DIMS = 3;
-    constexpr auto shape = Shape<NUM_DIMS>(3, 2, 2);
+    constexpr auto rank = 3;
+    constexpr auto shape = Shape<rank>(3, 2, 2);
 
     auto memo = ContiguousMemory<float, Device::CPU>(12);
     std::fill_n(memo.rawMemory(), 12, 0.0f);
 
-    auto tensor = Tensor<float, Device::CPU, NUM_DIMS>(memo, shape);
+    auto tensor = Tensor<float, Device::CPU, rank>(memo, shape);
     REQUIRE_FALSE(tensor.unique());
 
     // writing is forbidden
@@ -193,14 +193,14 @@ TEST_CASE("Tensor API", "[tensor][api]") {
   }
 
   SECTION("Shared Memory Indexing") {
-    constexpr auto NUM_DIMS = 3;
-    constexpr auto shape = Shape<NUM_DIMS>(3, 2, 2);
+    constexpr auto rank = 3;
+    constexpr auto shape = Shape<rank>(3, 2, 2);
 
     auto memo = ContiguousMemory<float, Device::CPU>(12);
     std::fill_n(memo.rawMemory(), 12, 0.0f);
 
-    auto tensor1 = Tensor<float, Device::CPU, NUM_DIMS>(memo, shape);
-    auto tensor2 = Tensor<float, Device::CPU, NUM_DIMS>(memo, shape);
+    auto tensor1 = Tensor<float, Device::CPU, rank>(memo, shape);
+    auto tensor2 = Tensor<float, Device::CPU, rank>(memo, shape);
 
     REQUIRE_FALSE(tensor1.unique());
     REQUIRE_FALSE(tensor2.unique());
