@@ -1099,10 +1099,13 @@ public:
     auto extract = [](const auto &list, std::size_t level,
                       std::array<std::size_t, dimNum> &dims,
                       const auto &self_ref) -> void {
-      if constexpr (requires { list.size(); }) {
+      if constexpr (requires {
+                      list.size();
+                      list.size() > 0;
+                    }) {
         dims[level] = list.size();
 
-        if (level + 1 < dimNum && list.size() > 0) {
+        if (level + 1 < dimNum) {
           if constexpr (requires { (*list.begin()).size(); }) {
             const auto expected_size = (*list.begin()).size();
 
