@@ -1180,7 +1180,7 @@ auto operator<<(std::ostream &os, const Shape<Rank> &shape) -> std::ostream & {
   return os << ")";
 }
 
-template <std::size_t Rank>
+template <std::size_t Rank = 0>
 auto operator<<(std::ostream &os, const Shape<0> &shape) -> std::ostream & {
   return os << "()";
 }
