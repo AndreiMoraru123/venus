@@ -165,8 +165,8 @@ public:
   }
 };
 
-template <std::size_t Dim>
-auto operator<<(std::ostream &os, const Shape<Dim> &shape) -> std::ostream & {
+template <std::size_t Rank>
+auto operator<<(std::ostream &os, const Shape<Rank> &shape) -> std::ostream & {
   os << "(";
   std::size_t count = 0;
   for (auto dim : shape) {
@@ -178,7 +178,7 @@ auto operator<<(std::ostream &os, const Shape<Dim> &shape) -> std::ostream & {
   return os << ")";
 }
 
-template <std::size_t Dim>
+template <std::size_t Rank>
 auto operator<<(std::ostream &os, const Shape<0> &shape) -> std::ostream & {
   return os << "()";
 }
@@ -188,10 +188,10 @@ explicit Shape(TShapeParameter...) -> Shape<sizeof...(TShapeParameter)>;
 
 } // namespace venus
 
-template <std::size_t Dim> struct std::formatter<venus::Shape<Dim>> {
+template <std::size_t Rank> struct std::formatter<venus::Shape<Rank>> {
   constexpr auto parse(std::format_parse_context &ctx) { return ctx.begin(); }
 
-  auto format(const venus::Shape<Dim> &shape, std::format_context &ctx) const {
+  auto format(const venus::Shape<Rank> &shape, std::format_context &ctx) const {
     ostringstream oss;
     oss << shape;
     return std::format_to(ctx.out(), "{}", oss.str());
