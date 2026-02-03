@@ -1450,6 +1450,10 @@ public:
 
   auto shape() const noexcept -> const Shape<Rank> & { return m_shape; }
 
+  [[nodiscard]] auto numel() const noexcept -> std::size_t {
+    return m_shape.count();
+  }
+
   [[nodiscard]] auto unique() const -> bool { return not m_mem.isShared(); }
 
   auto clone() const -> Tensor { return Tensor(*this); }
@@ -1739,6 +1743,8 @@ public:
   }
 
   auto value() const noexcept { return data()[0]; }
+
+  [[nodiscard]] auto numel() const noexcept -> std::size_t { return 1; }
 
   auto operator==(const Tensor &tensor) const noexcept -> bool {
     return value() == tensor.value();
