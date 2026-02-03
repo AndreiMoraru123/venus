@@ -19,7 +19,7 @@
 #include <venus/tensor/eager_ops.hpp>
 #include <venus/tensor/shape.hpp>
 
-#define REGISTER_SCALAR_OP(op)                                                 \
+#define REGISTER_SCALAR_BOOL_OP(op)                                            \
   auto operator op(const ElementType &element) const noexcept                  \
       -> Tensor<bool, DeviceType, 0> {                                         \
     return Tensor<bool, DeviceType, 0>(value() op element);                    \
@@ -584,12 +584,12 @@ public:
     }
   }
 
-  REGISTER_SCALAR_OP(==)
-  REGISTER_SCALAR_OP(!=)
-  REGISTER_SCALAR_OP(<)
-  REGISTER_SCALAR_OP(<=)
-  REGISTER_SCALAR_OP(>)
-  REGISTER_SCALAR_OP(>=)
+  REGISTER_SCALAR_BOOL_OP(==)
+  REGISTER_SCALAR_BOOL_OP(!=)
+  REGISTER_SCALAR_BOOL_OP(<)
+  REGISTER_SCALAR_BOOL_OP(<=)
+  REGISTER_SCALAR_BOOL_OP(>)
+  REGISTER_SCALAR_BOOL_OP(>=)
 
   auto evalRegister() const;
 
@@ -733,4 +733,4 @@ auto operator/(const Scalar &scalar,
 #undef REGISTER_OPERATOR_EQUAL
 #undef REGISTER_POST_OPERATOR
 #undef REGISTER_PRE_OPERATOR
-#undef REGISTER_SCALAR_OP
+#undef REGISTER_SCALAR_BOOL_OP
