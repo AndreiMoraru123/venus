@@ -61,7 +61,7 @@ private:
   struct Deleter {
     Deleter(std::deque<void *> &p_refPool) : m_refPool(p_refPool) {}
     void operator()(void *p_val) const {
-      std::lock_guard<std::mutex> guard(m_mutex);
+      std::scoped_lock<std::mutex> guard(m_mutex);
       m_refPool.push_back(p_val);
     }
 
@@ -84,7 +84,7 @@ public:
       p_elemSize = ((p_elemSize / BlockSize) + 1) * BlockSize;
     }
 
-    std::lock_guard<std::mutex> guard(m_mutex);
+    std::scoped_lock<std::mutex> guard(m_mutex);
 
     T *raw_buf = nullptr;
     auto &slot = m_pool.memBuffer[p_elemSize];
