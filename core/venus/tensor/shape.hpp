@@ -129,14 +129,19 @@ public:
   }
 
   // Range Ops
-  constexpr auto begin() { return m_dims.begin(); }
-  constexpr auto end() { return m_dims.end(); }
+  constexpr auto begin(this auto &&self) {
+    return std::forward<decltype(self)>(self).m_dims.begin();
+  }
+  constexpr auto end(this auto &&self) {
+    return std::forward<decltype(self)>(self).m_dims.end();
+  }
 
-  constexpr auto begin() const { return m_dims.begin(); }
-  constexpr auto end() const { return m_dims.end(); }
-
-  constexpr auto cbegin() const { return m_dims.begin(); }
-  constexpr auto cend() const { return m_dims.end(); }
+  constexpr auto cbegin(this auto &&self) {
+    return std::as_const(self).m_dims.begin();
+  }
+  constexpr auto cend(this auto &&self) {
+    return std::as_const(self).m_dims.end();
+  }
 
   constexpr auto size() const { return m_dims.size(); }
 
