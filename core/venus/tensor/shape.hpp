@@ -81,7 +81,7 @@ public:
         static_cast<std::size_t>(indices)...};
     for (std::size_t i = 0; i < rank; ++i) {
       if (idx_array[i] >= m_dims[i]) {
-        throw std::out_of_range("Index out of bounds in Shape::IndexToOffset");
+        throw std::out_of_range("Index out of bounds in Shape::idxToOffset");
       }
     }
 

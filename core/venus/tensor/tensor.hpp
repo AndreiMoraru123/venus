@@ -404,7 +404,7 @@ public:
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Indexing is currently only supported on CPU");
     const auto offset =
-        self.m_shape.IndexToOffset(static_cast<std::size_t>(indices)...);
+        self.m_shape.idxToOffset(static_cast<std::size_t>(indices)...);
     return self.data()[offset];
   }
 #else
