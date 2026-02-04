@@ -1127,14 +1127,19 @@ public:
   }
 
   // Range Ops
-  constexpr auto begin() { return m_dims.begin(); }
-  constexpr auto end() { return m_dims.end(); }
+  constexpr auto begin(this auto &&self) {
+    return std::forward<decltype(self)>(self).m_dims.begin();
+  }
+  constexpr auto end(this auto &&self) {
+    return std::forward<decltype(self)>(self).m_dims.end();
+  }
 
-  constexpr auto begin() const { return m_dims.begin(); }
-  constexpr auto end() const { return m_dims.end(); }
-
-  constexpr auto cbegin() const { return m_dims.begin(); }
-  constexpr auto cend() const { return m_dims.end(); }
+  constexpr auto cbegin(this auto &&self) {
+    return std::as_const(self).m_dims.begin();
+  }
+  constexpr auto cend(this auto &&self) {
+    return std::as_const(self).m_dims.end();
+  }
 
   constexpr auto size() const { return m_dims.size(); }
 
@@ -1595,89 +1600,71 @@ public:
   // Simple direct indexing for interpreter mode (no proxy)
   template <typename... Indices>
     requires(sizeof...(Indices) == Rank)
-  constexpr auto operator[](Indices... indices) -> ElementType {
+  constexpr auto operator[](this auto &&self, Indices... indices)
+      -> ElementType {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Indexing is currently only supported on CPU");
     const auto offset =
-        m_shape.IndexToOffset(static_cast<std::size_t>(indices)...);
-    return data()[offset];
-  }
-
-  template <typename... Indices>
-    requires(sizeof...(Indices) == Rank)
-  constexpr auto operator[](Indices... indices) const -> ElementType {
-    static_assert(std::is_same_v<DeviceType, Device::CPU>,
-                  "Indexing is currently only supported on CPU");
-    const auto offset =
-        m_shape.IndexToOffset(static_cast<std::size_t>(indices)...);
-    return data()[offset];
+        self.m_shape.IndexToOffset(static_cast<std::size_t>(indices)...);
+    return self.data()[offset];
   }
 #else
   // Tensor indexing
   template <typename... Indices>
     requires(sizeof...(Indices) == Rank)
-  auto operator[](Indices... indices) -> ElementProxy {
+  auto operator[](this auto &&self, Indices... indices) {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Indexing is currently only supported on CPU");
     const auto offset =
-        m_shape.idxToOffset(static_cast<std::size_t>(indices)...);
-    return ElementProxy(*this, data()[offset]);
-  }
-
-  template <typename... Indices>
-    requires(sizeof...(Indices) == Rank)
-  auto operator[](Indices... indices) const -> ElementType {
-    static_assert(std::is_same_v<DeviceType, Device::CPU>,
-                  "Indexing is currently only supported on CPU");
-    const auto offset =
-        m_shape.idxToOffset(static_cast<std::size_t>(indices)...);
-    return data()[offset];
+        self.m_shape.idxToOffset(static_cast<std::size_t>(indices)...);
+    if constexpr (std::is_const_v<std::remove_reference_t<decltype(self)>>) {
+      return self.data()[offset];
+    } else {
+      return ElementProxy(self, self.data()[offset]);
+    }
   }
 #endif
 
   auto evalRegister() const;
 
-  auto lowLevel() { return LowLevelAccess<Tensor>(*this); }
-  auto lowLevel() const { return LowLevelAccess<const Tensor>(*this); }
+  auto lowLevel(this auto &&self) {
+    using Self = std::remove_reference_t<decltype(self)>;
+    return LowLevelAccess<Self>(self);
+  }
 
 private:
   Shape<Rank> m_shape;
   ContiguousMemory<ElementType, DeviceType> m_mem;
 
 public:
-  constexpr auto begin() {
+  constexpr auto begin(this auto &&self) {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Range iteration is currently only supported on CPU");
-    return tensor_iterator<Tensor>(this, 0);
+    using Self = std::remove_reference_t<decltype(self)>;
+    return tensor_iterator<Self>(&self, 0);
   }
 
-  constexpr auto end() {
+  constexpr auto end(this auto &&self) {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Range iteration is currently only supported on CPU");
-    return tensor_iterator<Tensor>(this, m_shape.count());
+    using Self = std::remove_reference_t<decltype(self)>;
+    return tensor_iterator<Self>(&self, self.m_shape.count());
   }
 
-  constexpr auto begin() const {
-    static_assert(std::is_same_v<DeviceType, Device::CPU>,
-                  "Range iteration is currently only supported on CPU");
-    return tensor_iterator<const Tensor>(this, 0);
+  constexpr auto cbegin(this auto &&self) {
+    return std::as_const(self).m_dims.begin();
   }
-
-  constexpr auto end() const {
-    static_assert(std::is_same_v<DeviceType, Device::CPU>,
-                  "Range iteration is currently only supported on CPU");
-    return tensor_iterator<const Tensor>(this, m_shape.count());
+  constexpr auto cend(this auto &&self) {
+    return std::as_const(self).m_dims.end();
   }
-
-  constexpr auto cbegin() const { return begin(); }
-  constexpr auto cend() const { return end(); }
 
   [[nodiscard]] constexpr auto size() const -> std::size_t {
     return m_shape.count();
   }
 
-  auto data() -> ElementType * { return m_mem.rawMemory(); }
-  auto data() const -> const ElementType * { return m_mem.rawMemory(); }
+  auto data(this auto &&self) -> decltype(auto) {
+    return std::forward<decltype(self)>(self).m_mem.rawMemory();
+  }
 };
 
 // Scalar Tensor ===============================================
@@ -1789,13 +1776,16 @@ public:
 
   auto evalRegister() const;
 
-  auto lowLevel() { return LowLevelAccess<Tensor>(*this); }
-  auto lowLevel() const { return LowLevelAccess<const Tensor>(*this); }
+  auto lowLevel(this auto &&self) {
+    using Self = std::remove_reference_t<decltype(self)>;
+    return LowLevelAccess<Self>(self);
+  }
 
   [[nodiscard]] constexpr auto size() const -> std::size_t { return 1; }
 
-  auto data() -> ElementType * { return m_mem.rawMemory(); }
-  auto data() const -> const ElementType * { return m_mem.rawMemory(); }
+  auto data(this auto &&self) -> decltype(auto) {
+    return std::forward<decltype(self)>(self).m_mem.rawMemory();
+  }
 
 private:
   ContiguousMemory<ElementType, DeviceType> m_mem;
