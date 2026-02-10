@@ -143,6 +143,29 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
     REQUIRE(z == y.dot(x));      // commutative
   }
 
+  SECTION("2D Matrix Multiplication") {
+    auto A = Tensor<int, Device::CPU, 2>{{1, 2, 3}, {4, 5, 6}};
+    auto B = Tensor<int, Device::CPU, 2>{{7, 8}, {9, 10}, {11, 12}};
+
+    auto C = venus::ops::matmul(A, B);
+
+    auto [M, K] = A.shape();
+    auto [K2, N] = B.shape();
+
+    Tensor<int, Device::CPU, 2> expected(M, N);
+    venus::ops::fill(expected, 0);
+
+    for (std::size_t i = 0; i < M; ++i) {
+      for (std::size_t j = 0; j < N; ++j) {
+        for (std::size_t k = 0; k < K; ++k) {
+          expected[i, j] += A[i, k] * B[k, j];
+        }
+      }
+    }
+
+    REQUIRE(venus::ops::equal(C, expected));
+  }
+
   SECTION("Where - Condition Only") {
     auto x = Tensor<float, Device::CPU, 2>(3, 2);
     auto y = Tensor<float, Device::CPU, 2>(3, 2);

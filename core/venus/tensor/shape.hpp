@@ -191,6 +191,12 @@ auto operator<<(std::ostream &os, const Shape<0> &shape) -> std::ostream & {
 template <SizeTLike... TShapeParameter>
 explicit Shape(TShapeParameter...) -> Shape<sizeof...(TShapeParameter)>;
 
+template <std::size_t N, std::size_t Rank>
+constexpr auto get(const Shape<Rank> &shape) noexcept -> std::size_t {
+  static_assert(N < Rank, "Index out of bounds in Shape::get");
+  return shape[N];
+}
+
 } // namespace venus
 
 template <std::size_t Rank> struct std::formatter<venus::Shape<Rank>> {
@@ -202,3 +208,16 @@ template <std::size_t Rank> struct std::formatter<venus::Shape<Rank>> {
     return std::format_to(ctx.out(), "{}", oss.str());
   }
 };
+
+namespace std {
+template <std::size_t Rank>
+struct tuple_size<venus::Shape<Rank>>
+    : std::integral_constant<std::size_t, Rank> {};
+
+template <std::size_t N, std::size_t Rank>
+struct tuple_element<N, venus::Shape<Rank>> {
+  static_assert(N < Rank, "Index out of bounds in tuple_elements for Shape");
+  using type = std::size_t;
+};
+
+} // namespace std

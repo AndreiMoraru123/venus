@@ -6,6 +6,7 @@
 #include <functional>
 #include <numeric>
 #include <ranges>
+#include <stdexcept>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -267,6 +268,41 @@ auto fill(Tensor<Elem, Dev, Rank> &tensor, Idx i) {
 #else
   std::fill(tensor.begin(), tensor.end(), i);
 #endif
+}
+
+// Matrix Multiplication (2D)
+template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
+          Scalar Elem2, typename Dev>
+  requires VenusTensor<Tensor<Elem1, Dev, 2>> &&
+           VenusTensor<Tensor<Elem2, Dev, 2>>
+auto matmul(const Tensor<Elem1, Dev, 2> &t1, const Tensor<Elem2, Dev, 2> &t2) {
+
+  using ResultElementType = std::common_type_t<Elem1, Elem2>;
+  using ResultTensor = Tensor<ResultElementType, Dev, 2>;
+
+  auto [M, K] = t1.shape();
+  auto [K2, N] = t2.shape();
+
+  if (K != K2) {
+    throw std::invalid_argument("Shape mismatch between tensors in matrix mul");
+  }
+
+  ResultTensor t3(M, N);
+  fill(t3, ResultElementType{0});
+
+  // TODO: This is optimized for row major layout
+  for (std::size_t i{}; i < M; i++) {
+    for (std::size_t k{}; k < K; k++) {
+      if (t1[i, k] == 0) {
+        continue;
+      }
+      for (std::size_t j{}; j < N; j++) {
+        t3[i, j] += t1[i, k] * t2[k, j];
+      }
+    }
+  }
+
+  return t3;
 }
 
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
