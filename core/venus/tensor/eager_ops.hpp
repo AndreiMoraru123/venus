@@ -194,7 +194,7 @@ REGISTER_BINARY_OP(lte, less_equal, <=)
 REGISTER_BINARY_OP(eq, equal_to, ==)
 REGISTER_BINARY_OP(neq, not_equal_to, !=)
 
-// Sort
+// Copy Sort
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
           typename Dev, std::size_t Rank>
   requires VenusTensor<Tensor<Elem, Dev, Rank>>
@@ -204,6 +204,17 @@ auto sort(const Tensor<Elem, Dev, Rank> &tensor) {
   auto copy = tensor.clone();
   std::ranges::sort(copy);
   return copy;
+}
+
+// In-Place Sort
+template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+          typename Dev, std::size_t Rank>
+  requires VenusTensor<Tensor<Elem, Dev, Rank>>
+auto sort(Tensor<Elem, Dev, Rank> &tensor) {
+  static_assert(std::is_same_v<Dev, Device::CPU>,
+                "Sort is currently only supported on CPU");
+  std::ranges::sort(tensor);
+  return tensor;
 }
 
 // All equal
