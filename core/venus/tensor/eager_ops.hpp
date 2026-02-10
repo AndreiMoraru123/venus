@@ -140,7 +140,7 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
 
 } // namespace detail
 
-// Transform
+// Copy Transform
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
           typename Dev, std::size_t Rank, typename Fn>
   requires VenusTensor<Tensor<Elem, Dev, Rank>>
@@ -160,6 +160,26 @@ auto transform(const Tensor<Elem, Dev, Rank> &tensor, Fn &&fn) {
                      [f = std::forward<Fn>(fn)](auto &&t) { return f(t); });
     std::ranges::copy(computation, result.begin());
     return result;
+  }
+}
+
+// In-Place Transform
+template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+          typename Dev, std::size_t Rank, typename Fn>
+  requires VenusTensor<Tensor<Elem, Dev, Rank>>
+auto transform(Tensor<Elem, Dev, Rank> &tensor, Fn &&fn) {
+  static_assert(std::is_same_v<Dev, Device::CPU>,
+                "Transform is currently only supported on CPU");
+
+  if constexpr (Rank == 0) {
+    tensor.setValue(fn(tensor.value()));
+    return tensor;
+  } else {
+    auto computation =
+        tensor | std::views::transform(
+                     [f = std::forward<Fn>(fn)](auto &&t) { return f(t); });
+    std::ranges::copy(computation, tensor.begin());
+    return tensor;
   }
 }
 
