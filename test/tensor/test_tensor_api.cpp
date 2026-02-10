@@ -37,7 +37,7 @@ TEST_CASE("Tensor API", "[tensor][api]") {
   SECTION("Shared Memory") {
     auto shared_memo = ContiguousMemory<float, Device::CPU>(1);
 
-    float *rawPtr = shared_memo.rawMemory();
+    float *rawPtr = shared_memo.ptr();
     rawPtr[0] = 1.0f;
 
     const auto scalar1 = Tensor<float, Device::CPU, 0>(shared_memo);
@@ -53,7 +53,7 @@ TEST_CASE("Tensor API", "[tensor][api]") {
   SECTION("Shared Shifted Memory") {
     auto shared_memo = ContiguousMemory<float, Device::CPU>(3);
 
-    float *rawPtr = shared_memo.rawMemory();
+    float *rawPtr = shared_memo.ptr();
     rawPtr[0] = 1.0f;
     rawPtr[2] = 3.0f;
 
@@ -81,7 +81,7 @@ TEST_CASE("Tensor API", "[tensor][api]") {
 
   SECTION("Low Level Access Memory") {
     auto memo = ContiguousMemory<float, Device::CPU>(1);
-    float *rawPtr = memo.rawMemory();
+    float *rawPtr = memo.ptr();
     rawPtr[0] = 10.0f;
 
     const auto tensor = Tensor<float, Device::CPU, 0>(memo);
@@ -168,7 +168,7 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     constexpr auto shape = Shape<rank>(3, 2, 2);
 
     auto memo = ContiguousMemory<float, Device::CPU>(12);
-    std::fill_n(memo.rawMemory(), 12, 0.0f);
+    std::fill_n(memo.ptr(), 12, 0.0f);
 
     auto tensor = Tensor<float, Device::CPU, rank>(memo, shape);
     REQUIRE_FALSE(tensor.unique());
@@ -197,7 +197,7 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     constexpr auto shape = Shape<rank>(3, 2, 2);
 
     auto memo = ContiguousMemory<float, Device::CPU>(12);
-    std::fill_n(memo.rawMemory(), 12, 0.0f);
+    std::fill_n(memo.ptr(), 12, 0.0f);
 
     auto tensor1 = Tensor<float, Device::CPU, rank>(memo, shape);
     auto tensor2 = Tensor<float, Device::CPU, rank>(memo, shape);

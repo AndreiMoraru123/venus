@@ -10,7 +10,7 @@ TEST_CASE("ContiguousMemory basics", "[memory]") {
     ContiguousMemory<float *, Device::CPU> memo(size);
 
     REQUIRE(memo.size() == size);
-    REQUIRE(memo.rawMemory() != nullptr);
+    REQUIRE(memo.ptr() != nullptr);
     REQUIRE_FALSE(memo.isShared());
   }
 
@@ -27,7 +27,7 @@ TEST_CASE("ContiguousMemory basics", "[memory]") {
     auto shifted = memo.shift(20);
 
     REQUIRE(shifted.size() == 80);
-    REQUIRE(shifted.rawMemory() == memo.rawMemory() + 20);
+    REQUIRE(shifted.ptr() == memo.ptr() + 20);
     REQUIRE(shifted.isShared());
     REQUIRE(memo.isShared());
   }

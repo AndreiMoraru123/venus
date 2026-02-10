@@ -346,13 +346,13 @@ public:
         // TODO: Do I want to throw here or do I want copy on write (cow)
         throw std::runtime_error("Cannot write to shared tensor");
         //     const std::size_t offset = &m_element -
-        //     m_tensor.m_mem.RawMemory();
+        //     m_tensor.m_mem.ptr();
         // auto new_mem =
         //     ContiguousMemory<ElementType, DeviceType>(m_tensor.m_mem.Size());
-        // std::copy_n(m_tensor.m_mem.RawMemory(), m_tensor.m_mem.Size(),
-        //             new_mem.RawMemory());
+        // std::copy_n(m_tensor.m_mem.ptr(), m_tensor.m_mem.Size(),
+        //             new_mem.ptr());
         // m_tensor.m_mem = std::move(new_mem);
-        // m_tensor.m_mem.RawMemory()[offset] = value;
+        // m_tensor.m_mem.ptr()[offset] = value;
         // return *this;
       }
       m_element = value;
@@ -462,7 +462,7 @@ public:
   }
 
   auto data(this auto &&self) -> decltype(auto) {
-    return std::forward<decltype(self)>(self).m_mem.rawMemory();
+    return std::forward<decltype(self)>(self).m_mem.ptr();
   }
 };
 
@@ -583,7 +583,7 @@ public:
   [[nodiscard]] constexpr auto size() const -> std::size_t { return 1; }
 
   auto data(this auto &&self) -> decltype(auto) {
-    return std::forward<decltype(self)>(self).m_mem.rawMemory();
+    return std::forward<decltype(self)>(self).m_mem.ptr();
   }
 
 private:
@@ -593,7 +593,7 @@ private:
 template <typename TElem, typename TDevice, std::size_t Rank>
 struct LowLevelAccess<Tensor<TElem, TDevice, Rank>> {
   LowLevelAccess(Tensor<TElem, TDevice, Rank> &tensor) : m_tensor(tensor) {}
-  auto rawMemory() -> TElem * { return m_tensor.m_mem.rawMemory(); }
+  auto rawMemory() -> TElem * { return m_tensor.m_mem.ptr(); }
   auto sharedMemory() const { return m_tensor.m_mem; }
 
 private:
@@ -604,7 +604,7 @@ template <typename TElem, typename TDevice, std::size_t Rank>
 struct LowLevelAccess<const Tensor<TElem, TDevice, Rank>> {
   LowLevelAccess(const Tensor<TElem, TDevice, Rank> &tensor)
       : m_tensor(tensor) {}
-  auto rawMemory() const -> const TElem * { return m_tensor.m_mem.rawMemory(); }
+  auto rawMemory() const -> const TElem * { return m_tensor.m_mem.ptr(); }
   auto sharedMemory() const { return m_tensor.m_mem; }
 
 private:
