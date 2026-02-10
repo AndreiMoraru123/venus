@@ -691,6 +691,7 @@ static constexpr bool HasNonTrivialPolicy =
 #include <functional>
 #include <numeric>
 #include <ranges>
+#include <stdexcept>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -952,6 +953,41 @@ auto fill(Tensor<Elem, Dev, Rank> &tensor, Idx i) {
 #else
   std::fill(tensor.begin(), tensor.end(), i);
 #endif
+}
+
+// Matrix Multiplication (2D)
+template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
+          Scalar Elem2, typename Dev>
+  requires VenusTensor<Tensor<Elem1, Dev, 2>> &&
+           VenusTensor<Tensor<Elem2, Dev, 2>>
+auto matmul(const Tensor<Elem1, Dev, 2> &t1, const Tensor<Elem2, Dev, 2> &t2) {
+
+  using ResultElementType = std::common_type_t<Elem1, Elem2>;
+  using ResultTensor = Tensor<ResultElementType, Dev, 2>;
+
+  auto [M, K] = t1.shape();
+  auto [K2, N] = t2.shape();
+
+  if (K != K2) {
+    throw std::invalid_argument("Shape mismatch between tensors in matrix mul");
+  }
+
+  ResultTensor t3(M, N);
+  fill(t3, ResultElementType{0});
+
+  // TODO: This is optimized for row major layout
+  for (std::size_t i{}; i < M; i++) {
+    for (std::size_t k{}; k < K; k++) {
+      if (t1[i, k] == 0) {
+        continue;
+      }
+      for (std::size_t j{}; j < N; j++) {
+        t3[i, j] += t1[i, k] * t2[k, j];
+      }
+    }
+  }
+
+  return t3;
 }
 
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
@@ -1220,6 +1256,12 @@ auto operator<<(std::ostream &os, const Shape<0> &shape) -> std::ostream & {
 template <SizeTLike... TShapeParameter>
 explicit Shape(TShapeParameter...) -> Shape<sizeof...(TShapeParameter)>;
 
+template <std::size_t N, std::size_t Rank>
+constexpr auto get(const Shape<Rank> &shape) noexcept -> std::size_t {
+  static_assert(N < Rank, "Index out of bounds in Shape::get");
+  return shape[N];
+}
+
 } // namespace venus
 
 template <std::size_t Rank> struct std::formatter<venus::Shape<Rank>> {
@@ -1231,6 +1273,19 @@ template <std::size_t Rank> struct std::formatter<venus::Shape<Rank>> {
     return std::format_to(ctx.out(), "{}", oss.str());
   }
 };
+
+namespace std {
+template <std::size_t Rank>
+struct tuple_size<venus::Shape<Rank>>
+    : std::integral_constant<std::size_t, Rank> {};
+
+template <std::size_t N, std::size_t Rank>
+struct tuple_element<N, venus::Shape<Rank>> {
+  static_assert(N < Rank, "Index out of bounds in tuple_elements for Shape");
+  using type = std::size_t;
+};
+
+} // namespace std
 #include <algorithm>
 #include <cassert>
 #include <compare>
