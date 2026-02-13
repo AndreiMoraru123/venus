@@ -83,7 +83,7 @@ cmake --build build --target venus-interactive
 [cling]$ #include <single_include/venus.hpp>
 [cling]$ using namespace venus;
 [cling]$ using namespace venus::ops;
-[cling]$ auto check_order(auto ints) { return where(sort(ints) != ints); }
+[cling]$ auto check_order(const auto& ints) { return where(sort(ints) != ints); }
 [cling]$ auto ints = Tensor<int, Device::CPU, 1>{5, 2, 4, 3, 1};
 [cling]$ check_order(ints)
 (ResultTensor) { 0, 0, 2, 3, 4 }
