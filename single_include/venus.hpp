@@ -902,6 +902,7 @@ auto dot(const Tensor<Elem1, Dev1, Rank1> &t1,
   return Tensor<ResultElementType, Dev1, 0>(product);
 }
 
+// Arange
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
           Scalar Idx, typename Dev, std::size_t Rank>
   requires VenusTensor<Tensor<Elem, Dev, Rank>>
@@ -913,6 +914,7 @@ void iota(Tensor<Elem, Dev, Rank> &tensor, Idx i) {
 #endif
 }
 
+// Fill
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
           Scalar Idx, typename Dev, std::size_t Rank>
   requires VenusTensor<Tensor<Elem, Dev, Rank>>
@@ -1605,6 +1607,34 @@ public:
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Sort is currently only supported on CPU");
     std::ranges::sort(self);
+  }
+
+  // Fill
+  template <venus::Scalar Idx>
+  void fill(this auto &&self, Idx i)
+    requires(!std::is_const_v<std::remove_reference_t<decltype(self)>>)
+  {
+    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+                  "Sort is currently only supported on CPU");
+#if _cpp_lib_ranges >= 202110L
+    std::ranges::fill(self, i);
+#else
+    std::fill(self.begin(), self.end(), i);
+#endif
+  }
+
+  // Arange
+  template <venus::Scalar Idx>
+  void iota(this auto &&self, Idx i)
+    requires(!std::is_const_v<std::remove_reference_t<decltype(self)>>)
+  {
+    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+                  "Sort is currently only supported on CPU");
+#if _cpp_lib_ranges >= 202110L
+    std::ranges::iota(self, i);
+#else
+    std::iota(self.begin(), self.end(), i);
+#endif
   }
 
   //* Proxy pattern for indexing elements (know when I'm reading vs writing)
