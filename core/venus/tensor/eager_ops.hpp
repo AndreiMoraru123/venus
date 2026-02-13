@@ -168,19 +168,17 @@ auto transform(const Tensor<Elem, Dev, Rank> &tensor, Fn &&fn) {
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
           typename Dev, std::size_t Rank, typename Fn>
   requires VenusTensor<Tensor<Elem, Dev, Rank>>
-auto transform(Tensor<Elem, Dev, Rank> &tensor, Fn &&fn) {
+void transform(Tensor<Elem, Dev, Rank> &tensor, Fn &&fn) {
   static_assert(std::is_same_v<Dev, Device::CPU>,
                 "Transform is currently only supported on CPU");
 
   if constexpr (Rank == 0) {
     tensor.setValue(fn(tensor.value()));
-    return tensor;
   } else {
     auto computation =
         tensor | std::views::transform(
                      [f = std::forward<Fn>(fn)](auto &&t) { return f(t); });
     std::ranges::copy(computation, tensor.begin());
-    return tensor;
   }
 }
 
@@ -210,12 +208,12 @@ auto sort(const Tensor<Elem, Dev, Rank> &tensor) {
 // In-Place Sort
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
           typename Dev, std::size_t Rank>
-  requires VenusTensor<Tensor<Elem, Dev, Rank>>
-auto sort(Tensor<Elem, Dev, Rank> &tensor) {
+  requires(VenusTensor<Tensor<Elem, Dev, Rank>> &&
+           !std::is_const_v<Tensor<Elem, Dev, Rank>>)
+void sort(Tensor<Elem, Dev, Rank> &tensor) {
   static_assert(std::is_same_v<Dev, Device::CPU>,
                 "Sort is currently only supported on CPU");
   std::ranges::sort(tensor);
-  return tensor;
 }
 
 // All equal
@@ -331,7 +329,7 @@ template <typename T1, typename T2, typename T3>
   requires VenusTensor<T1> && (VenusTensor<T2> || Scalar<T2>) &&
            (VenusTensor<T3> || Scalar<T3>)
 auto where(T1 &&t1, T2 &&t2, T3 &&t3) {
-  auto v1 = [&] {
+  const auto v1 = [&] {
     if constexpr (ScalarTensor<T1>) {
       return t1.value();
     } else {
@@ -339,7 +337,7 @@ auto where(T1 &&t1, T2 &&t2, T3 &&t3) {
     }
   }();
 
-  auto v2 = [&] {
+  const auto v2 = [&] {
     if constexpr (ScalarTensor<T2>) {
       return t2.value();
     } else {
@@ -347,7 +345,7 @@ auto where(T1 &&t1, T2 &&t2, T3 &&t3) {
     }
   }();
 
-  auto v3 = [&] {
+  const auto v3 = [&] {
     if constexpr (ScalarTensor<T3>) {
       return t3.value();
     } else {
