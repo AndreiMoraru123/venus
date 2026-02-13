@@ -31,7 +31,7 @@ auto main() -> int {
 }
 ```
 
-#### Solving the problem from https://www.youtube.com/watch?v=EEwREnUdbFs
+#### [1 Problem, 7 Libraries](https://www.youtube.com/watch?v=EEwREnUdbFs)
 
 in PyTorch:
 
