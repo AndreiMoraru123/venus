@@ -580,16 +580,6 @@ public:
     return venus::ops::dot(*this, other);
   }
 
-  // In-Place Transform
-  template <typename Fn>
-  void transform(this auto &&self, Fn &&fn)
-    requires(!std::is_const_v<std::remove_reference_t<decltype(self)>>)
-  {
-    static_assert(std::is_same_v<DeviceType, Device::CPU>,
-                  "Transform is currently only supported on CPU");
-    self.setValue(fn(self.value()));
-  }
-
   operator bool() const noexcept {
     if constexpr (std::is_same_v<ElementType, bool>) {
       return value();
