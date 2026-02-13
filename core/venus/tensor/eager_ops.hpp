@@ -217,6 +217,7 @@ auto dot(const Tensor<Elem1, Dev1, Rank1> &t1,
   return Tensor<ResultElementType, Dev1, 0>(product);
 }
 
+// Arange
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
           Scalar Idx, typename Dev, std::size_t Rank>
   requires VenusTensor<Tensor<Elem, Dev, Rank>>
@@ -228,6 +229,7 @@ void iota(Tensor<Elem, Dev, Rank> &tensor, Idx i) {
 #endif
 }
 
+// Fill
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
           Scalar Idx, typename Dev, std::size_t Rank>
   requires VenusTensor<Tensor<Elem, Dev, Rank>>
