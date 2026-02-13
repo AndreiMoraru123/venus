@@ -961,6 +961,8 @@ template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
   requires VenusTensor<Tensor<Elem1, Dev, 2>> &&
            VenusTensor<Tensor<Elem2, Dev, 2>>
 auto matmul(const Tensor<Elem1, Dev, 2> &t1, const Tensor<Elem2, Dev, 2> &t2) {
+  static_assert(std::is_same_v<Dev, Device::CPU>,
+                "MatMul is currently only supported on CPU");
 
   using ResultElementType = std::common_type_t<Elem1, Elem2>;
   using ResultTensor = Tensor<ResultElementType, Dev, 2>;
