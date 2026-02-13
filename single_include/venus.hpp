@@ -849,24 +849,6 @@ auto transform(const Tensor<Elem, Dev, Rank> &tensor, Fn &&fn) {
   }
 }
 
-// In-Place Transform
-template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
-          typename Dev, std::size_t Rank, typename Fn>
-  requires VenusTensor<Tensor<Elem, Dev, Rank>>
-void transform(Tensor<Elem, Dev, Rank> &tensor, Fn &&fn) {
-  static_assert(std::is_same_v<Dev, Device::CPU>,
-                "Transform is currently only supported on CPU");
-
-  if constexpr (Rank == 0) {
-    tensor.setValue(fn(tensor.value()));
-  } else {
-    auto computation =
-        tensor | std::views::transform(
-                     [f = std::forward<Fn>(fn)](auto &&t) { return f(t); });
-    std::ranges::copy(computation, tensor.begin());
-  }
-}
-
 REGISTER_BINARY_OP(add, plus, +)
 REGISTER_BINARY_OP(sub, minus, -)
 REGISTER_BINARY_OP(mul, multiplies, *)
@@ -888,17 +870,6 @@ auto sort(const Tensor<Elem, Dev, Rank> &tensor) {
   auto copy = tensor.clone();
   std::ranges::sort(copy);
   return copy;
-}
-
-// In-Place Sort
-template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
-          typename Dev, std::size_t Rank>
-  requires(VenusTensor<Tensor<Elem, Dev, Rank>> &&
-           !std::is_const_v<Tensor<Elem, Dev, Rank>>)
-void sort(Tensor<Elem, Dev, Rank> &tensor) {
-  static_assert(std::is_same_v<Dev, Device::CPU>,
-                "Sort is currently only supported on CPU");
-  std::ranges::sort(tensor);
 }
 
 // All equal
@@ -1614,6 +1585,28 @@ public:
     return venus::ops::dot(*this, other);
   }
 
+  // In-Place Transform
+  template <typename Fn>
+  void transform(this auto &&self, Fn &&fn)
+    requires(!std::is_const_v<std::remove_reference_t<decltype(self)>>)
+  {
+    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+                  "Transform is currently only supported on CPU");
+    auto computation =
+        self | std::views::transform(
+                   [f = std::forward<Fn>(fn)](auto &&t) { return f(t); });
+    std::ranges::copy(computation, self.begin());
+  }
+
+  // In-Place Sort
+  void sort(this auto &&self)
+    requires(!std::is_const_v<std::remove_reference_t<decltype(self)>>)
+  {
+    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+                  "Sort is currently only supported on CPU");
+    std::ranges::sort(self);
+  }
+
   //* Proxy pattern for indexing elements (know when I'm reading vs writing)
   //? Price to pay: have to specify all possible operator overloads that I want
   class ElementProxy {
@@ -1844,6 +1837,16 @@ public:
   template <typename OtherElementType>
   auto dot(const Tensor<OtherElementType, DeviceType, rank> &other) const {
     return venus::ops::dot(*this, other);
+  }
+
+  // In-Place Transform
+  template <typename Fn>
+  void transform(this auto &&self, Fn &&fn)
+    requires(!std::is_const_v<std::remove_reference_t<decltype(self)>>)
+  {
+    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+                  "Transform is currently only supported on CPU");
+    self.setValue(fn(self.value()));
   }
 
   operator bool() const noexcept {
