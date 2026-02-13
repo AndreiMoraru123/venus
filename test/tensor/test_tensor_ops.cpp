@@ -92,21 +92,6 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
     }
   }
 
-  SECTION("Scalar Transform") {
-    const auto tensor = Tensor<float, Device::CPU, 0>(5.0);
-    auto res = venus::ops::transform(tensor, [](auto &&t) { return t * 3; });
-
-    STATIC_REQUIRE(std::is_same_v<decltype(res)::ElementType, float>);
-    REQUIRE(res.value() == 15.0f);
-  }
-
-  SECTION("Scalar Transform (in-place)") {
-    auto tensor = Tensor<float, Device::CPU, 0>(5.0);
-    venus::ops::transform(tensor, [](auto &&t) { return t * 3; });
-
-    REQUIRE(tensor.value() == 15.0f);
-  }
-
   SECTION("Tensor Transform") {
     const auto tensor =
         Tensor<float, Device::CPU, 2>{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
@@ -119,9 +104,9 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
   }
 
   SECTION("Tensor Transform (in-place)") {
-    auto tensor = Tensor<float, Device::CPU, 2>(3, 3);
-    venus::ops::iota(tensor, 1);
-    venus::ops::transform(tensor, [](auto &&t) { return t * 3; });
+    auto tensor =
+        Tensor<float, Device::CPU, 2>{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+    tensor.transform([](auto &&t) { return t * 3; });
 
     REQUIRE(tensor[0, 0] == 3.0f);  // 1 * 3
     REQUIRE(tensor[1, 1] == 15.0f); // 5 * 3
