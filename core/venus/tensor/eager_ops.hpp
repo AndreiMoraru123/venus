@@ -132,6 +132,7 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
         std::views::zip(t1, t2, t3) | std::views::transform([op](auto &&tuple) {
           return std::apply(op, tuple);
         });
+    std::ranges::copy(computation, result.begin());
     return result;
   }
 }
