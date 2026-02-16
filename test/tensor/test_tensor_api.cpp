@@ -213,8 +213,8 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     auto x = Tensor<float, Device::CPU, 1>(1);
     auto y = Tensor<float, Device::CPU, 1>(2);
 
-    venus::ops::iota(x, 1);
-    venus::ops::iota(y, 1);
+    x.iota(1);
+    y.iota(1);
 
     REQUIRE_THROWS_AS(y.toScalar(), std::runtime_error);
 
@@ -324,7 +324,7 @@ TEST_CASE("Tensor API", "[tensor][api]") {
 
   SECTION("Tensor Rule of V") {
     auto tensor = Tensor<float, Device::CPU, 2>(2, 3);
-    venus::ops::iota(tensor, 1);
+    tensor.iota(1);
     void *tensor_ptr = static_cast<void *>(tensor.data());
 
     auto copied_tensor(tensor);
@@ -337,7 +337,7 @@ TEST_CASE("Tensor API", "[tensor][api]") {
 
     auto x = Tensor<float, Device::CPU, 2>(2, 3);
     void *x_ptr = static_cast<void *>(x.data());
-    venus::ops::iota(x, 1);
+    x.iota(1);
 
     auto y = Tensor<float, Device::CPU, 2>(2, 3);
     auto z = Tensor<float, Device::CPU, 2>(2, 3);

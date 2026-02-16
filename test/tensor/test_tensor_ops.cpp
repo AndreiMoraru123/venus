@@ -39,8 +39,8 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
     auto x = Tensor<int, Device::CPU, 2>(3, 3);
     auto y = Tensor<float, Device::CPU, 2>(3, 3);
 
-    venus::ops::iota(x, 1);
-    venus::ops::iota(y, 1);
+    x.iota(1);
+    y.iota(1);
 
     using TensorOp = std::function<decltype(x + y)(decltype(x), decltype(y))>;
     using ScalarOp = std::function<float(int, float)>;
@@ -117,8 +117,8 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
     auto x = Tensor<int, Device::CPU, 1>(3);
     auto y = Tensor<float, Device::CPU, 1>(3);
 
-    venus::ops::iota(x, 1);
-    venus::ops::iota(y, 1);
+    x.iota(1);
+    y.iota(1);
 
     auto z = x.dot(y);
 
@@ -137,8 +137,7 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
     auto [M, K] = A.shape();
     auto [K2, N] = B.shape();
 
-    Tensor<int, Device::CPU, 2> expected(M, N);
-    venus::ops::fill(expected, 0);
+    auto expected = Tensor<int, Device::CPU, 2>(M, N);
 
     for (std::size_t i = 0; i < M; ++i) {
       for (std::size_t j = 0; j < N; ++j) {
@@ -155,8 +154,8 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
     auto x = Tensor<float, Device::CPU, 2>(3, 2);
     auto y = Tensor<float, Device::CPU, 2>(3, 2);
 
-    venus::ops::iota(x, 1);
-    venus::ops::fill(y, 1);
+    x.iota(1);
+    y.fill(1);
 
     auto z = venus::ops::where(x > 3);
 
@@ -174,8 +173,8 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
     auto x = Tensor<float, Device::CPU, 2>(3, 2);
     auto y = Tensor<float, Device::CPU, 2>(3, 2);
 
-    venus::ops::iota(x, 1);
-    venus::ops::fill(y, 1);
+    x.iota(1);
+    y.fill(1);
 
     auto z = venus::ops::where(x > 3, x, y);
 

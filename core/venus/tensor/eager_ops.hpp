@@ -217,28 +217,32 @@ auto dot(const Tensor<Elem1, Dev1, Rank1> &t1,
   return Tensor<ResultElementType, Dev1, 0>(product);
 }
 
-// Arange
+// Out-Of-Place Arange
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
           Scalar Idx, typename Dev, std::size_t Rank>
   requires VenusTensor<Tensor<Elem, Dev, Rank>>
-void iota(Tensor<Elem, Dev, Rank> &tensor, Idx i) {
+auto iota(const Tensor<Elem, Dev, Rank> &tensor, Idx i) {
+  auto result = Tensor<Elem, Dev, Rank>(tensor.shape());
 #if _cpp_lib_ranges >= 202110L
-  std::ranges::iota(tensor, i);
+  std::ranges::iota(result, i);
 #else
-  std::iota(tensor.begin(), tensor.end(), i);
+  std::iota(result.begin(), result.end(), i);
 #endif
+  return result;
 }
 
-// Fill
+// Out-Of-Place Fill
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
           Scalar Idx, typename Dev, std::size_t Rank>
   requires VenusTensor<Tensor<Elem, Dev, Rank>>
-void fill(Tensor<Elem, Dev, Rank> &tensor, Idx i) {
+auto fill(const Tensor<Elem, Dev, Rank> &tensor, Idx i) {
+  auto result = Tensor<Elem, Dev, Rank>(tensor.shape());
 #if _cpp_lib_ranges >= 202110L
-  std::ranges::fill(tensor, i);
+  std::ranges::fill(result, i);
 #else
-  std::fill(tensor.begin(), tensor.end(), i);
+  std::fill(result.begin(), result.end(), i);
 #endif
+  return result;
 }
 
 // Matrix Multiplication (2D)
@@ -260,8 +264,7 @@ auto matmul(const Tensor<Elem1, Dev, 2> &t1, const Tensor<Elem2, Dev, 2> &t2) {
     throw std::invalid_argument("Shape mismatch between tensors in matrix mul");
   }
 
-  ResultTensor t3(M, N);
-  fill(t3, ResultElementType{0});
+  auto t3 = ResultTensor(M, N);
 
   // TODO: This is optimized for row major layout
   for (std::size_t i{}; i < M; i++) {

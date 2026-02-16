@@ -24,7 +24,7 @@ TEST_CASE("Tensor as Range", "[tensor][range]") {
     const auto shape = Shape(2, 3);
     auto tensor = Tensor<int, Device::CPU, 2>(shape);
 
-    venus::ops::iota(tensor, 10);
+    tensor.iota(10);
 
     auto it = tensor.begin();
     REQUIRE(*(it + 2) == 12);
@@ -87,7 +87,7 @@ TEST_CASE("Tensor as Range", "[tensor][range]") {
   SECTION("Range Algos - Accumulation") {
     auto tensor = Tensor<int, Device::CPU, 2>(2, 3);
 
-    venus::ops::iota(tensor, 1);
+    tensor.iota(1);
 
     auto sum = std::ranges::fold_left(tensor, 0, std::plus<>{});
     REQUIRE(sum == 21);
@@ -96,7 +96,7 @@ TEST_CASE("Tensor as Range", "[tensor][range]") {
   SECTION("Ranges Algos - Transform and Copy") {
     auto tensor = Tensor<int, Device::CPU, 2>(2, 2);
 
-    venus::ops::iota(tensor, 1);
+    tensor.iota(1);
 
     std::ranges::transform(tensor, tensor.begin(),
                            [](auto proxy) { return proxy * 2; });
@@ -111,7 +111,7 @@ TEST_CASE("Tensor as Range", "[tensor][range]") {
   SECTION("Range Algos - Find and Count") {
     auto tensor = Tensor<int, Device::CPU, 2>(2, 3);
 
-    venus::ops::iota(tensor, 1);
+    tensor.iota(1);
 
     auto it = std::ranges::find(tensor, 4);
     REQUIRE(it != tensor.end());
@@ -124,7 +124,7 @@ TEST_CASE("Tensor as Range", "[tensor][range]") {
   SECTION("Ranges Views") {
     auto tensor = Tensor<int, Device::CPU, 2>(2, 2);
 
-    venus::ops::iota(tensor, 1);
+    tensor.iota(1);
 
     auto result = tensor | std::views::transform([](int x) { return x * 2; }) |
                   std::views::filter([](int x) { return x > 5; }) |
