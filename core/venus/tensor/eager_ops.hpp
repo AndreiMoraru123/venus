@@ -97,9 +97,8 @@ auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
       throw std::invalid_argument("Tensor shapes must match");
     }
 
-    using ResultTensor = Tensor<ResultElementType, Dev1, Rank1>;
-    ResultTensor result(t1.shape());
-    auto computation =
+    auto result = Tensor<ResultElementType, Dev1, Rank1>(t1.shape());
+    const auto computation =
         std::views::zip(t1, t2) | std::views::transform([op](auto &&tuple) {
           return std::apply(op, tuple);
         });
@@ -128,13 +127,11 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
       throw std::invalid_argument("Tensor shapes must match");
     }
 
-    using ResultTensor = Tensor<ResultElementType, Dev1, Rank1>;
-    ResultTensor result(t1.shape());
-    auto computation =
+    auto result = Tensor<ResultElementType, Dev1, Rank1>(t1.shape());
+    const auto computation =
         std::views::zip(t1, t2, t3) | std::views::transform([op](auto &&tuple) {
           return std::apply(op, tuple);
         });
-    std::ranges::copy(computation, result.begin());
     return result;
   }
 }
@@ -154,12 +151,8 @@ auto transform(const Tensor<Elem, Dev, Rank> &tensor, Fn &&fn) {
   if constexpr (Rank == 0) {
     return Tensor<ResultElementType, Dev, 0>(fn(tensor.value()));
   } else {
-    using ResultTensor = Tensor<ResultElementType, Dev, Rank>;
-    ResultTensor result(tensor.shape());
-    auto computation =
-        tensor | std::views::transform(
-                     [f = std::forward<Fn>(fn)](auto &&t) { return f(t); });
-    std::ranges::copy(computation, result.begin());
+    auto result = Tensor<ResultElementType, Dev, Rank>(tensor.shape());
+    std::ranges::transform(tensor, result.begin(), std::forward<Fn>(fn));
     return result;
   }
 }
@@ -255,7 +248,6 @@ auto matmul(const Tensor<Elem1, Dev, 2> &t1, const Tensor<Elem2, Dev, 2> &t2) {
                 "MatMul is currently only supported on CPU");
 
   using ResultElementType = std::common_type_t<Elem1, Elem2>;
-  using ResultTensor = Tensor<ResultElementType, Dev, 2>;
 
   auto [M, K] = t1.shape();
   auto [K2, N] = t2.shape();
@@ -264,7 +256,7 @@ auto matmul(const Tensor<Elem1, Dev, 2> &t1, const Tensor<Elem2, Dev, 2> &t2) {
     throw std::invalid_argument("Shape mismatch between tensors in matrix mul");
   }
 
-  auto t3 = ResultTensor(M, N);
+  auto t3 = Tensor<ResultElementType, Dev, 2>(M, N);
 
   // TODO: This is optimized for row major layout
   for (std::size_t i{}; i < M; i++) {
@@ -285,8 +277,7 @@ template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
           typename Dev, std::size_t Rank>
   requires BoolTensor<Tensor<Elem, Dev, Rank>>
 auto where(const Tensor<Elem, Dev, Rank> &condition) {
-  using ResultTensor = Tensor<std::size_t, Dev, Rank>;
-  ResultTensor result(condition.shape());
+  auto result = Tensor<std::size_t, Dev, Rank>(condition.shape());
 
   auto result_ptr = std::ranges::data(result);
   auto indices = std::views::iota(std::size_t{0}, condition.size());
