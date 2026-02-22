@@ -132,7 +132,7 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
     auto A = Tensor<int, Device::CPU, 2>{{1, 2, 3}, {4, 5, 6}};
     auto B = Tensor<int, Device::CPU, 2>{{7, 8}, {9, 10}, {11, 12}};
 
-    auto C = venus::ops::matmul(A, B);
+    auto C = venus::ops::mm(A, B);
 
     auto [M, K] = A.shape();
     auto [K2, N] = B.shape();
