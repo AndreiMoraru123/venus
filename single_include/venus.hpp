@@ -929,7 +929,7 @@ template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
           Scalar Elem2, typename Dev>
   requires VenusTensor<Tensor<Elem1, Dev, 2>> &&
            VenusTensor<Tensor<Elem2, Dev, 2>>
-auto matmul(const Tensor<Elem1, Dev, 2> &t1, const Tensor<Elem2, Dev, 2> &t2) {
+auto mm(const Tensor<Elem1, Dev, 2> &t1, const Tensor<Elem2, Dev, 2> &t2) {
   static_assert(std::is_same_v<Dev, Device::CPU>,
                 "MatMul is currently only supported on CPU");
 
