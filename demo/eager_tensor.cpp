@@ -1,7 +1,7 @@
 
 #include <cassert>
 #include <print>
-#include <venus/tensor/eager_ops.hpp>
+#include <venus/tensor/eager.hpp>
 #include <venus/tensor/tensor.hpp>
 
 using namespace venus;
@@ -17,10 +17,10 @@ auto main() -> int {
   std::println("{}", z); // venus::Tensor(140.00)
 
   assert(z == y.dot(x));
-  assert(z == venus::ops::dot(x, y));
+  assert(z == venus::eager::dot(x, y));
 
-  assert(venus::ops::equal(x + y, venus::ops::add(x, y)));
-  assert(venus::ops::equal(x - y, venus::ops::sub(x, y)));
-  assert(venus::ops::equal(x * y, venus::ops::mul(x, y)));
-  assert(venus::ops::equal(x / y, venus::ops::div(x, y)));
+  assert(venus::eager::equal(x + y, venus::eager::add(x, y)));
+  assert(venus::eager::equal(x - y, venus::eager::sub(x, y)));
+  assert(venus::eager::equal(x * y, venus::eager::mul(x, y)));
+  assert(venus::eager::equal(x / y, venus::eager::div(x, y)));
 }

@@ -62,7 +62,7 @@ concept BoolTensor =
     }                                                                          \
   }
 
-namespace venus::ops {
+namespace venus::eager {
 
 // Details =====================================================
 namespace detail {
@@ -345,6 +345,6 @@ auto where(T1 &&t1, T2 &&t2, T3 &&t3) {
   }
 }
 
-} // namespace venus::ops
+} // namespace venus::eager
 
 #undef REGISTER_BINARY_OP

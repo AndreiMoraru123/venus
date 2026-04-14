@@ -95,7 +95,7 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
   SECTION("Tensor Transform") {
     const auto tensor =
         Tensor<float, Device::CPU, 2>{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
-    auto res = venus::ops::transform(tensor, [](auto &&t) { return t * 3; });
+    auto res = venus::eager::transform(tensor, [](auto &&t) { return t * 3; });
 
     STATIC_REQUIRE(std::is_same_v<decltype(res)::ElementType, float>);
     REQUIRE(res[0, 0] == 3.0f);  // 1 * 3
@@ -132,7 +132,7 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
     auto A = Tensor<int, Device::CPU, 2>{{1, 2, 3}, {4, 5, 6}};
     auto B = Tensor<int, Device::CPU, 2>{{7, 8}, {9, 10}, {11, 12}};
 
-    auto C = venus::ops::mm(A, B);
+    auto C = venus::eager::mm(A, B);
 
     auto [M, K] = A.shape();
     auto [K2, N] = B.shape();
@@ -147,7 +147,7 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
       }
     }
 
-    REQUIRE(venus::ops::equal(C, expected));
+    REQUIRE(venus::eager::equal(C, expected));
   }
 
   SECTION("Where - Condition Only") {
@@ -157,7 +157,7 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
     x.iota(1);
     y.fill(1);
 
-    auto z = venus::ops::where(x > 3);
+    auto z = venus::eager::where(x > 3);
 
     STATIC_REQUIRE(std::is_same_v<decltype(z)::ElementType, std::size_t>);
     for (std::size_t i = 0; i < z.shape().count(); ++i) {
@@ -176,7 +176,7 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
     x.iota(1);
     y.fill(1);
 
-    auto z = venus::ops::where(x > 3, x, y);
+    auto z = venus::eager::where(x > 3, x, y);
 
     STATIC_REQUIRE(std::is_same_v<decltype(z)::ElementType, float>);
     for (std::size_t i = 0; i < z.shape().count(); ++i) {

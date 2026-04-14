@@ -42,8 +42,9 @@ import torch
 def check_order(ints):
     return torch.where(torch.sort(ints)[0] != ints)[0]
 
+
 ints = torch.tensor([5, 2, 4, 3, 1])
-print(check_order(ints) # tensor([0, 2, 3, 4])
+print(check_order(ints)  # tensor([0, 2, 3, 4])
 ```
 
 in Venus:
@@ -55,7 +56,7 @@ in Venus:
 using namespace venus;
 
 auto check_order(const auto &ints) {
-  return venus::ops::where(venus::ops::sort(ints) != ints);
+  return venus::eager::where(venus::eager::sort(ints) != ints);
 }
 
 auto main() -> int {
@@ -66,7 +67,8 @@ auto main() -> int {
 
 #### Interactive Venus
 
-Venus offers a lightweight implementation that works via [Cling](https://github.com/root-project/cling), allowing it to run interactively in shell mode:
+Venus offers a lightweight implementation that works via [Cling](https://github.com/root-project/cling), allowing it to
+run interactively in shell mode:
 
 ```sh
 cmake --build build --target venus-interactive
@@ -82,7 +84,7 @@ cmake --build build --target venus-interactive
 *******************************************
 [cling]$ #include <single_include/venus.hpp>
 [cling]$ using namespace venus;
-[cling]$ using namespace venus::ops;
+[cling]$ using namespace venus::eager;
 [cling]$ auto check_order(const auto& ints) { return where(sort(ints) != ints); }
 [cling]$ auto ints = Tensor<int, Device::CPU, 1>{5, 2, 4, 3, 1};
 [cling]$ check_order(ints)

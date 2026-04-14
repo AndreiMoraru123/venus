@@ -4,7 +4,7 @@
 using namespace venus;
 
 auto check_order(const auto &ints) {
-  return venus::ops::where(venus::ops::sort(ints) != ints);
+  return venus::eager::where(venus::eager::sort(ints) != ints);
 }
 
 auto main() -> int {
