@@ -376,8 +376,8 @@ public:
 #endif
   }
 
-  //* Proxy pattern for indexing elements (know when I'm reading vs writing)
-  //? Price to pay: have to specify all possible operator overloads that I want
+  // * Proxy pattern for indexing elements (know when I'm reading vs writing)
+  // ? Price to pay: have to specify all possible operator overloads that I want
   class ElementProxy {
   private:
     Tensor &m_tensor;
