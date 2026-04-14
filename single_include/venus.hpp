@@ -747,7 +747,7 @@ concept BoolTensor =
     }                                                                          \
   }
 
-namespace venus::ops {
+namespace venus::eager {
 
 // Details =====================================================
 namespace detail {
@@ -1030,7 +1030,7 @@ auto where(T1 &&t1, T2 &&t2, T3 &&t3) {
   }
 }
 
-} // namespace venus::ops
+} // namespace venus::eager
 
 #undef REGISTER_BINARY_OP
 
@@ -1528,58 +1528,58 @@ public:
 
   // Addition
   template <typename OtherType> auto operator+(OtherType &&other) const {
-    return venus::ops::add(*this, std::forward<OtherType>(other));
+    return venus::eager::add(*this, std::forward<OtherType>(other));
   }
 
   // Subtraction
   template <typename OtherType> auto operator-(OtherType &&other) const {
-    return venus::ops::sub(*this, std::forward<OtherType>(other));
+    return venus::eager::sub(*this, std::forward<OtherType>(other));
   }
 
   // Multiplication
   template <typename OtherType> auto operator*(OtherType &&other) const {
-    return venus::ops::mul(*this, std::forward<OtherType>(other));
+    return venus::eager::mul(*this, std::forward<OtherType>(other));
   }
 
   // Division
   template <typename OtherType> auto operator/(OtherType &&other) const {
-    return venus::ops::div(*this, std::forward<OtherType>(other));
+    return venus::eager::div(*this, std::forward<OtherType>(other));
   }
 
   // Greater than
   template <typename OtherType> auto operator>(OtherType &&other) const {
-    return venus::ops::gt(*this, std::forward<OtherType>(other));
+    return venus::eager::gt(*this, std::forward<OtherType>(other));
   }
 
   // Greater or equal
   template <typename OtherType> auto operator>=(OtherType &&other) const {
-    return venus::ops::gte(*this, std::forward<OtherType>(other));
+    return venus::eager::gte(*this, std::forward<OtherType>(other));
   }
 
   // Less than
   template <typename OtherType> auto operator<(OtherType &&other) const {
-    return venus::ops::lt(*this, std::forward<OtherType>(other));
+    return venus::eager::lt(*this, std::forward<OtherType>(other));
   }
 
   // Less or equal
   template <typename OtherType> auto operator<=(OtherType &&other) const {
-    return venus::ops::lte(*this, std::forward<OtherType>(other));
+    return venus::eager::lte(*this, std::forward<OtherType>(other));
   }
 
   // Equal
   template <typename OtherType> auto operator==(OtherType &&other) const {
-    return venus::ops::eq(*this, std::forward<OtherType>(other));
+    return venus::eager::eq(*this, std::forward<OtherType>(other));
   }
 
   // Not equal
   template <typename OtherType> auto operator!=(OtherType &&other) const {
-    return venus::ops::neq(*this, std::forward<OtherType>(other));
+    return venus::eager::neq(*this, std::forward<OtherType>(other));
   }
 
   // Dot product
   template <typename OtherElementType>
   auto dot(const Tensor<OtherElementType, DeviceType, Rank> &other) const {
-    return venus::ops::dot(*this, other);
+    return venus::eager::dot(*this, other);
   }
 
   // In-Place Transform
@@ -1840,28 +1840,28 @@ public:
 
   // Addition
   template <typename OtherType> auto operator+(OtherType &&other) const {
-    return venus::ops::add(*this, std::forward<OtherType>(other));
+    return venus::eager::add(*this, std::forward<OtherType>(other));
   }
 
   // Subtraction
   template <typename OtherType> auto operator-(OtherType &&other) const {
-    return venus::ops::sub(*this, std::forward<OtherType>(other));
+    return venus::eager::sub(*this, std::forward<OtherType>(other));
   }
 
   // Multiplication
   template <typename OtherType> auto operator*(OtherType &&other) const {
-    return venus::ops::mul(*this, std::forward<OtherType>(other));
+    return venus::eager::mul(*this, std::forward<OtherType>(other));
   }
 
   // Division
   template <typename OtherType> auto operator/(OtherType &&other) const {
-    return venus::ops::div(*this, std::forward<OtherType>(other));
+    return venus::eager::div(*this, std::forward<OtherType>(other));
   }
 
   // Dot product
   template <typename OtherElementType>
   auto dot(const Tensor<OtherElementType, DeviceType, rank> &other) const {
-    return venus::ops::dot(*this, other);
+    return venus::eager::dot(*this, other);
   }
 
   operator bool() const noexcept {
@@ -1994,7 +1994,7 @@ template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
           std::size_t Rank>
 auto operator+(const Scalar &scalar,
                const venus::Tensor<TElem, TDevice, Rank> &tensor) {
-  return venus::ops::add(scalar, tensor);
+  return venus::eager::add(scalar, tensor);
 }
 
 // Scalar-first Substraction
@@ -2002,7 +2002,7 @@ template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
           std::size_t Rank>
 auto operator-(const Scalar &scalar,
                const venus::Tensor<TElem, TDevice, Rank> &tensor) {
-  return venus::ops::sub(scalar, tensor);
+  return venus::eager::sub(scalar, tensor);
 }
 
 // Scalar-first Multiplication
@@ -2010,7 +2010,7 @@ template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
           std::size_t Rank>
 auto operator*(const Scalar &scalar,
                const venus::Tensor<TElem, TDevice, Rank> &tensor) {
-  return venus::ops::mul(scalar, tensor);
+  return venus::eager::mul(scalar, tensor);
 }
 
 // Scalar-fist Division
@@ -2018,7 +2018,7 @@ template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
           std::size_t Rank>
 auto operator/(const Scalar &scalar,
                const venus::Tensor<TElem, TDevice, Rank> &tensor) {
-  return venus::ops::div(scalar, tensor);
+  return venus::eager::div(scalar, tensor);
 }
 
 #undef REGISTER_OPERATOR_EQUAL
