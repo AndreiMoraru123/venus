@@ -91,3 +91,29 @@ cmake --build build --target venus-interactive
 (venus::Tensor<std::size_t, venus::Device::CPU, 1UL>) { 0, 0, 2, 3, 4 }
 [cling]$
 ```
+
+### Special Thanks and Author's Note
+
+Venus draws heavy inspiration from [MetaNN](https://github.com/liwei-cpp/MetaNN), both the repository and the accompanying book _C++ Template Metaprogramming in Practice_ by Li Wei.
+
+This is primarily a hobby project that I work on in my spare time, but I genuinely aim to build meaningfully on the original ideas rather than simply replicate them.
+
+MetaNN was developed in a different era of the ecosystem, when static graph compilation and C++17 were the norm. The book references Theano multiple times, TensorFlow was still new, and PyTorch wasn't even a thing.
+
+In many ways, this historical context still reflects how modern deep learning systems are structured today - the core execution models have remained relatively consistent, while most evolution has happened at the Python interface level.
+
+One of the core design goals of Venus is to revisit this balance: to bring more of that evolution back into the native C++ layer, rather than relying on a higher-level bindings to provide usability and expressiveness.
+
+While the original design is an impressive take on template metaprogramming, Venus aims to extend and modernize these ideas with improvements such as:
+
+- Eager execution
+- Use of modern C++ features (concepts, ranges)
+- Heterogeneous compute, with a stronger focus on inference rather than training
+- Beautiful, expressive APIs (as far as C++ allows)
+
+Although TMP is still used where it fits naturally, it is no longer the central design goal.
+
+On that note, Venus is intentionally designed as a C++-first library and does not aim to provide Python bindings.
+There are already excellent projects in the Python ecosystem, such as PyTorch, Triton, and TVM, to name a few.
+
+The goal of Venus is to explore what a modern, native C++ approach to tensor computation can offer.
