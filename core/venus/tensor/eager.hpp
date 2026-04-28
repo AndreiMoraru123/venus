@@ -196,19 +196,28 @@ auto equal(const Tensor<Elem1, Dev1, Rank1> &t1,
   return std::ranges::equal(t1, t2);
 }
 
-// Dot product
+// Inner product
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
           typename Dev1, Scalar Elem2, typename Dev2, std::size_t Rank1,
           std::size_t Rank2>
   requires VenusTensor<Tensor<Elem1, Dev1, Rank1>> &&
            VenusTensor<Tensor<Elem2, Dev2, Rank2>>
-auto dot(const Tensor<Elem1, Dev1, Rank1> &t1,
-         const Tensor<Elem2, Dev2, Rank2> &t2) {
+auto inner(const Tensor<Elem1, Dev1, Rank1> &t1,
+           const Tensor<Elem2, Dev2, Rank2> &t2) {
   detail::validate_binary_op(t1, t2);
   using ResultElementType = std::common_type_t<Elem1, Elem2>;
   auto product =
       std::inner_product(t1.begin(), t1.end(), t2.begin(), ResultElementType{});
   return Tensor<ResultElementType, Dev1, 0>(product);
+}
+
+// Dot product
+template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
+          typename Dev1, Scalar Elem2, typename Dev2>
+  requires VenusTensor<Tensor<Elem1, Dev1, 1>> &&
+           VenusTensor<Tensor<Elem2, Dev2, 1>>
+auto dot(const Tensor<Elem1, Dev1, 1> &t1, const Tensor<Elem2, Dev2, 1> &t2) {
+  return inner(t1, t2);
 }
 
 // Out-Of-Place Arange

@@ -320,8 +320,15 @@ public:
     return venus::eager::neq(*this, std::forward<OtherType>(other));
   }
 
+  // Inner product
+  template <typename OtherElementType>
+  auto inner(const Tensor<OtherElementType, DeviceType, Rank> &other) const {
+    return venus::eager::inner(*this, other);
+  }
+
   // Dot product
   template <typename OtherElementType>
+    requires(Rank == 1)
   auto dot(const Tensor<OtherElementType, DeviceType, Rank> &other) const {
     return venus::eager::dot(*this, other);
   }
@@ -602,10 +609,10 @@ public:
     return venus::eager::div(*this, std::forward<OtherType>(other));
   }
 
-  // Dot product
+  // Inner product
   template <typename OtherElementType>
-  auto dot(const Tensor<OtherElementType, DeviceType, rank> &other) const {
-    return venus::eager::dot(*this, other);
+  auto inner(const Tensor<OtherElementType, DeviceType, rank> &other) const {
+    return venus::eager::inner(*this, other);
   }
 
   operator bool() const noexcept {
