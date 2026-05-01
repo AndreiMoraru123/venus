@@ -4,16 +4,18 @@
 
 using namespace venus;
 
-auto conv2d(Tensor<float, Device::CPU, 2> &input,
-            Tensor<float, Device::CPU, 2> &kernel, std::size_t stride = 1)
-    -> Tensor<float, Device::CPU, 2> {
+template <typename T, std::size_t Rank>
+  requires(Rank == 2)
+auto conv2d(const Tensor<T, Device::CPU, Rank> &input,
+            const Tensor<T, Device::CPU, Rank> &kernel, std::size_t stride = 1)
+    -> Tensor<T, Device::CPU, Rank> {
   const auto [w, h] = input.shape();
   const auto [kW, kH] = kernel.shape();
 
   const auto outW = (w - kW) / stride + 1;
   const auto outH = (h - kH) / stride + 1;
 
-  auto out = Tensor<float, Device::CPU, 2>(outW, outH);
+  auto out = Tensor<T, Device::CPU, Rank>(outW, outH);
 
   for (std::size_t i{}; i < outW; ++i) {
     for (std::size_t j{}; j < outH; ++j) {
