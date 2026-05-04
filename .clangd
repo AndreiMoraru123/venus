@@ -1,5 +1,5 @@
 CompileFlags:
-  Add: ["-std=c++23", "-fmodules"]
+  Add: ["-std=c++23"]
 InlayHints:
   Enabled: Yes
   BlockEnd: Yes
