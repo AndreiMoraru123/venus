@@ -688,6 +688,7 @@ static constexpr bool HasNonTrivialPolicy =
 #include <algorithm>
 #include <concepts>
 #include <cstddef>
+#include <format>
 #include <functional>
 #include <numeric>
 #include <ranges>
@@ -948,7 +949,10 @@ auto mm(const Tensor<Elem1, Dev, 2> &t1, const Tensor<Elem2, Dev, 2> &t2) {
   auto [K2, N] = t2.shape();
 
   if (K != K2) {
-    throw std::invalid_argument("Shape mismatch between tensors in matrix mul");
+    throw std::invalid_argument(
+        std::format("Shape mismatch between tensors in matrix mul: t1 has "
+                    "shape {}, whereas t2 has shape {}.",
+                    t1.shape(), t2.shape()));
   }
 
   auto t3 = Tensor<ResultElementType, Dev, 2>(M, N);
