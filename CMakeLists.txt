@@ -67,7 +67,6 @@ if(CLANG_REPL_EXECUTABLE)
                 -Xcc=-I${CMAKE_CURRENT_SOURCE_DIR}/core
                 -Xcc=-I${CMAKE_CURRENT_SOURCE_DIR}
                 -Xcc=-DVENUS_INTERPRETER
-                --execute="#include \"single_include/venus.hpp\""
         DEPENDS venus
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMENT "Starting clang-repl based interactive Venus interpreter. Have fun!"
