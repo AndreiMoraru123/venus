@@ -1,19 +1,17 @@
-name: MSVC Visual Studio 18 2026
+name: MSVC
+
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   build-msvc:
-    name: Build and Test
     runs-on: windows-latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup CMake
         uses: jwlawson/actions-setup-cmake@v1.14
@@ -22,15 +20,13 @@ jobs:
 
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
-        with:
-          vsversion: "2026"
 
       - name: Create build directory
         run: mkdir build
 
-      - name: Configure with CMake
+      - name: Configure
         working-directory: build
-        run: cmake .. -G "Visual Studio 18 2026" -A x64 -DCMAKE_BUILD_TYPE=Release -DBUILD_DEMO=OFF
+        run: cmake .. -A x64 -DBUILD_DEMO=OFF
 
       - name: Build
         working-directory: build
