@@ -9,6 +9,7 @@ namespace venus::Device {
 struct CPU;
 }
 
+
 #ifdef VENUS_INTERPRETER
 // Simple allocator for repl interpreter
 
@@ -124,6 +125,7 @@ private:
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
+
 
 namespace venus {
 
@@ -273,8 +275,10 @@ template <typename TLayerName, typename... TPolicies> struct SubPolicyContainer;
 #undef TypePolicyObj
 #include <type_traits>
 
+
 #include <cstddef>
 #include <type_traits>
+
 
 namespace venus::Sequential {
 
@@ -680,18 +684,6 @@ static constexpr bool HasNonTrivialPolicy =
 
 // =============================================================
 } // namespace venus
-#ifdef VENUS_INTERPRETER
-#include <iostream>
-namespace venus {
-template <typename T, Device D, std::size_t Rank>
-void __clang_repl__Display__(const Tensor<T, D, Rank> &t) {
-  std::cout << t << "\n";
-}
-template <std::size_t Rank> void __clang_repl__Display__(const Shape<Rank> &s) {
-  std::cout << s << "\n";
-}
-} // namespace venus
-#endif
 
 #include <algorithm>
 #include <concepts>
@@ -704,6 +696,7 @@ template <std::size_t Rank> void __clang_repl__Display__(const Shape<Rank> &s) {
 #include <tuple>
 #include <type_traits>
 #include <utility>
+
 
 namespace venus {
 template <typename T>
@@ -1291,6 +1284,12 @@ struct tuple_element<N, venus::Shape<Rank>> {
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
+
+
+
+
+
+
 
 #define REGISTER_SCALAR_BOOL_OP(op)                                            \
   auto operator op(const ElementType &element) const noexcept                  \
@@ -2055,6 +2054,8 @@ auto operator/(const Scalar &scalar,
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
+
+
 
 namespace venus {
 
