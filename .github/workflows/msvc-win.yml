@@ -1,4 +1,4 @@
-name: MSVC Latest
+name: MSVC Windows
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-msvc:
-    name: MSVC / Windows
+    name: Build and Test
     runs-on: windows-latest
 
     steps:
