@@ -58,20 +58,21 @@ if (BUILD_SINGLE_HEADER AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
     add_subdirectory(scripts)
 endif()
 
-find_program(CLING_EXECUTABLE cling PATHS /opt/cling/bin)
+find_program(CLANG_REPL_EXECUTABLE clang-repl)
 
-if(CLING_EXECUTABLE)
-    message(STATUS "Found Cling: ${CLING_EXECUTABLE}")
-
+if(CLANG_REPL_EXECUTABLE)
     add_custom_target(venus-interactive
-        COMMAND ${CLING_EXECUTABLE} -std=c++23
-                -DVENUS_INTERPRETER
-                # -I ${CMAKE_BINARY_DIR}/_deps/mdspan-src/include
+        COMMAND ${CLANG_REPL_EXECUTABLE}
+                -Xcc=-std=c++23
+                -Xcc=-I${CMAKE_CURRENT_SOURCE_DIR}/core
+                -Xcc=-I${CMAKE_CURRENT_SOURCE_DIR}
+                -Xcc=-DVENUS_INTERPRETER
+                --execute="#include \"single_include/venus.hpp\""
         DEPENDS venus
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        COMMENT "Starting Cling-based interactive Venus interpreter. Include <single_include/venus.hpp>, have fun!"
+        COMMENT "Starting clang-repl based interactive Venus interpreter. Have fun!"
         USES_TERMINAL
     )
 else()
-    message(WARNING "Cling not found - target 'venus-interactive' will not be available")
+    message(WARNING "Clang-repl not found - target 'venus-interactive' will not be available")
 endif()

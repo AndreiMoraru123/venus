@@ -13,6 +13,7 @@
 #include <venus/policies/policy_macro_begin.hpp>
 #include <venus/policies/policy_macro_end.hpp>
 #include <venus/policies/policy_ops.hpp>
+#include <venus/repl.hpp>
 #include <venus/sequential.hpp>
 #include <venus/tensor/eager.hpp>
 #include <venus/tensor/shape.hpp>
