@@ -2,7 +2,6 @@
 
 // Auto-generated main header
 
-// clang-format off
 #include <venus/memory/allocators.hpp>
 #include <venus/memory/contiguous_memory.hpp>
 #include <venus/memory/device.hpp>
@@ -20,4 +19,3 @@
 #include <venus/tensor/tensor.hpp>
 #include <venus/traits.hpp>
 #include <venus/var_type_dict.hpp>
-#include <venus/repl.hpp> // always last

@@ -67,7 +67,7 @@ auto main() -> int {
 
 #### Interactive Venus
 
-Venus offers a lightweight implementation that works via [Cling](https://github.com/root-project/cling), allowing it to
+Venus offers a lightweight implementation that works via [Clang-Repl](https://clang.llvm.org/docs/ClangRepl.html?utm_source=chatgpt.com), allowing it to
 run interactively in shell mode:
 
 ```sh
@@ -76,20 +76,16 @@ cmake --build build --target venus-interactive
 
 ```cpp
 [0/2] Re-checking globbed directories...
-[0/2] Starting Cling-based interactive Venus interpreter. Include <single_include/venus.hpp>, have fun!
+[0/2] Starting Clang-based interactive Venus interpreter. Include <single_include/venus.hpp>, have fun!
 
-****************** CLING ******************
-* Type C++ code and press enter to run it *
-*             Type .q to exit             *
-*******************************************
-[cling]$ #include <single_include/venus.hpp>
-[cling]$ using namespace venus;
-[cling]$ using namespace venus::eager;
-[cling]$ auto check_order(const auto& ints) { return where(sort(ints) != ints); }
-[cling]$ auto ints = Tensor<int, Device::CPU, 1>{5, 2, 4, 3, 1};
-[cling]$ check_order(ints)
-(venus::Tensor<std::size_t, venus::Device::CPU, 1UL>) { 0, 0, 2, 3, 4 }
-[cling]$
+clang-repl> #include <single_include/venus.hpp>
+clang-repl> using namespace venus;
+clang-repl> using namespace venus::eager;
+clang-repl> auto check_order(const auto& ints) { return where(sort(ints) != ints); }
+clang-repl> auto ints = Tensor<int, Device::CPU, 1>{5, 2, 4, 3, 1};
+clang-repl> std::cout << check_order(ints)
+venus::Tensor([0, 0, 2, 3, 4], shape=(5))
+clang-repl>
 ```
 
 ### Special Thanks and Author's Note

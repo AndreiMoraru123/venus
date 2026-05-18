@@ -9,14 +9,6 @@ enable_testing()
 include(CTest)
 include(FetchContent)
 
-# FetchContent_Declare(
-#     mdspan
-#     GIT_REPOSITORY https://github.com/kokkos/mdspan
-#     GIT_TAG stable
-# )
-
-# FetchContent_MakeAvailable(mdspan)
-
 add_library(venus INTERFACE)
 target_include_directories(venus INTERFACE
      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/core>
@@ -32,10 +24,6 @@ target_sources(venus INTERFACE
     BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/core
     FILES ${VENUS_HEADERS}
 )
-
-# target_link_libraries(venus INTERFACE
-#     mdspan
-# )
 
 if(BUILD_TESTING)
     FetchContent_Declare(
@@ -67,9 +55,10 @@ if(CLANG_REPL_EXECUTABLE)
                 -Xcc=-I${CMAKE_CURRENT_SOURCE_DIR}/core
                 -Xcc=-I${CMAKE_CURRENT_SOURCE_DIR}
                 -Xcc=-DVENUS_INTERPRETER
+                -Xcc=-include
+                -Xcc=${CMAKE_CURRENT_SOURCE_DIR}/single_include/venus.hpp
         DEPENDS venus
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        COMMENT "Starting clang-repl based interactive Venus interpreter. Have fun!"
         USES_TERMINAL
     )
 else()
