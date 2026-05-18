@@ -1,4 +1,4 @@
-name: GCC:14
+name: GCC:16
 on:
   push:
     branches:
@@ -12,7 +12,7 @@ jobs:
     name: Build Demos
     runs-on: ubuntu-latest
     container:
-      image: gcc:14
+      image: gcc:16
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -20,7 +20,7 @@ jobs:
       - name: Setup CMake
         uses: jwlawson/actions-setup-cmake@v1.14
         with:
-          cmake-version: "3.25.1"
+          cmake-version: "4.2.0"
 
       - name: Create build directory
         run: mkdir -p build

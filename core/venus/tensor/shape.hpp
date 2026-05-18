@@ -4,9 +4,12 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
-#include <experimental/mdspan>
+#include <format>
 #include <functional>
+#include <mdspan>
+#include <sstream>
 #include <stdexcept>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 
@@ -172,20 +175,20 @@ public:
 
 template <std::size_t Rank>
 auto operator<<(std::ostream &os, const Shape<Rank> &shape) -> std::ostream & {
-  os << "(";
+  os << std::string_view{"("};
   std::size_t count = 0;
   for (auto dim : shape) {
     if (count > 0)
-      os << ", ";
+      os << std::string_view{", "};
     count++;
     os << dim;
   }
-  return os << ")";
+  return os << std::string_view{")"};
 }
 
 template <std::size_t Rank = 0>
 auto operator<<(std::ostream &os, const Shape<0> &shape) -> std::ostream & {
-  return os << "()";
+  return os << std::string_view{"()"};
 }
 
 template <SizeTLike... TShapeParameter>
@@ -203,7 +206,7 @@ template <std::size_t Rank> struct std::formatter<venus::Shape<Rank>> {
   constexpr auto parse(std::format_parse_context &ctx) { return ctx.begin(); }
 
   auto format(const venus::Shape<Rank> &shape, std::format_context &ctx) const {
-    ostringstream oss;
+    std::ostringstream oss;
     oss << shape;
     return std::format_to(ctx.out(), "{}", oss.str());
   }

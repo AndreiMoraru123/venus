@@ -1,4 +1,4 @@
-name: LLVM Clang:19 Linux
+name: LLVM Clang:22 Linux
 on:
   push:
     branches:
@@ -15,25 +15,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install LLVM and Clang 19
+      - name: Install LLVM and Clang 22
         run: |
           wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
           sudo add-apt-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy main"
           sudo apt-get update
-          sudo apt-get install -y clang-19 libc++-19-dev libc++abi-19-dev lld-19
-          clang-19 --version
+          sudo apt-get install -y clang-22 libc++-22-dev libc++abi-22-dev lld-22
+          clang-22 --version
 
       - name: Setup CMake
         uses: jwlawson/actions-setup-cmake@v1.14
         with:
-          cmake-version: "3.25.1"
+          cmake-version: "4.2.0"
 
       - name: Create build directory
         run: mkdir -p build
 
       - name: Configure with CMake
         working-directory: build
-        run: cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++-19 -DCMAKE_C_COMPILER=clang-19 -DBUILD_TESTING=ON -DBUILD_DEMO=OFF
+        run: cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++-22 -DCMAKE_C_COMPILER=clang-22 -DBUILD_TESTING=ON -DBUILD_DEMO=OFF
 
       - name: Build
         working-directory: build

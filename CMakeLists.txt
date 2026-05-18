@@ -9,13 +9,13 @@ enable_testing()
 include(CTest)
 include(FetchContent)
 
-FetchContent_Declare(
-    mdspan
-    GIT_REPOSITORY https://github.com/kokkos/mdspan
-    GIT_TAG stable
-)
+# FetchContent_Declare(
+#     mdspan
+#     GIT_REPOSITORY https://github.com/kokkos/mdspan
+#     GIT_TAG stable
+# )
 
-FetchContent_MakeAvailable(mdspan)
+# FetchContent_MakeAvailable(mdspan)
 
 add_library(venus INTERFACE)
 target_include_directories(venus INTERFACE
@@ -26,16 +26,16 @@ target_include_directories(venus INTERFACE
 file(GLOB_RECURSE VENUS_HEADERS CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/core/*.hpp"
 )
- 
+
 target_sources(venus INTERFACE
     FILE_SET HEADERS
     BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/core
     FILES ${VENUS_HEADERS}
-) 
-
-target_link_libraries(venus INTERFACE
-    mdspan
 )
+
+# target_link_libraries(venus INTERFACE
+#     mdspan
+# )
 
 if(BUILD_TESTING)
     FetchContent_Declare(
@@ -62,11 +62,11 @@ find_program(CLING_EXECUTABLE cling PATHS /opt/cling/bin)
 
 if(CLING_EXECUTABLE)
     message(STATUS "Found Cling: ${CLING_EXECUTABLE}")
-    
+
     add_custom_target(venus-interactive
         COMMAND ${CLING_EXECUTABLE} -std=c++23
                 -DVENUS_INTERPRETER
-                -I ${CMAKE_BINARY_DIR}/_deps/mdspan-src/include
+                # -I ${CMAKE_BINARY_DIR}/_deps/mdspan-src/include
         DEPENDS venus
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMENT "Starting Cling-based interactive Venus interpreter. Include <single_include/venus.hpp>, have fun!"
