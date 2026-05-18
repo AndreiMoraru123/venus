@@ -2,7 +2,6 @@
 
 // Auto-generated main header
 
-// clang-format off
 #include <cstddef>
 #include <cstring>
 #include <memory>
@@ -685,6 +684,18 @@ static constexpr bool HasNonTrivialPolicy =
 
 // =============================================================
 } // namespace venus
+#ifdef VENUS_INTERPRETER
+#include <iostream>
+namespace venus {
+template <typename T, Device D, std::size_t Rank>
+void __clang_repl__Display__(const Tensor<T, D, Rank> &t) {
+  std::cout << t << "\n";
+}
+template <std::size_t Rank> void __clang_repl__Display__(const Shape<Rank> &s) {
+  std::cout << s << "\n";
+}
+} // namespace venus
+#endif
 
 #include <algorithm>
 #include <concepts>
@@ -2171,15 +2182,3 @@ template <typename... TParameters> struct VarTypeDict {
 };
 
 }; // namespace venus
-#ifdef VENUS_INTERPRETER
-#include <iostream>
-namespace venus {
-template <typename T, Device D, std::size_t Rank>
-void __clang_repl__Display__(const Tensor<T, D, Rank> &t) {
-  std::cout << t << "\n";
-}
-template <std::size_t Rank> void __clang_repl__Display__(const Shape<Rank> &s) {
-  std::cout << s << "\n";
-}
-} // namespace venus
-#endif // always last
