@@ -1,4 +1,4 @@
-name: MSVC
+name: MSVC Latest
 
 on:
   push:
@@ -8,10 +8,12 @@ on:
 
 jobs:
   build-msvc:
+    name: MSVC / Windows
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Setup CMake
         uses: jwlawson/actions-setup-cmake@v1.14
