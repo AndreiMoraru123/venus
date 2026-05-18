@@ -75,16 +75,15 @@ cmake --build build --target venus-interactive
 ```
 
 ```cpp
-[0/2] Re-checking globbed directories...
-[0/2] Starting Clang-based interactive Venus interpreter. Include <single_include/venus.hpp>, have fun!
-
-clang-repl> #include <single_include/venus.hpp>
+clang-repl> #include <iostream>
 clang-repl> using namespace venus;
 clang-repl> using namespace venus::eager;
 clang-repl> auto check_order(const auto& ints) { return where(sort(ints) != ints); }
 clang-repl> auto ints = Tensor<int, Device::CPU, 1>{5, 2, 4, 3, 1};
-clang-repl> std::cout << check_order(ints)
+clang-repl> auto res = check_order(ints);
+clang-repl> std::cout << res << "\n"
 venus::Tensor([0, 0, 2, 3, 4], shape=(5))
+(std::basic_ostream<char, std::char_traits<char> > &) @0x793ab8acf480
 clang-repl>
 ```
 
