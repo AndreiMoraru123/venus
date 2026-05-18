@@ -18,7 +18,7 @@ jobs:
       - name: Install LLVM and Clang 22
         run: |
           wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo add-apt-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy main"
+          sudo add-apt-repository "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main"
           sudo apt-get update
           sudo apt-get install -y clang-22 libc++-22-dev libc++abi-22-dev lld-22
           clang-22 --version
