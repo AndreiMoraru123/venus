@@ -33,7 +33,15 @@ jobs:
 
       - name: Configure with CMake
         working-directory: build
-        run: cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++-22 -DCMAKE_C_COMPILER=clang-22 -DBUILD_TESTING=ON -DBUILD_DEMO=OFF
+        run: |
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER=clang++-22 \
+            -DCMAKE_C_COMPILER=clang-22 \
+            -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
+            -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++" \
+            -DBUILD_TESTING=ON \
+            -DBUILD_DEMO=OFF
 
       - name: Build
         working-directory: build
