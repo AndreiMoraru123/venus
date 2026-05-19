@@ -46,17 +46,26 @@ if (BUILD_SINGLE_HEADER AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
     add_subdirectory(scripts)
 endif()
 
+find_program(RLWRAP_EXECUTABLE rlwrap)
 find_program(CLANG_REPL_EXECUTABLE clang-repl)
 
 if(CLANG_REPL_EXECUTABLE)
+    if (RLWRAP_EXECUTABLE)
+        set(REPL_COMMAND ${RLWRAP_EXECUTABLE} --always-readline ${CLANG_REPL_EXECUTABLE})
+    else()
+        set(REPL_COMMAND ${CLANG_REPL_EXECUTABLE})
+    endif()
+
     add_custom_target(venus-interactive
-        COMMAND ${CLANG_REPL_EXECUTABLE}
+        COMMAND ${REPL_COMMAND}
                 -Xcc=-std=c++23
                 -Xcc=-I${CMAKE_CURRENT_SOURCE_DIR}/core
                 -Xcc=-I${CMAKE_CURRENT_SOURCE_DIR}
                 -Xcc=-DVENUS_INTERPRETER
                 -Xcc=-include
                 -Xcc=${CMAKE_CURRENT_SOURCE_DIR}/single_include/venus.hpp
+                -Xcc=-include
+                -Xcc=${CMAKE_CURRENT_SOURCE_DIR}/repl/pretty_print.hpp
         DEPENDS venus
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         USES_TERMINAL
