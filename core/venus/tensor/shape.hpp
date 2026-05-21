@@ -78,8 +78,9 @@ public:
   constexpr auto idxToOffset(Dimensions... indices) const -> std::size_t {
     static_assert(sizeof...(Dimensions) == rank, "Wrong number of indices");
 
-    // TODO: The accessor policy in mdspan should be able to perform this (???)
-    // bounds checking
+    // ? The accessor policy in mdspan should be able to perform this (???)
+    // TODO: Move bounds checking up to tensor logic when mdspan::at lands
+    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p3383r0.html
     const std::array<std::size_t, rank> idx_array = {
         static_cast<std::size_t>(indices)...};
     for (std::size_t i = 0; i < rank; ++i) {
@@ -88,8 +89,8 @@ public:
       }
     }
 
-    auto span = createSpan(std::make_index_sequence<rank>{});
-    return span.mapping()(indices...);
+    auto mapping = createMapping(std::make_index_sequence<rank>{});
+    return mapping(indices...);
   }
 
   constexpr static auto fromNestedInitializerList(auto nested_init_list)
@@ -152,8 +153,10 @@ private:
   std::array<std::size_t, Rank> m_dims{};
 
   template <std::size_t... Is>
-  constexpr auto createSpan(std::index_sequence<Is...> /*unused*/) const {
-    return std::mdspan<int, std::dextents<std::size_t, rank>>(0, m_dims[Is]...);
+  constexpr auto createMapping(std::index_sequence<Is...> /*unused*/) const {
+    using Extents = std::dextents<std::size_t, rank>;
+    using Mapping = std::layout_right::mapping<Extents>;
+    return Mapping{Extents{m_dims[Is]...}};
   }
 };
 
