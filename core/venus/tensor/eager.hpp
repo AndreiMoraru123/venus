@@ -1,17 +1,25 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <concepts>
 #include <cstddef>
+#include <cstdint>
 #include <format>
 #include <functional>
 #include <numeric>
 #include <ranges>
 #include <stdexcept>
+#include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 #include <venus/memory/device.hpp>
+#include <venus/str.hpp>
+#include <venus/tensor/shape.hpp>
+
+inline constexpr std::size_t NUMBER_OF_LETTERS = 26;
+using LettersArr = std::array<std::int64_t, NUMBER_OF_LETTERS>;
 
 namespace venus {
 template <typename T>
@@ -136,6 +144,57 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
     std::ranges::copy(computation, result.begin());
     return result;
   }
+}
+
+consteval auto count_operands(std::string_view eqn) {
+  auto lhs = eqn.substr(0, eqn.find("->"));
+  return std::ranges::count(lhs, ',') + 1;
+}
+
+consteval auto compute_occurences(std::string_view eqn) -> LettersArr {
+  LettersArr occ{};
+  auto lhs = eqn.substr(0, eqn.find("->"));
+  for (char c : lhs)
+    if (c != ',')
+      occ[c - 'a']++;
+
+  return occ;
+}
+
+consteval auto compute_last_occurence(std::string_view eqn) -> LettersArr {
+  LettersArr last{};
+  last.fill(-1);
+  auto lhs = eqn.substr(0, eqn.find("->"));
+  std::int64_t operand = 0;
+  for (char c : lhs) {
+    if (c == ',') {
+      operand++;
+      continue;
+    }
+    last[c - 'a'] = operand;
+  }
+  return last;
+}
+
+consteval auto compute_sorted_position(std::string_view eqn,
+                                       const LettersArr &occ) -> LettersArr {
+  LettersArr pos{};
+  pos.fill(-1);
+  auto arrow = eqn.find("->");
+  std::int64_t dim = 0;
+  if (arrow != std::string_view::npos) {
+    for (char c : eqn.substr(arrow + 2))
+      pos[c - 'a'] = dim++;
+  } else {
+    for (std::size_t i = 0; i < NUMBER_OF_LETTERS; i++)
+      if (occ[i] == 1)
+        pos[i] = dim++;
+  }
+  // summation indices
+  for (std::size_t i = 0; i < NUMBER_OF_LETTERS; i++)
+    if (occ[i] > 0 && pos[i] == -1)
+      pos[i] = dim++;
+  return pos;
 }
 
 } // namespace detail
@@ -356,6 +415,72 @@ auto where(T1 &&t1, T2 &&t2, T3 &&t3) {
     return detail::binary_elementwise_op(
         [s2 = v2](auto &&a, auto &&c) { return a ? s2 : c; }, v1, v3);
   }
+}
+
+template <std::size_t Dim,
+          template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+          typename Dev, std::size_t Rank>
+  requires VenusTensor<Tensor<Elem, Dev, Rank>>
+auto sum_dim(const Tensor<Elem, Dev, Rank> &t) -> Tensor<Elem, Dev, Rank> {
+  static_assert(Dim < Rank, "sum dimension cannot be higher than tensor rank");
+
+  const auto &in_shape = t.shape();
+  std::array<std::size_t, Rank> out_ext;
+  for (std::size_t i = 0; i < Rank; i++) {
+    out_ext[i] = (i == Dim) ? 1 : in_shape[i];
+  }
+
+  auto out_shape = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+    return Shape<Rank>(out_ext[Is]...);
+  }(std::make_index_sequence<Rank>{});
+
+  auto result = Tensor<Elem, Dev, Rank>(out_shape);
+  result.fill(Elem{0});
+
+  for (auto [flat, val] :
+       std::views::zip(std::views::iota(std::size_t{0}, t.size()), t)) {
+    auto midx = in_shape.offsetToIdx(flat);
+    midx[Dim] = 0;
+    [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+      result[midx[Is]...] += val;
+    }(std::make_index_sequence<Rank>{});
+  }
+
+  return result;
+}
+
+template <std::size_t... Dims,
+          template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+          typename Dev, std::size_t Rank>
+  requires VenusTensor<Tensor<Elem, Dev, Rank>>
+auto sum_dims(const Tensor<Elem, Dev, Rank> &t) -> Tensor<Elem, Dev, Rank> {
+  auto result = t;
+  ((result = sum_dim<Dims>(result)), ...);
+  return result;
+}
+
+// Sumproduct pair
+template <std::size_t... SumDims,
+          template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
+          typename Dev1, Scalar Elem2, typename Dev2, std::size_t Rank1,
+          std::size_t Rank2>
+  requires VenusTensor<Tensor<Elem1, Dev1, Rank1>> &&
+           VenusTensor<Tensor<Elem2, Dev2, Rank2>>
+auto sumproduct_pair(const Tensor<Elem1, Dev1, Rank1> &t1,
+                     const Tensor<Elem2, Dev2, Rank2> &t2) {
+  detail::validate_binary_op(t1, t2);
+  auto product = t1 * t2;
+  return sum_dims<SumDims...>(product);
+}
+
+template <VenusStr Eqn, VenusTensor... Ts> auto einsum(Ts &&...tensors) {
+  constexpr auto eqn = Eqn.view();
+  constexpr auto occ = detail::compute_occurences(eqn);
+  constexpr auto last_occ = detail::compute_last_occurence(eqn);
+  constexpr auto sorted_pos = detail::compute_sorted_position(eqn, occ);
+
+  static_assert(detail::count_operands(eqn) == sizeof...(Ts),
+                "operand count mismatch");
 }
 
 } // namespace venus::eager
