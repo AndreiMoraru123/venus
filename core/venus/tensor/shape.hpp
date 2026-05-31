@@ -203,6 +203,57 @@ constexpr auto get(const Shape<Rank> &shape) noexcept -> std::size_t {
   return shape[N];
 }
 
+// -------------------------- BROADCASTING --------------------------
+template <std::size_t RankOut, std::size_t RankIn>
+constexpr auto
+project_broadcast_index(const std::array<std::size_t, RankOut> &out_idx,
+                        const Shape<RankIn> &in_shape) {
+  std::array<std::size_t, RankIn> in_idx{};
+  constexpr auto offset = RankOut - RankIn;
+
+  for (std::size_t i = 0; i < RankIn; i++) {
+    in_idx[i] = in_shape[i] == 1 ? 0 : out_idx[i + offset];
+  }
+
+  return in_idx;
+}
+
+template <std::size_t RankOut, std::size_t Rank1, std::size_t Rank2>
+constexpr auto broadcast(const Shape<Rank1> &s1, const Shape<Rank2> &s2)
+    -> Shape<RankOut> {
+  std::array<std::size_t, RankOut> out{};
+
+  for (std::size_t i = 0; i < RankOut; i++) {
+    auto d1 = std::size_t{1};
+    auto d2 = std::size_t{1};
+
+    if (i >= RankOut - Rank1)
+      d1 = s1[i - (RankOut - Rank1)];
+    if (i >= RankOut - Rank2)
+      d2 = s2[i - (RankOut - Rank2)];
+
+    if (d1 != d2 && d1 != 1 && d2 != 1) {
+      throw std::invalid_argument("Tensor shapes are not broadcastable");
+    }
+
+    out[i] = std::max(d1, d2);
+  }
+
+  return [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+    return Shape<RankOut>(out[Is]...);
+  }(std::make_index_sequence<RankOut>{});
+}
+
+template <std::size_t RankOut, std::size_t Rank1, std::size_t Rank2,
+          std::size_t Rank3>
+constexpr auto broadcast(const Shape<Rank1> &s1, const Shape<Rank2> &s2,
+                         const Shape<Rank3> &s3) {
+  constexpr auto Rank12 = std::max(Rank1, Rank2);
+  auto s12 = broadcast<Rank12>(s1, s2);
+  return broadcast<RankOut>(s12, s3);
+}
+// ------------------------------------------------------------------
+
 } // namespace venus
 
 template <std::size_t Rank> struct std::formatter<venus::Shape<Rank>> {

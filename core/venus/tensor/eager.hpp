@@ -76,19 +76,19 @@ namespace venus::eager {
 // Details =====================================================
 namespace detail {
 
-template <template <typename, typename, std::size_t> class Tensor,
-          typename Elem1, typename Dev1, std::size_t Rank1, typename Elem2,
-          typename Dev2, std::size_t Rank2>
-  requires(Rank1 == Rank2) && std::is_same_v<Dev1, Dev2> &&
-          std::is_same_v<Dev1, Device::CPU>
-void validate_binary_op(const Tensor<Elem1, Dev1, Rank1> &t1,
-                        const Tensor<Elem2, Dev2, Rank2> &t2) {
-  if constexpr (Rank1 > 0) {
-    if (t1.shape() != t2.shape()) {
-      throw std::invalid_argument("Tensor shapes must match");
-    }
-  }
-}
+// template <template <typename, typename, std::size_t> class Tensor,
+//           typename Elem1, typename Dev1, std::size_t Rank1, typename Elem2,
+//           typename Dev2, std::size_t Rank2>
+//   requires(Rank1 == Rank2) && std::is_same_v<Dev1, Dev2> &&
+//           std::is_same_v<Dev1, Device::CPU>
+// void validate_binary_op(const Tensor<Elem1, Dev1, Rank1> &t1,
+//                         const Tensor<Elem2, Dev2, Rank2> &t2) {
+//   if constexpr (Rank1 > 0) {
+//     if (t1.shape() != t2.shape()) {
+//       throw std::invalid_argument("Tensor shapes must match");
+//     }
+//   }
+// }
 
 template <typename Op, template <typename, typename, std::size_t> class Tensor,
           typename Elem1, typename Dev1, std::size_t Rank1, typename Elem2,
@@ -96,22 +96,28 @@ template <typename Op, template <typename, typename, std::size_t> class Tensor,
 auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
                            const Tensor<Elem2, Dev2, Rank2> &t2) {
 
-  validate_binary_op(t1, t2);
   using ResultElementType = std::common_type_t<Elem1, Elem2>;
 
   if constexpr (Rank1 == 0 && Rank2 == 0) {
     return Tensor<ResultElementType, Dev1, 0>(op(t1.value(), t2.value()));
   } else {
-    if (t1.shape() != t2.shape()) {
-      throw std::invalid_argument("Tensor shapes must match");
+    constexpr std::size_t RankOut = std::max(Rank1, Rank2);
+    auto out_shape = broadcast<RankOut>(t1.shape(), t2.shape());
+
+    auto result = Tensor<ResultElementType, Dev1, RankOut>(out_shape);
+
+    for (std::size_t flat = 0; flat < result.size(); ++flat) {
+      auto out_idx = out_shape.offsetToIdx(flat);
+
+      auto idx1 = project_broadcast_index(out_idx, t1.shape());
+      auto idx2 = project_broadcast_index(out_idx, t2.shape());
+
+      [&]<std::size_t... I1, std::size_t... I2>(std::index_sequence<I1...>,
+                                                std::index_sequence<I2...>) {
+        result.data()[flat] = op(t1[idx1[I1]...], t2[idx2[I2]...]);
+      }(std::make_index_sequence<Rank1>{}, std::make_index_sequence<Rank2>{});
     }
 
-    auto result = Tensor<ResultElementType, Dev1, Rank1>(t1.shape());
-    const auto computation =
-        std::views::zip(t1, t2) | std::views::transform([op](auto &&tuple) {
-          return std::apply(op, tuple);
-        });
-    std::ranges::copy(computation, result.begin());
     return result;
   }
 }
@@ -124,24 +130,33 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
                             const Tensor<Elem2, Dev2, Rank2> &t2,
                             const Tensor<Elem3, Dev3, Rank3> &t3) {
 
-  validate_binary_op(t1, t2);
-  validate_binary_op(t2, t3);
   using ResultElementType = std::common_type_t<Elem1, Elem2, Elem3>;
 
   if constexpr (Rank1 == 0 && Rank2 == 0 && Rank3 == 0) {
     return Tensor<ResultElementType, Dev1, 0>(
         op(t1.value(), t2.value(), t3.value()));
   } else {
-    if (t1.shape() != t2.shape() || t2.shape() != t3.shape()) {
-      throw std::invalid_argument("Tensor shapes must match");
+    constexpr std::size_t RankOut = std::max({Rank1, Rank2, Rank3});
+    auto out_shape = broadcast<RankOut>(t1.shape(), t2.shape(), t2.shape());
+
+    auto result = Tensor<ResultElementType, Dev1, RankOut>(out_shape);
+
+    for (std::size_t flat = 0; flat < result.size(); ++flat) {
+      auto out_idx = out_shape.offsetToIdx(flat);
+
+      auto idx1 = project_broadcast_index(out_idx, t1.shape());
+      auto idx2 = project_broadcast_index(out_idx, t2.shape());
+      auto idx3 = project_broadcast_index(out_idx, t3.shape());
+
+      [&]<std::size_t... I1, std::size_t... I2, std::size_t... I3>(
+          std::index_sequence<I1...>, std::index_sequence<I2...>,
+          std::index_sequence<I3...>) {
+        result.data()[flat] =
+            op(t1[idx1[I1]...], t2[idx2[I2]...], t3[idx3[I3]...]);
+      }(std::make_index_sequence<Rank1>{}, std::make_index_sequence<Rank2>{},
+        std::make_index_sequence<Rank3>{});
     }
 
-    auto result = Tensor<ResultElementType, Dev1, Rank1>(t1.shape());
-    const auto computation =
-        std::views::zip(t1, t2, t3) | std::views::transform([op](auto &&tuple) {
-          return std::apply(op, tuple);
-        });
-    std::ranges::copy(computation, result.begin());
     return result;
   }
 }
@@ -249,7 +264,6 @@ template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
            VenusTensor<Tensor<Elem2, Dev2, Rank2>>
 auto equal(const Tensor<Elem1, Dev1, Rank1> &t1,
            const Tensor<Elem2, Dev2, Rank2> &t2) -> bool {
-  detail::validate_binary_op(t1, t2);
   if (t1.shape() != t2.shape()) {
     return false;
   }
@@ -264,7 +278,6 @@ template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
            VenusTensor<Tensor<Elem2, Dev2, Rank2>>
 auto inner(const Tensor<Elem1, Dev1, Rank1> &t1,
            const Tensor<Elem2, Dev2, Rank2> &t2) {
-  detail::validate_binary_op(t1, t2);
   using ResultElementType = std::common_type_t<Elem1, Elem2>;
   auto product =
       std::inner_product(t1.begin(), t1.end(), t2.begin(), ResultElementType{});
@@ -468,7 +481,6 @@ template <std::size_t... SumDims,
            VenusTensor<Tensor<Elem2, Dev2, Rank2>>
 auto sumproduct_pair(const Tensor<Elem1, Dev1, Rank1> &t1,
                      const Tensor<Elem2, Dev2, Rank2> &t2) {
-  detail::validate_binary_op(t1, t2);
   auto product = t1 * t2;
   return sum_dims<SumDims...>(product);
 }
