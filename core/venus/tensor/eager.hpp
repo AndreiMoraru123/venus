@@ -136,7 +136,7 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
         op(t1.value(), t2.value(), t3.value()));
   } else {
     constexpr std::size_t RankOut = std::max({Rank1, Rank2, Rank3});
-    auto out_shape = broadcast<RankOut>(t1.shape(), t2.shape(), t2.shape());
+    auto out_shape = broadcast<RankOut>(t1.shape(), t2.shape(), t3.shape());
 
     auto result = Tensor<ResultElementType, Dev1, RankOut>(out_shape);
 
