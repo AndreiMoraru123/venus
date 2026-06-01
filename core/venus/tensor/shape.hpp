@@ -206,16 +206,16 @@ constexpr auto get(const Shape<Rank> &shape) noexcept -> std::size_t {
 // -------------------------- BROADCASTING --------------------------
 template <std::size_t RankOut, std::size_t RankIn>
 constexpr auto
-project_broadcast_index(const std::array<std::size_t, RankOut> &out_idx,
-                        const Shape<RankIn> &in_shape) {
-  std::array<std::size_t, RankIn> in_idx{};
+project_broadcast_idx(const std::array<std::size_t, RankOut> &in_idx,
+                      const Shape<RankIn> &in_shape) {
+  std::array<std::size_t, RankIn> out_idx{};
   constexpr auto offset = RankOut - RankIn;
 
   for (std::size_t i = 0; i < RankIn; i++) {
-    in_idx[i] = in_shape[i] == 1 ? 0 : out_idx[i + offset];
+    out_idx[i] = in_shape[i] == 1 ? 0 : in_idx[i + offset];
   }
 
-  return in_idx;
+  return out_idx;
 }
 
 template <std::size_t RankOut, std::size_t Rank1, std::size_t Rank2>

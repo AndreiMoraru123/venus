@@ -11,7 +11,6 @@
 #include <ranges>
 #include <stdexcept>
 #include <string_view>
-#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <venus/memory/device.hpp>
@@ -19,7 +18,7 @@
 #include <venus/tensor/shape.hpp>
 
 inline constexpr std::size_t NUMBER_OF_LETTERS = 26;
-using LettersArr = std::array<std::int64_t, NUMBER_OF_LETTERS>;
+using AlphabetArray = std::array<std::int64_t, NUMBER_OF_LETTERS>;
 
 namespace venus {
 template <typename T>
@@ -109,8 +108,8 @@ auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
     for (std::size_t flat = 0; flat < result.size(); ++flat) {
       auto out_idx = out_shape.offsetToIdx(flat);
 
-      auto idx1 = project_broadcast_index(out_idx, t1.shape());
-      auto idx2 = project_broadcast_index(out_idx, t2.shape());
+      auto idx1 = project_broadcast_idx(out_idx, t1.shape());
+      auto idx2 = project_broadcast_idx(out_idx, t2.shape());
 
       [&]<std::size_t... I1, std::size_t... I2>(std::index_sequence<I1...>,
                                                 std::index_sequence<I2...>) {
@@ -144,9 +143,9 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
     for (std::size_t flat = 0; flat < result.size(); ++flat) {
       auto out_idx = out_shape.offsetToIdx(flat);
 
-      auto idx1 = project_broadcast_index(out_idx, t1.shape());
-      auto idx2 = project_broadcast_index(out_idx, t2.shape());
-      auto idx3 = project_broadcast_index(out_idx, t3.shape());
+      auto idx1 = project_broadcast_idx(out_idx, t1.shape());
+      auto idx2 = project_broadcast_idx(out_idx, t2.shape());
+      auto idx3 = project_broadcast_idx(out_idx, t3.shape());
 
       [&]<std::size_t... I1, std::size_t... I2, std::size_t... I3>(
           std::index_sequence<I1...>, std::index_sequence<I2...>,
@@ -161,13 +160,13 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
   }
 }
 
-consteval auto count_operands(std::string_view eqn) {
+consteval auto count_operands(const std::string_view eqn) {
   auto lhs = eqn.substr(0, eqn.find("->"));
   return std::ranges::count(lhs, ',') + 1;
 }
 
-consteval auto compute_occurences(std::string_view eqn) -> LettersArr {
-  LettersArr occ{};
+consteval auto compute_occurences(const std::string_view eqn) -> AlphabetArray {
+  AlphabetArray occ{};
   auto lhs = eqn.substr(0, eqn.find("->"));
   for (char c : lhs)
     if (c != ',')
@@ -176,8 +175,9 @@ consteval auto compute_occurences(std::string_view eqn) -> LettersArr {
   return occ;
 }
 
-consteval auto compute_last_occurence(std::string_view eqn) -> LettersArr {
-  LettersArr last{};
+consteval auto compute_last_occurence(const std::string_view eqn)
+    -> AlphabetArray {
+  AlphabetArray last{};
   last.fill(-1);
   auto lhs = eqn.substr(0, eqn.find("->"));
   std::int64_t operand = 0;
@@ -191,9 +191,10 @@ consteval auto compute_last_occurence(std::string_view eqn) -> LettersArr {
   return last;
 }
 
-consteval auto compute_sorted_position(std::string_view eqn,
-                                       const LettersArr &occ) -> LettersArr {
-  LettersArr pos{};
+consteval auto compute_sorted_position(const std::string_view eqn,
+                                       const AlphabetArray &occ)
+    -> AlphabetArray {
+  AlphabetArray pos{};
   pos.fill(-1);
   auto arrow = eqn.find("->");
   std::int64_t dim = 0;
