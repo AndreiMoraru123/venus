@@ -449,7 +449,6 @@ auto sum_dim(const Tensor<Elem, Dev, Rank> &t) -> Tensor<Elem, Dev, Rank> {
   }(std::make_index_sequence<Rank>{});
 
   auto result = Tensor<Elem, Dev, Rank>(out_shape);
-  result.fill(Elem{0});
 
   for (auto [flat, val] :
        std::views::zip(std::views::iota(std::size_t{0}, t.size()), t)) {
