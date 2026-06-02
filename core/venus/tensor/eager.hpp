@@ -75,20 +75,6 @@ namespace venus::eager {
 // Details =====================================================
 namespace detail {
 
-// template <template <typename, typename, std::size_t> class Tensor,
-//           typename Elem1, typename Dev1, std::size_t Rank1, typename Elem2,
-//           typename Dev2, std::size_t Rank2>
-//   requires(Rank1 == Rank2) && std::is_same_v<Dev1, Dev2> &&
-//           std::is_same_v<Dev1, Device::CPU>
-// void validate_binary_op(const Tensor<Elem1, Dev1, Rank1> &t1,
-//                         const Tensor<Elem2, Dev2, Rank2> &t2) {
-//   if constexpr (Rank1 > 0) {
-//     if (t1.shape() != t2.shape()) {
-//       throw std::invalid_argument("Tensor shapes must match");
-//     }
-//   }
-// }
-
 template <typename Op, template <typename, typename, std::size_t> class Tensor,
           typename Elem1, typename Dev1, std::size_t Rank1, typename Elem2,
           typename Dev2, std::size_t Rank2>

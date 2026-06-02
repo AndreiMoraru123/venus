@@ -233,7 +233,10 @@ constexpr auto broadcast(const Shape<Rank1> &s1, const Shape<Rank2> &s2)
       d2 = s2[i - (RankOut - Rank2)];
 
     if (d1 != d2 && d1 != 1 && d2 != 1) {
-      throw std::invalid_argument("Tensor shapes are not broadcastable");
+      throw std::invalid_argument(
+          std::format("Tensor shapes are not broadcastable, t1 has shape {}, "
+                      "whereas t2 has shape {}.",
+                      s1, s2));
     }
 
     out[i] = std::max(d1, d2);
