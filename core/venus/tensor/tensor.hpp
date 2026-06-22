@@ -250,10 +250,6 @@ public:
 
   auto shape() const noexcept -> const Shape<Rank> & { return m_shape; }
 
-  [[nodiscard]] auto numel() const noexcept -> std::size_t {
-    return m_shape.count();
-  }
-
   [[nodiscard]] auto unique() const -> bool { return not m_mem.isShared(); }
 
   auto clone() const -> Tensor { return Tensor(*this); }
@@ -521,6 +517,17 @@ public:
   auto data(this auto &&self) -> decltype(auto) {
     return std::forward<decltype(self)>(self).m_mem.ptr();
   }
+
+  template <std::size_t NewRank>
+  auto reshape(this auto &&self, Shape<NewRank> new_shape) {
+    if (new_shape.count() != self.size()) {
+      throw std::invalid_argument(std::format(
+          "Cannot reshape tensor of size {} to new shape of size {}",
+          self.size(), new_shape.count()));
+    }
+
+    return Tensor<ElementType, DeviceType, NewRank>(self.m_mem, new_shape);
+  }
 };
 
 // Scalar Tensor ===============================================
@@ -582,8 +589,6 @@ public:
   }
 
   auto value() const noexcept { return data()[0]; }
-
-  [[nodiscard]] auto numel() const noexcept -> std::size_t { return 1; }
 
   auto operator==(const Tensor &tensor) const noexcept -> bool {
     return value() == tensor.value();

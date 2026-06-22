@@ -315,8 +315,7 @@ auto squeeze_to_rank(const Tensor<Elem, Dev, FromRank> &tensor) {
     auto out_shape = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
       return Shape<ToRank>(result_shape[Is]...);
     }(std::make_index_sequence<ToRank>{});
-    return Tensor<Elem, Dev, ToRank>(tensor.lowLevel().sharedMemory(),
-                                     out_shape);
+    return tensor.template reshape<ToRank>(out_shape);
   }
 }
 
