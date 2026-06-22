@@ -19,6 +19,7 @@
 
 inline constexpr std::size_t NUMBER_OF_LETTERS = 26;
 using AlphabetArray = std::array<std::int64_t, NUMBER_OF_LETTERS>;
+using PositionLabels = std::array<std::size_t, NUMBER_OF_LETTERS>;
 
 namespace venus {
 template <typename T>
@@ -185,7 +186,8 @@ consteval auto compute_sorted_position(const std::string_view eqn,
   auto arrow = eqn.find("->");
   std::int64_t dim = 0;
   if (arrow != std::string_view::npos) {
-    for (char c : eqn.substr(arrow + 2))
+    auto rhs = eqn.substr(arrow + 2);
+    for (char c : rhs)
       pos[c - 'a'] = dim++;
   } else {
     for (std::size_t i = 0; i < NUMBER_OF_LETTERS; i++)
@@ -197,6 +199,125 @@ consteval auto compute_sorted_position(const std::string_view eqn,
     if (occ[i] > 0 && pos[i] == -1)
       pos[i] = dim++;
   return pos;
+}
+
+consteval auto count_total_dimensions(std::string_view eqn) -> std::size_t {
+  auto occ = compute_occurences(eqn);
+  return std::ranges::count_if(occ, [](auto &&val) { return val > 0; });
+}
+
+consteval auto count_output_dimensions(std::string_view eqn,
+                                       const AlphabetArray &occ)
+    -> std::size_t {
+  auto arrow = eqn.find("->");
+  if (arrow != std::string_view::npos) {
+    return eqn.size() - (arrow + 2);
+  }
+  return std::ranges::count(occ, 1);
+}
+
+consteval auto compute_position_labels(const AlphabetArray &sorted_pos)
+    -> PositionLabels {
+  PositionLabels pos_labels{};
+  for (std::size_t letter = 0; letter < NUMBER_OF_LETTERS; letter++) {
+    if (sorted_pos[letter] >= 0)
+      pos_labels[static_cast<std::size_t>(sorted_pos[letter])] = letter;
+  }
+  return pos_labels;
+}
+
+consteval auto count_dims_for_op(std::string_view eqn, std::size_t op_idx) {
+  auto lhs = eqn.substr(0, eqn.find("->"));
+  std::size_t op = 0, n = 0;
+  for (char c : lhs) {
+    if (c == ',') {
+      ++op;
+      continue;
+    }
+    if (op == op_idx)
+      n++;
+  }
+  return n;
+}
+
+consteval auto compute_axes_for_op(std::string_view eqn, std::size_t op_idx)
+    -> AlphabetArray {
+  AlphabetArray axes{};
+  axes.fill(-1);
+
+  auto lhs = eqn.substr(0, eqn.find("->"));
+  std::size_t op = 0, dim = 0;
+  for (char c : lhs) {
+    if (c == ',') {
+      ++op;
+      dim = 0;
+      continue;
+    }
+    if (op == op_idx) {
+      auto letter = static_cast<std::size_t>(c - 'a');
+      if (axes[letter] != 1) {
+        // throw "einsum repeated label in one opearand is diagonal,
+        // unsupported";
+      }
+      axes[letter] = static_cast<std::int64_t>(dim++);
+    }
+  }
+
+  return axes;
+}
+
+consteval auto count_sum_dims_for_op(std::size_t op_idx,
+                                     const AlphabetArray &last_occ,
+                                     const AlphabetArray &sorted_pos,
+                                     std::size_t num_output_dims)
+    -> std::size_t {
+  std::size_t n = 0;
+  for (std::size_t letter = 0; letter < NUMBER_OF_LETTERS; ++letter) {
+    if (last_occ[letter] == static_cast<std::int64_t>(op_idx) &&
+        sorted_pos[letter] >= static_cast<std::int64_t>(num_output_dims)) {
+      ++n;
+    }
+  }
+  return n;
+}
+
+template <std::size_t OpIdx, VenusStr Eqn>
+consteval auto compute_sum_dims_for_step() {
+  constexpr auto eqn = Eqn.view();
+  constexpr auto occ = compute_occurences(eqn);
+  constexpr auto last_occ = compute_last_occurence(eqn);
+  constexpr auto sorted_pos = compute_sorted_position(eqn, occ);
+  constexpr auto num_out = count_output_dimensions(eqn, occ);
+
+  constexpr auto count =
+      count_sum_dims_for_op(OpIdx, last_occ, sorted_pos, num_out);
+  std::array<std::size_t, count> dims{};
+  std::size_t n = 0;
+
+  for (std::size_t letter = 0; letter < NUMBER_OF_LETTERS; ++letter) {
+    if (last_occ[letter] == static_cast<std::int64_t>(OpIdx) &&
+        sorted_pos[letter] >= static_cast<std::int64_t>(num_out)) {
+      dims[n++] = static_cast<std::size_t>(sorted_pos[letter]);
+    }
+  }
+  return dims;
+}
+
+template <std::size_t ToRank,
+          template <typename, typename, std::size_t> class Tensor,
+          typename Elem, typename Dev, std::size_t FromRank>
+  requires VenusTensor<Tensor<Elem, Dev, FromRank>>
+auto squeeze_to_rank(const Tensor<Elem, Dev, FromRank> &tensor) {
+  if constexpr (ToRank == 0) {
+    return tensor.toScalar();
+  } else {
+    auto result_shape = tensor.shape();
+    auto out_shape = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+      return Shape<ToRank>(result_shape[Is]...);
+    }(std::make_index_sequence<ToRank>{});
+    return Tensor<Elem, Dev, ToRank>(tensor.lowLevel().sharedMemory(),
+                                     out_shape);
+  }
 }
 
 } // namespace detail
@@ -471,14 +592,101 @@ auto sumproduct_pair(const Tensor<Elem1, Dev1, Rank1> &t1,
   return sum_dims<SumDims...>(product);
 }
 
-template <VenusStr Eqn, VenusTensor... Ts> auto einsum(Ts &&...tensors) {
+template <std::size_t OpIdx, VenusStr Eqn,
+          template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+          typename Dev, std::size_t Rank>
+  requires VenusTensor<Tensor<Elem, Dev, Rank>>
+auto homogenize_operand(const Tensor<Elem, Dev, Rank> &t) {
   constexpr auto eqn = Eqn.view();
   constexpr auto occ = detail::compute_occurences(eqn);
-  constexpr auto last_occ = detail::compute_last_occurence(eqn);
   constexpr auto sorted_pos = detail::compute_sorted_position(eqn, occ);
+  constexpr auto total_dims = detail::count_total_dimensions(eqn);
+  constexpr auto pos_labels = detail::compute_position_labels(sorted_pos);
+  constexpr auto axes = detail::compute_axes_for_op(eqn, OpIdx);
 
-  static_assert(detail::count_operands(eqn) == sizeof...(Ts),
+  std::array<std::size_t, total_dims> homo_dims{};
+  for (std::size_t i = 0; i < total_dims; ++i) {
+    auto letter = pos_labels[i];
+    auto axis = axes[letter];
+    if (axis != -1) {
+      homo_dims[i] = t.shape()[axis];
+    } else {
+      homo_dims[i] = 1;
+    }
+  }
+
+  auto homo_shape = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+    return Shape<total_dims>(homo_dims[Is]...);
+  }(std::make_index_sequence<total_dims>{});
+
+  auto project_homo_idx =
+      [pos_labels, axes](const std::array<std::size_t, total_dims> &out_idx) {
+        std::array<std::size_t, Rank> orig_idx{};
+        for (std::size_t i = 0; i < total_dims; ++i) {
+          auto letter = pos_labels[i];
+          auto axis = axes[letter];
+          if (axis != -1) {
+            orig_idx[static_cast<std::size_t>(axis)] = out_idx[i];
+          }
+        }
+        return orig_idx;
+      };
+
+  auto homogenized = Tensor<Elem, Dev, total_dims>(homo_shape);
+  for (std::size_t flat = 0; flat < homogenized.size(); ++flat) {
+    auto out_idx = homo_shape.offsetToIdx(flat);
+    auto orig_idx = project_homo_idx(out_idx);
+    [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+      homogenized.data()[flat] = t[orig_idx[Is]...];
+    }(std::make_index_sequence<Rank>{});
+  }
+
+  return homogenized;
+}
+
+template <VenusStr Eqn,
+          template <typename, typename, std::size_t> class... Tensors,
+          typename... Ts, typename... Devs, std::size_t... Ranks>
+  requires(VenusTensor<Tensors<Ts, Devs, Ranks>> && ...)
+auto einsum(const Tensors<Ts, Devs, Ranks> &...tensors) {
+  static_assert((std::is_same_v<Devs, Device::CPU> && ...),
+                "Einsum is currently only supported on CPU");
+  constexpr auto eqn = Eqn.view();
+  constexpr auto occ = detail::compute_occurences(eqn);
+  constexpr auto num_out = detail::count_output_dimensions(eqn, occ);
+
+  static_assert(detail::count_operands(eqn) == sizeof...(Tensors),
                 "operand count mismatch");
+
+  auto homo_tensors = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+    return std::make_tuple(homogenize_operand<Is, Eqn>(tensors)...);
+  }(std::make_index_sequence<sizeof...(Tensors)>{});
+
+  auto t0 = std::get<0>(homo_tensors);
+  constexpr auto initial_sum_dims = detail::compute_sum_dims_for_step<0, Eqn>();
+  auto initial_result = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+    if constexpr (sizeof...(Is) > 0) {
+      return sum_dims<initial_sum_dims[Is]...>(t0);
+    } else {
+      return t0;
+    }
+  }(std::make_index_sequence<initial_sum_dims.size()>{});
+
+  auto final_contracted = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+    auto current = initial_result;
+    auto step = [&]<std::size_t OpIdx>() {
+      constexpr auto sum_dims = detail::compute_sum_dims_for_step<OpIdx, Eqn>();
+      const auto &next_op = std::get<OpIdx>(homo_tensors);
+      current = [&]<std::size_t... Js>(std::index_sequence<Js...>) {
+        return sumproduct_pair<sum_dims[Js]...>(current, next_op);
+        ;
+      }(std::make_index_sequence<sum_dims.size()>{});
+    };
+    (step.template operator()<Is + 1>(), ...);
+    return current;
+  }(std::make_index_sequence<sizeof...(Tensors) - 1>{});
+
+  return detail::squeeze_to_rank<num_out>(final_contracted);
 }
 
 } // namespace venus::eager
