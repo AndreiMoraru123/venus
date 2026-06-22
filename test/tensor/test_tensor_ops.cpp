@@ -187,4 +187,50 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
       }
     }
   }
+
+  SECTION("Broadcasting") {
+    // clang-format off
+    auto a = Tensor<int, Device::CPU, 2>{{
+        {0,  1,  2,  3},
+        {4,  5,  6,  7},
+        {8,  9,  10, 11},
+        {12, 13, 14, 15}}};
+
+    auto b_row = Tensor<int, Device::CPU, 2>{{4, 3, 2, 1}};
+    auto b_col = Tensor<int, Device::CPU, 2>{
+      {4},
+      {3},
+      {2},
+      {1}};
+
+    auto c = a + b_row;
+    auto d = a + b_col;
+
+    REQUIRE(venus::eager::equal(c, b_row + a));
+    REQUIRE(venus::eager::equal(d, b_col + a));
+
+    REQUIRE(c.shape() == a.shape());
+    REQUIRE(d.shape() == a.shape());
+
+    auto b_row_bc = Tensor<int, Device::CPU, 2>{{
+      {4, 3, 2, 1},
+      {4, 3, 2, 1},
+      {4, 3, 2, 1},
+      {4, 3, 2, 1}
+    }};
+    auto b_col_bc = Tensor<int, Device::CPU, 2>{{
+      {4, 4, 4, 4},
+      {3, 3, 3, 3},
+      {2, 2, 2, 2},
+      {1, 1, 1, 1}
+    }};
+    // clang-format on
+
+    for (std::size_t i = 0; i < a.shape().count(); i++) {
+      REQUIRE(c.lowLevel().rawMemory()[i] ==
+              a.lowLevel().rawMemory()[i] + b_row_bc.lowLevel().rawMemory()[i]);
+      REQUIRE(d.lowLevel().rawMemory()[i] ==
+              a.lowLevel().rawMemory()[i] + b_col_bc.lowLevel().rawMemory()[i]);
+    }
+  }
 }
