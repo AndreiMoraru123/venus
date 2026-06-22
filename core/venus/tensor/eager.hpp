@@ -98,10 +98,7 @@ auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
       auto idx1 = project_broadcast_idx(out_idx, t1.shape());
       auto idx2 = project_broadcast_idx(out_idx, t2.shape());
 
-      [&]<std::size_t... I1, std::size_t... I2>(std::index_sequence<I1...>,
-                                                std::index_sequence<I2...>) {
-        result.data()[flat] = op(t1[idx1[I1]...], t2[idx2[I2]...]);
-      }(std::make_index_sequence<Rank1>{}, std::make_index_sequence<Rank2>{});
+      result.data()[flat] = op(t1[idx1], t2[idx2]);
     }
 
     return result;
@@ -134,13 +131,7 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
       auto idx2 = project_broadcast_idx(out_idx, t2.shape());
       auto idx3 = project_broadcast_idx(out_idx, t3.shape());
 
-      [&]<std::size_t... I1, std::size_t... I2, std::size_t... I3>(
-          std::index_sequence<I1...>, std::index_sequence<I2...>,
-          std::index_sequence<I3...>) {
-        result.data()[flat] =
-            op(t1[idx1[I1]...], t2[idx2[I2]...], t3[idx3[I3]...]);
-      }(std::make_index_sequence<Rank1>{}, std::make_index_sequence<Rank2>{},
-        std::make_index_sequence<Rank3>{});
+      result.data()[flat] = op(t1[idx1], t2[idx2], t3[idx3]);
     }
 
     return result;
@@ -554,9 +545,7 @@ auto sum_dim(const Tensor<Elem, Dev, Rank> &t) -> Tensor<Elem, Dev, Rank> {
        std::views::zip(std::views::iota(std::size_t{0}, t.size()), t)) {
     auto midx = in_shape.offsetToIdx(flat);
     midx[Dim] = 0;
-    [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-      result[midx[Is]...] += val;
-    }(std::make_index_sequence<Rank>{});
+    result[midx] += val;
   }
 
   return result;
@@ -627,9 +616,7 @@ auto homogenize_operand(const Tensor<Elem, Dev, Rank> &t) {
   for (std::size_t flat = 0; flat < homogenized.size(); ++flat) {
     auto out_idx = homo_shape.offsetToIdx(flat);
     auto orig_idx = project_homo_idx(out_idx);
-    [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-      homogenized.data()[flat] = t[orig_idx[Is]...];
-    }(std::make_index_sequence<Rank>{});
+    homogenized.data()[flat] = t[orig_idx];
   }
 
   return homogenized;

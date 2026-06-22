@@ -77,6 +77,23 @@ public:
     return result;
   }
 
+  constexpr auto
+  idxToOffset(const std::array<std::size_t, rank> &idx_array) const
+      -> std::size_t {
+    for (std::size_t i = 0; i < rank; ++i) {
+      if (idx_array[i] >= m_dims[i]) {
+        throw std::out_of_range("Index out of bounds in Shape::idxToOffset");
+      }
+    }
+    std::size_t offset = 0;
+    std::size_t stride = 1;
+    for (int i = (int)rank - 1; i >= 0; --i) {
+      offset += idx_array[i] * stride;
+      stride *= m_dims[i];
+    }
+    return offset;
+  }
+
   template <SizeTLike... Dimensions>
   constexpr auto idxToOffset(Dimensions... indices) const -> std::size_t {
     static_assert(sizeof...(Dimensions) == rank, "Wrong number of indices");

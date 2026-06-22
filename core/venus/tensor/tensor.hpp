@@ -460,6 +460,15 @@ public:
         self.m_shape.idxToOffset(static_cast<std::size_t>(indices)...);
     return self.data()[offset];
   }
+
+  auto operator[](this auto &&self,
+                  const std::array<std::size_t, Rank> &indices) {
+    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+                  "Indexing is currently only supported on CPU");
+    const auto offset = self.m_shape.idxToOffset(indices);
+    return self.data()[offset];
+  }
+
 #else
   // Tensor indexing
   template <typename... Indices>
@@ -469,6 +478,18 @@ public:
                   "Indexing is currently only supported on CPU");
     const auto offset =
         self.m_shape.idxToOffset(static_cast<std::size_t>(indices)...);
+    if constexpr (std::is_const_v<std::remove_reference_t<decltype(self)>>) {
+      return self.data()[offset];
+    } else {
+      return ElementProxy(self, self.data()[offset]);
+    }
+  }
+
+  auto operator[](this auto &&self,
+                  const std::array<std::size_t, Rank> &indices) {
+    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+                  "Indexing is currently only supported on CPU");
+    const auto offset = self.m_shape.idxToOffset(indices);
     if constexpr (std::is_const_v<std::remove_reference_t<decltype(self)>>) {
       return self.data()[offset];
     } else {
