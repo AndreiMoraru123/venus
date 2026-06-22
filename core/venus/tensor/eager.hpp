@@ -311,11 +311,8 @@ auto squeeze_to_rank(const Tensor<Elem, Dev, FromRank> &tensor) {
   if constexpr (ToRank == 0) {
     return tensor.toScalar();
   } else {
-    auto result_shape = tensor.shape();
-    auto out_shape = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-      return Shape<ToRank>(result_shape[Is]...);
-    }(std::make_index_sequence<ToRank>{});
-    return tensor.template reshape<ToRank>(out_shape);
+    return tensor.template reshape<ToRank>(
+        tensor.shape().template slice<ToRank>());
   }
 }
 
@@ -550,10 +547,7 @@ auto sum_dim(const Tensor<Elem, Dev, Rank> &t) -> Tensor<Elem, Dev, Rank> {
     out_ext[i] = (i == Dim) ? 1 : in_shape[i];
   }
 
-  auto out_shape = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-    return Shape<Rank>(out_ext[Is]...);
-  }(std::make_index_sequence<Rank>{});
-
+  auto out_shape = Shape<Rank>(out_ext);
   auto result = Tensor<Elem, Dev, Rank>(out_shape);
 
   for (auto [flat, val] :
@@ -614,9 +608,7 @@ auto homogenize_operand(const Tensor<Elem, Dev, Rank> &t) {
     }
   }
 
-  auto homo_shape = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-    return Shape<total_dims>(homo_dims[Is]...);
-  }(std::make_index_sequence<total_dims>{});
+  auto homo_shape = Shape<total_dims>(homo_dims);
 
   auto project_homo_idx =
       [pos_labels, axes](const std::array<std::size_t, total_dims> &out_idx) {

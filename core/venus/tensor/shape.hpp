@@ -35,6 +35,9 @@ public:
     requires(sizeof...(Dimensions) != Rank)
   constexpr explicit Shape(Dimensions...) = delete;
 
+  constexpr explicit Shape(std::array<std::size_t, Rank> dims) noexcept
+      : m_dims(std::move(dims)) {}
+
   constexpr auto operator==(const Shape &val) const -> bool {
     return m_dims == val.m_dims;
   }
@@ -149,6 +152,16 @@ public:
 
   constexpr auto size() const { return m_dims.size(); }
 
+  template <std::size_t SubRank, std::size_t StartOffset = 0>
+    requires(StartOffset + SubRank <= rank)
+  auto slice() const -> Shape<SubRank> {
+    std::array<std::size_t, SubRank> sub_dims{};
+    for (std::size_t i = 0; i < SubRank; i++) {
+      sub_dims[i] = m_dims[StartOffset + i];
+    }
+    return Shape<SubRank>(sub_dims);
+  }
+
 private:
   std::array<std::size_t, Rank> m_dims{};
 
@@ -242,9 +255,7 @@ constexpr auto broadcast(const Shape<Rank1> &s1, const Shape<Rank2> &s2)
     out[i] = std::max(d1, d2);
   }
 
-  return [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-    return Shape<RankOut>(out[Is]...);
-  }(std::make_index_sequence<RankOut>{});
+  return Shape<RankOut>(out);
 }
 
 template <std::size_t RankOut, std::size_t Rank1, std::size_t Rank2,
@@ -255,6 +266,7 @@ constexpr auto broadcast(const Shape<Rank1> &s1, const Shape<Rank2> &s2,
   auto s12 = broadcast<Rank12>(s1, s2);
   return broadcast<RankOut>(s12, s3);
 }
+
 // ------------------------------------------------------------------
 
 } // namespace venus
