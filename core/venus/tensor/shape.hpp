@@ -171,7 +171,7 @@ public:
 
   template <std::size_t SubRank, std::size_t StartOffset = 0>
     requires(StartOffset + SubRank <= rank)
-  auto slice() const -> Shape<SubRank> {
+  constexpr auto slice() const -> Shape<SubRank> {
     std::array<std::size_t, SubRank> sub_dims{};
     for (std::size_t i = 0; i < SubRank; i++) {
       sub_dims[i] = m_dims[StartOffset + i];
