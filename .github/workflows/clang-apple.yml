@@ -19,11 +19,6 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - name: Setup LLVM
-        uses: ZhongRuoyu/setup-llvm@v0
-        with:
-          llvm-version: "19"
-
       - name: Setup CMake
         uses: jwlawson/actions-setup-cmake@v2
         with:
@@ -35,7 +30,7 @@ jobs:
       - name: Configure with CMake
         working-directory: build
         run: |
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DBUILD_TESTING=ON -DBUILD_DEMO=OFF
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBUILD_DEMO=OFF
 
       - name: Build
         working-directory: build
