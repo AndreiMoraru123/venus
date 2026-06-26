@@ -622,6 +622,36 @@ auto homogenize_operand(const Tensor<Elem, Dev, Rank> &t) {
   return homogenized;
 }
 
+template <VenusStr Eqn, std::size_t NumOut, typename... HomogenizedTensors>
+auto _einsum_contract(HomogenizedTensors... tensors) {
+  const auto &t0 = tensors...[0];
+  constexpr auto initial_sum_dims = detail::compute_sum_dims_for_step<0, Eqn>();
+
+  auto initial_result = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+    if constexpr (sizeof...(Is) > 0) {
+      return sum_dims<initial_sum_dims[Is]...>(t0);
+    } else {
+      return t0;
+    }
+  }(std::make_index_sequence<initial_sum_dims.size()>{});
+
+  auto final_contracted = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+    auto current = initial_result;
+    auto step = [&]<std::size_t OpIdx>() {
+      constexpr auto sum_dims = detail::compute_sum_dims_for_step<OpIdx, Eqn>();
+      const auto &next_op = tensors...[OpIdx];
+      current = [&]<std::size_t... Js>(std::index_sequence<Js...>) {
+        return sumproduct_pair<sum_dims[Js]...>(current, next_op);
+        ;
+      }(std::make_index_sequence<sum_dims.size()>{});
+    };
+    (step.template operator()<Is + 1>(), ...);
+    return current;
+  }(std::make_index_sequence<sizeof...(HomogenizedTensors) - 1>{});
+
+  return detail::squeeze_to_rank<NumOut>(final_contracted);
+}
+
 template <VenusStr Eqn,
           template <typename, typename, std::size_t> class... Tensors,
           typename... Ts, typename... Devs, std::size_t... Ranks>
@@ -640,31 +670,10 @@ auto einsum(const Tensors<Ts, Devs, Ranks> &...tensors) {
     return std::make_tuple(homogenize_operand<Is, Eqn>(tensors)...);
   }(std::make_index_sequence<sizeof...(Tensors)>{});
 
-  auto t0 = std::get<0>(homo_tensors);
-  constexpr auto initial_sum_dims = detail::compute_sum_dims_for_step<0, Eqn>();
-  auto initial_result = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-    if constexpr (sizeof...(Is) > 0) {
-      return sum_dims<initial_sum_dims[Is]...>(t0);
-    } else {
-      return t0;
-    }
-  }(std::make_index_sequence<initial_sum_dims.size()>{});
-
-  auto final_contracted = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-    auto current = initial_result;
-    auto step = [&]<std::size_t OpIdx>() {
-      constexpr auto sum_dims = detail::compute_sum_dims_for_step<OpIdx, Eqn>();
-      const auto &next_op = std::get<OpIdx>(homo_tensors);
-      current = [&]<std::size_t... Js>(std::index_sequence<Js...>) {
-        return sumproduct_pair<sum_dims[Js]...>(current, next_op);
-        ;
-      }(std::make_index_sequence<sum_dims.size()>{});
-    };
-    (step.template operator()<Is + 1>(), ...);
-    return current;
-  }(std::make_index_sequence<sizeof...(Tensors) - 1>{});
-
-  return detail::squeeze_to_rank<num_out>(final_contracted);
+  return [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+    return _einsum_contract<Eqn, num_out>(
+        homogenize_operand<Is, Eqn>(tensors)...);
+  }(std::make_index_sequence<sizeof...(Tensors)>{});
 }
 
 } // namespace venus::eager

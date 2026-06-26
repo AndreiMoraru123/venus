@@ -1,10 +1,12 @@
 name: MSVC Windows
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  # do this until msvc workflow addopts C++26 pack indexing
+  workflow_dispatch:
+#  push:
+#    branches: [main]
+#  pull_request:
+#    branches: [main]
 
 jobs:
   build-msvc:
@@ -16,9 +18,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup CMake
-        uses: jwlawson/actions-setup-cmake@v1.14
+        uses: jwlawson/actions-setup-cmake@v2
         with:
-          cmake-version: "4.2.0"
+          cmake-version: "latest"
 
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
