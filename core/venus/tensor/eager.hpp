@@ -666,10 +666,6 @@ auto einsum(const Tensors<Ts, Devs, Ranks> &...tensors) {
   static_assert(detail::count_operands(eqn) == sizeof...(Tensors),
                 "operand count mismatch");
 
-  auto homo_tensors = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-    return std::make_tuple(homogenize_operand<Is, Eqn>(tensors)...);
-  }(std::make_index_sequence<sizeof...(Tensors)>{});
-
   return [&]<std::size_t... Is>(std::index_sequence<Is...>) {
     return _einsum_contract<Eqn, num_out>(
         homogenize_operand<Is, Eqn>(tensors)...);
