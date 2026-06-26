@@ -126,4 +126,16 @@ TEST_CASE("Shape semantics", "[shape]") {
     REQUIRE(sliced_offset[0] == 3);
     REQUIRE(sliced_offset[1] == 4);
   }
+
+  SECTION("Broadcasting") {
+    constexpr auto s1 = Shape<3>(2, 3, 4);
+    constexpr auto s2 = Shape<3>(2, 1, 4);
+
+    constexpr auto broad_s = broadcast<3>(s1, s2);
+    STATIC_REQUIRE(broad_s.rank == 3);
+    STATIC_REQUIRE(broad_s.count() == 2 * 3 * 4);
+    REQUIRE(broad_s[0] == 2);
+    REQUIRE(broad_s[1] == 3);
+    REQUIRE(broad_s[2] == 4);
+  }
 }
