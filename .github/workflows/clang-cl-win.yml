@@ -18,10 +18,10 @@ jobs:
       - name: Setup MSVC environment
         uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Setup LLVM 19
+      - name: Setup LLVM 22
         uses: ZhongRuoyu/setup-llvm@v0
         with:
-          llvm-version: "19"
+          llvm-version: "22"
 
       - name: Setup CMake
         uses: jwlawson/actions-setup-cmake@v2
