@@ -392,6 +392,12 @@ public:
     }
   }
 
+  static auto eye(const Shape<rank>& shape) {
+    auto tensor = Tensor(shape);
+    tensor.eye();
+    return tensor;
+  }
+
   // * Proxy pattern for indexing elements (know when I'm reading vs writing)
   // ? Price to pay: have to specify all possible operator overloads that I want
   class ElementProxy {

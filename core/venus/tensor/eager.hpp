@@ -407,15 +407,7 @@ template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
   requires VenusTensor<Tensor<Elem, Dev, Rank>> && (Rank > 2)
 auto eye_like(const Tensor<Elem, Dev, Rank> &tensor) {
   auto result = Tensor<Elem, Dev, Rank>(tensor.shape());
-  for (auto [flat, val] : std::views::zip(
-           std::views::iota(std::size_t{0}, tensor.size()), result)) {
-    auto midx = tensor.shape().offsetToIdx(flat);
-    if (midx[Rank - 2] == midx[Rank - 1]) {
-      val = 1;
-    } else {
-      val = 0;
-    }
-  }
+  result.eye();
   return result;
 }
 
