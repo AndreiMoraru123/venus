@@ -2,16 +2,14 @@ name: "Generate Single Header"
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
   run:
     name: Generate
     runs-on: ubuntu-latest
-    container:
-      image: gcc:16
 
     permissions:
       contents: write
@@ -21,6 +19,11 @@ jobs:
         uses: actions/checkout@master
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup LLVM 22
+        uses: ZhongRuoyu/setup-llvm@v0
+        with:
+          llvm-version: "22"
 
       - name: Setup CMake
         uses: jwlawson/actions-setup-cmake@v2
@@ -32,7 +35,7 @@ jobs:
 
       - name: Configure with CMake
         working-directory: build
-        run: cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_DEMO=OFF -DBUILD_SINGLE_HEADER=ON
+        run: cmake .. -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_DEMO=OFF -DBUILD_SINGLE_HEADER=ON
 
       - name: Build
         working-directory: build
