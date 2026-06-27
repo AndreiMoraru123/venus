@@ -255,11 +255,9 @@ public:
   auto clone() const -> Tensor { return Tensor(*this); }
 
   auto toScalar() const -> Tensor<TElem, TDevice, 0> {
-    static_assert(Rank == 1,
-                  "ToScalar can only be called on 1D tensors with 1 element.");
     if (size() != 1) {
       throw std::runtime_error(
-          std::format("Cannot convert non-scalar tensor to scalar tensor: "
+          std::format("toScalar can only be called on tensors with exactly 1 element."
                       "Tensor size is {}, while the size of a scalar is 1.",
                       size()));
     }

@@ -246,9 +246,8 @@ consteval auto compute_axes_for_op(std::string_view eqn, std::size_t op_idx)
     }
     if (op == op_idx) {
       auto letter = static_cast<std::size_t>(c - 'a');
-      if (axes[letter] != 1) {
-        // throw "einsum repeated label in one opearand is diagonal,
-        // unsupported";
+      if (axes[letter] != -1) {
+         throw "einsum repeated label in one operand is diagonal, unsupported";
       }
       axes[letter] = static_cast<std::int64_t>(dim++);
     }

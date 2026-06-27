@@ -288,6 +288,65 @@ TEST_CASE("Sum across multiple dimensions", "[tensor][ops][sum_dims]") {
     auto total = venus::eager::sum_dims<0, 1, 2>(tensor);
 
     REQUIRE(total.shape() == Shape(1, 1, 1));
-    REQUIRE(total.reshape<1>(Shape(1)).toScalar() == 300);
+    REQUIRE(total.toScalar() == 300);
   }
+}
+
+TEST_CASE("Einsum", "[tensor][ops][einsum]") {
+
+  SECTION("Vector Inner (Dot) Product (i,i->)") {
+    auto a = Tensor<int, Device::CPU, 1>(3);
+    a.iota(1);
+
+    auto b = Tensor<int, Device::CPU, 1>(3);
+    b.iota(1);
+
+    auto result = venus::eager::einsum<"i,i->">(a, b);
+    REQUIRE(result == 1 * 1 + 2 * 2 + 3 * 3);
+  }
+
+  SECTION("Vector Outer Product (i,j->)") {
+    auto a = Tensor<int, Device::CPU, 1>(3);
+    a.iota(1);
+
+    auto b = Tensor<int, Device::CPU, 1>(3);
+    b.iota(1);
+
+    auto result = venus::eager::einsum<"i,j->">(a, b);
+    REQUIRE(result == std::ranges::fold_left(a, 0, std::plus{}) *
+                          std::ranges::fold_left(b, 0, std::plus{}));
+  }
+
+  SECTION("Vector Hadamard (Element-Wise) Product (i,j->)") {
+    auto a = Tensor<int, Device::CPU, 1>(3);
+    a.iota(1);
+
+    auto b = Tensor<int, Device::CPU, 1>(3);
+    b.iota(1);
+
+    auto result = venus::eager::einsum<"i,i->i">(a, b);
+    REQUIRE(result[0] == 1 * 1);
+    REQUIRE(result[1] == 2 * 2);
+    REQUIRE(result[2] == 3 * 3);
+  }
+
+  // --- Diagonal not implemented for now ---
+  //SECTION("Matrix Trace (ii->)") {
+  //  auto matrix = Tensor<int, Device::CPU, 2>(3, 3);
+  //  matrix.iota(1);
+  //
+  //  auto result = venus::eager::einsum<"ii->">(matrix);
+  //  REQUIRE(result == 1 + 5 + 9);
+  //}
+  //
+  //SECTION("Matrix Diagonal Extraction (ii->i)") {
+  //  auto matrix = Tensor<int, Device::CPU, 2>(3, 3);
+  //  matrix.iota(1);
+  //
+  //  auto result = venus::eager::einsum<"ii->i">(matrix);
+  //  REQUIRE(result.shape() == Shape(3));
+  //  REQUIRE(result[0] == 1);
+  //  REQUIRE(result[1] == 5);
+  //  REQUIRE(result[2] == 9);
+  //}
 }
