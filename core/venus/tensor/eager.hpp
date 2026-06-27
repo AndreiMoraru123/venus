@@ -271,7 +271,7 @@ consteval auto count_sum_dims_for_op(std::size_t op_idx,
   return n;
 }
 
-template <std::size_t OpIdx, VenusStr Eqn>
+template <std::size_t OpIdx, ConstexprString Eqn>
 consteval auto compute_sum_dims_for_step() {
   constexpr auto eqn = Eqn.view();
   constexpr auto occ = compute_occurences(eqn);
@@ -583,7 +583,7 @@ auto sumproduct_pair(const Tensor<Elem1, Dev1, Rank1> &t1,
   return sum_dims<SumDims...>(product);
 }
 
-template <std::size_t OpIdx, VenusStr Eqn,
+template <std::size_t OpIdx, ConstexprString Eqn,
           template <typename, typename, std::size_t> class Tensor, Scalar Elem,
           typename Dev, std::size_t Rank>
   requires VenusTensor<Tensor<Elem, Dev, Rank>>
@@ -631,7 +631,8 @@ auto homogenize_operand(const Tensor<Elem, Dev, Rank> &t) {
   return homogenized;
 }
 
-template <VenusStr Eqn, std::size_t NumOut, typename... HomogenizedTensors>
+template <ConstexprString Eqn, std::size_t NumOut,
+          typename... HomogenizedTensors>
 auto _einsum_contract(HomogenizedTensors... tensors) {
   const auto &t0 = tensors...[0];
   constexpr auto initial_sum_dims = detail::compute_sum_dims_for_step<0, Eqn>();
@@ -661,7 +662,7 @@ auto _einsum_contract(HomogenizedTensors... tensors) {
   return detail::squeeze_to_rank<NumOut>(final_contracted);
 }
 
-template <VenusStr Eqn,
+template <ConstexprString Eqn,
           template <typename, typename, std::size_t> class... Tensors,
           typename... Ts, typename... Devs, std::size_t... Ranks>
   requires(VenusTensor<Tensors<Ts, Devs, Ranks>> && ...)
