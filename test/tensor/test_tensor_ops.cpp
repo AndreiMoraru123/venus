@@ -330,8 +330,36 @@ TEST_CASE("Einsum", "[tensor][ops][einsum]") {
     REQUIRE(result[2] == 3 * 3);
   }
 
+  SECTION("Batched Matrix Multiplication (bij,bjk->bik)") {
+    auto a = Tensor<int, Device::CPU, 3>(2, 2, 2);
+    a.iota(1); // Batch 0: [[1, 2], [3, 4]]
+               // Batch 1: [[5, 6], [7, 8]]
+
+    auto b = venus::eager::eye_like(a);
+
+    // Identity
+    auto result = venus::eager::einsum<"bij,bjk->bik">(a, b);
+    REQUIRE(result.shape() == Shape(2, 2, 2));
+    REQUIRE(venus::eager::equal(result, a));
+  }
+
+  SECTION("Implicit Mode (ij,jk)") {
+    auto a = Tensor<int, Device::CPU, 2>(2, 3);
+    a.iota(1);
+    auto b = Tensor<int, Device::CPU, 2>(3, 2);
+    b.iota(1);
+
+    // Because 'i' and 'k' appear once, implicit mode sorts them alphabetically
+    // to "ik".
+    auto result_implicit = venus::eager::einsum<"ij,jk">(a, b);
+    auto result_explicit = venus::eager::einsum<"ij,jk->ik">(a, b);
+
+    REQUIRE(result_implicit.shape() == Shape(2, 2));
+    REQUIRE(venus::eager::equal(result_implicit, result_explicit));
+  }
+
   // --- Diagonal not implemented for now ---
-  //SECTION("Matrix Trace (ii->)") {
+  // SECTION("Matrix Trace (ii->)") {
   //  auto matrix = Tensor<int, Device::CPU, 2>(3, 3);
   //  matrix.iota(1);
   //
@@ -339,7 +367,7 @@ TEST_CASE("Einsum", "[tensor][ops][einsum]") {
   //  REQUIRE(result == 1 + 5 + 9);
   //}
   //
-  //SECTION("Matrix Diagonal Extraction (ii->i)") {
+  // SECTION("Matrix Diagonal Extraction (ii->i)") {
   //  auto matrix = Tensor<int, Device::CPU, 2>(3, 3);
   //  matrix.iota(1);
   //

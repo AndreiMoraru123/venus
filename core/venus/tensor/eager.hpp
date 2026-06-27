@@ -247,7 +247,7 @@ consteval auto compute_axes_for_op(std::string_view eqn, std::size_t op_idx)
     if (op == op_idx) {
       auto letter = static_cast<std::size_t>(c - 'a');
       if (axes[letter] != -1) {
-         throw "einsum repeated label in one operand is diagonal, unsupported";
+        throw "einsum repeated label in one operand is diagonal, unsupported";
       }
       axes[letter] = static_cast<std::int64_t>(dim++);
     }
@@ -398,6 +398,24 @@ auto iota(const Tensor<Elem, Dev, Rank> &tensor, Idx i) {
 #else
   std::iota(result.begin(), result.end(), i);
 #endif
+  return result;
+}
+
+// Out-Of-Place Identity
+template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+          typename Dev, std::size_t Rank>
+  requires VenusTensor<Tensor<Elem, Dev, Rank>> && (Rank > 2)
+auto eye_like(const Tensor<Elem, Dev, Rank> &tensor) {
+  auto result = Tensor<Elem, Dev, Rank>(tensor.shape());
+  for (auto [flat, val] : std::views::zip(
+           std::views::iota(std::size_t{0}, tensor.size()), result)) {
+    auto midx = tensor.shape().offsetToIdx(flat);
+    if (midx[Rank - 2] == midx[Rank - 1]) {
+      val = 1;
+    } else {
+      val = 0;
+    }
+  }
   return result;
 }
 

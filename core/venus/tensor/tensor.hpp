@@ -256,10 +256,10 @@ public:
 
   auto toScalar() const -> Tensor<TElem, TDevice, 0> {
     if (size() != 1) {
-      throw std::runtime_error(
-          std::format("toScalar can only be called on tensors with exactly 1 element."
-                      "Tensor size is {}, while the size of a scalar is 1.",
-                      size()));
+      throw std::runtime_error(std::format(
+          "toScalar can only be called on tensors with exactly 1 element."
+          "Tensor size is {}, while the size of a scalar is 1.",
+          size()));
     }
     return Tensor<TElem, TDevice, 0>(*std::ranges::data(*this));
   }
@@ -375,6 +375,21 @@ public:
 #else
     std::iota(self.begin(), self.end(), i);
 #endif
+  }
+
+  // In-Place Identity
+  void eye(this auto &&self)
+    requires(!std::is_const_v<std::remove_reference_t<decltype(self)>>)
+  {
+    for (auto [flat, val] :
+         std::views::zip(std::views::iota(std::size_t{0}, self.size()), self)) {
+      auto midx = self.m_shape.offsetToIdx(flat);
+      if (midx[Rank - 2] == midx[Rank - 1]) {
+        val = 1;
+      } else {
+        val = 0;
+      }
+    }
   }
 
   // * Proxy pattern for indexing elements (know when I'm reading vs writing)
