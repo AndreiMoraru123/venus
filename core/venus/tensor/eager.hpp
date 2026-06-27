@@ -636,7 +636,7 @@ auto _einsum_contract(HomogenizedTensors... tensors) {
   }(std::make_index_sequence<initial_sum_dims.size()>{});
 
   auto final_contracted = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-    auto current = initial_result;
+    auto current = std::move(initial_result);
     auto step = [&]<std::size_t OpIdx>() {
       constexpr auto sum_dims = detail::compute_sum_dims_for_step<OpIdx, Eqn>();
       const auto &next_op = tensors...[OpIdx];
