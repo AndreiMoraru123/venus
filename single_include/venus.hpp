@@ -685,18 +685,360 @@ static constexpr bool HasNonTrivialPolicy =
 // =============================================================
 } // namespace venus
 
+
 #include <algorithm>
+#include <cstddef>
+#include <iostream>
+#include <print>
+#include <string_view>
+
+template <std::size_t N> struct ConstexprString {
+  char data[N]{};
+
+  constexpr ConstexprString(const char (&str)[N]) { std::copy_n(str, N, data); }
+
+  constexpr auto operator<=>(const ConstexprString &) const = default;
+
+  [[nodiscard]] constexpr auto view() const -> std::string_view {
+    return {data, N - 1};
+  }
+};
+
+template <std::size_t N> ConstexprString(const char (&)[N]) -> ConstexprString<N>;
+
+template <ConstexprString Str> void print_str() {
+  std::println("{}", Str.view());
+  std::cout << Str.data << "\n";
+}
+#include <algorithm>
+#include <array>
 #include <concepts>
 #include <cstddef>
+#include <cstdint>
 #include <format>
 #include <functional>
 #include <numeric>
 #include <ranges>
 #include <stdexcept>
-#include <tuple>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 
+
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <cstddef>
+#include <format>
+#include <functional>
+#include <mdspan>
+#include <sstream>
+#include <stdexcept>
+#include <string_view>
+#include <type_traits>
+#include <utility>
+
+namespace venus {
+
+template <typename... Dimensions>
+concept SizeTLike = (std::is_convertible_v<Dimensions, std::size_t> and ...);
+
+template <std::size_t Rank> class Shape {
+  static_assert(Rank > 0);
+
+public:
+  static constexpr std::size_t rank = Rank;
+
+  constexpr explicit Shape() = default;
+
+  template <SizeTLike... Dimensions>
+    requires(sizeof...(Dimensions) == Rank)
+  constexpr explicit Shape(Dimensions... shapes)
+      : m_dims({static_cast<std::size_t>(shapes)...}) {}
+
+  template <SizeTLike... Dimensions>
+    requires(sizeof...(Dimensions) != Rank)
+  constexpr explicit Shape(Dimensions...) = delete;
+
+  constexpr explicit Shape(std::array<std::size_t, Rank> dims) noexcept
+      : m_dims(std::move(dims)) {}
+
+  constexpr auto operator==(const Shape &val) const -> bool {
+    return m_dims == val.m_dims;
+  }
+
+  template <size_t otherRank>
+  auto constexpr operator==(const Shape<otherRank> & /*unused*/) const -> bool {
+    return false;
+  }
+
+  [[nodiscard]] constexpr auto count() const -> std::size_t {
+    return std::ranges::fold_left(m_dims, static_cast<std::size_t>(1),
+                                  std::multiplies<>());
+  }
+
+  constexpr auto operator[](size_t idx) const -> std::size_t {
+    if (std::is_constant_evaluated()) {
+      if (idx >= rank) {
+        // TODO: This won't actually throw, do I really need comptime? (shape)
+        throw std::out_of_range("Index out of bounds for Shape");
+      }
+    } else {
+      assert(idx < rank);
+    }
+    return m_dims[idx];
+  }
+
+  constexpr auto offsetToIdx(std::size_t offset) const
+      -> std::array<std::size_t, rank> {
+    std::array<std::size_t, rank> result{};
+    for (int i = (int)rank - 1; i >= 0 && offset > 0; --i) {
+      result[i] = offset % m_dims[i];
+      offset /= m_dims[i];
+    }
+    if (offset != 0) {
+      throw std::runtime_error("Offset out of bounds!");
+    }
+    return result;
+  }
+
+  constexpr auto
+  idxToOffset(const std::array<std::size_t, rank> &idx_array) const
+      -> std::size_t {
+    for (std::size_t i = 0; i < rank; ++i) {
+      if (idx_array[i] >= m_dims[i]) {
+        throw std::out_of_range("Index out of bounds in Shape::idxToOffset");
+      }
+    }
+    std::size_t offset = 0;
+    std::size_t stride = 1;
+    for (int i = (int)rank - 1; i >= 0; --i) {
+      offset += idx_array[i] * stride;
+      stride *= m_dims[i];
+    }
+    return offset;
+  }
+
+  template <SizeTLike... Dimensions>
+  constexpr auto idxToOffset(Dimensions... indices) const -> std::size_t {
+    static_assert(sizeof...(Dimensions) == rank, "Wrong number of indices");
+
+    // ? The accessor policy in mdspan should be able to perform this (???)
+    // TODO: Move bounds checking up to tensor logic when mdspan::at lands
+    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p3383r0.html
+    const std::array<std::size_t, rank> idx_array = {
+        static_cast<std::size_t>(indices)...};
+    for (std::size_t i = 0; i < rank; ++i) {
+      if (idx_array[i] >= m_dims[i]) {
+        throw std::out_of_range("Index out of bounds in Shape::idxToOffset");
+      }
+    }
+
+    auto mapping = createMapping(std::make_index_sequence<rank>{});
+    return mapping(indices...);
+  }
+
+  constexpr static auto fromNestedInitializerList(auto nested_init_list)
+      -> Shape<rank> {
+    Shape<rank> shape;
+
+    auto extract = [](const auto &list, std::size_t level,
+                      std::array<std::size_t, rank> &dims,
+                      const auto &self_ref) -> void {
+      if constexpr (requires {
+                      list.size();
+                      list.size() > 0;
+                    }) {
+        dims[level] = list.size();
+
+        if (level + 1 < rank) {
+          if constexpr (requires { (*list.begin()).size(); }) {
+            const auto expected_size = (*list.begin()).size();
+
+            // Horizontal: Check all sibling lists at this level
+            for (const auto &sublist : list) {
+              if (sublist.size() != expected_size) {
+                throw std::invalid_argument(
+                    std::format("Inconsistent dimensions at dimension {}: "
+                                "expected size {}, got {}",
+                                level + 2, expected_size, sublist.size()));
+              }
+            }
+            // Vertical: Go deeper into each sublist
+            for (const auto &sublist : list) {
+              self_ref(sublist, level + 1, dims, self_ref);
+            }
+          }
+        }
+      }
+    };
+
+    extract(nested_init_list, 0, shape.m_dims, extract);
+    return shape;
+  }
+
+  // Range Ops
+  constexpr auto begin(this auto &&self) {
+    return std::forward<decltype(self)>(self).m_dims.begin();
+  }
+  constexpr auto end(this auto &&self) {
+    return std::forward<decltype(self)>(self).m_dims.end();
+  }
+
+  constexpr auto cbegin(this auto &&self) {
+    return std::as_const(self).m_dims.begin();
+  }
+  constexpr auto cend(this auto &&self) {
+    return std::as_const(self).m_dims.end();
+  }
+
+  constexpr auto size() const { return m_dims.size(); }
+
+  template <std::size_t SubRank, std::size_t StartOffset = 0>
+    requires(StartOffset + SubRank <= rank)
+  constexpr auto slice() const -> Shape<SubRank> {
+    std::array<std::size_t, SubRank> sub_dims{};
+    for (std::size_t i = 0; i < SubRank; i++) {
+      sub_dims[i] = m_dims[StartOffset + i];
+    }
+    return Shape<SubRank>(sub_dims);
+  }
+
+private:
+  std::array<std::size_t, Rank> m_dims{};
+
+  template <std::size_t... Is>
+  constexpr auto createMapping(std::index_sequence<Is...> /*unused*/) const {
+    using Extents = std::dextents<std::size_t, rank>;
+    using Mapping = std::layout_right::mapping<Extents>;
+    return Mapping{Extents{m_dims[Is]...}};
+  }
+};
+
+template <> class Shape<0> {
+public:
+  static constexpr std::size_t rank = 0;
+
+  explicit Shape() = default;
+
+  static constexpr auto count() -> std::size_t { return 1; }
+
+  constexpr auto operator==(const Shape &val) const -> bool { return true; }
+
+  template <size_t otherRank>
+  auto constexpr operator==(const Shape<otherRank> & /*unused*/) const -> bool {
+    return false;
+  }
+};
+
+template <std::size_t Rank>
+auto operator<<(std::ostream &os, const Shape<Rank> &shape) -> std::ostream & {
+  os << std::string_view{"("};
+  std::size_t count = 0;
+  for (auto dim : shape) {
+    if (count > 0)
+      os << std::string_view{", "};
+    count++;
+    os << dim;
+  }
+  return os << std::string_view{")"};
+}
+
+template <std::size_t Rank = 0>
+auto operator<<(std::ostream &os, const Shape<0> &shape) -> std::ostream & {
+  return os << std::string_view{"()"};
+}
+
+template <SizeTLike... TShapeParameter>
+explicit Shape(TShapeParameter...) -> Shape<sizeof...(TShapeParameter)>;
+
+template <std::size_t N, std::size_t Rank>
+constexpr auto get(const Shape<Rank> &shape) noexcept -> std::size_t {
+  static_assert(N < Rank, "Index out of bounds in Shape::get");
+  return shape[N];
+}
+
+// -------------------------- BROADCASTING --------------------------
+template <std::size_t RankOut, std::size_t RankIn>
+constexpr auto
+project_broadcast_idx(const std::array<std::size_t, RankOut> &in_idx,
+                      const Shape<RankIn> &in_shape) {
+  std::array<std::size_t, RankIn> out_idx{};
+  constexpr auto offset = RankOut - RankIn;
+
+  for (std::size_t i = 0; i < RankIn; i++) {
+    out_idx[i] = in_shape[i] == 1 ? 0 : in_idx[i + offset];
+  }
+
+  return out_idx;
+}
+
+template <std::size_t RankOut, std::size_t Rank1, std::size_t Rank2>
+constexpr auto broadcast(const Shape<Rank1> &s1, const Shape<Rank2> &s2)
+    -> Shape<RankOut> {
+  std::array<std::size_t, RankOut> out{};
+
+  for (std::size_t i = 0; i < RankOut; i++) {
+    auto d1 = std::size_t{1};
+    auto d2 = std::size_t{1};
+
+    if (i >= RankOut - Rank1)
+      d1 = s1[i - (RankOut - Rank1)];
+    if (i >= RankOut - Rank2)
+      d2 = s2[i - (RankOut - Rank2)];
+
+    if (d1 != d2 && d1 != 1 && d2 != 1) {
+      throw std::invalid_argument(
+          std::format("Tensor shapes are not broadcastable, t1 has shape {}, "
+                      "whereas t2 has shape {}.",
+                      s1, s2));
+    }
+
+    out[i] = std::max(d1, d2);
+  }
+
+  return Shape<RankOut>(out);
+}
+
+template <std::size_t RankOut, std::size_t Rank1, std::size_t Rank2,
+          std::size_t Rank3>
+constexpr auto broadcast(const Shape<Rank1> &s1, const Shape<Rank2> &s2,
+                         const Shape<Rank3> &s3) {
+  constexpr auto Rank12 = std::max(Rank1, Rank2);
+  auto s12 = broadcast<Rank12>(s1, s2);
+  return broadcast<RankOut>(s12, s3);
+}
+
+// ------------------------------------------------------------------
+
+} // namespace venus
+
+template <std::size_t Rank> struct std::formatter<venus::Shape<Rank>> {
+  constexpr auto parse(std::format_parse_context &ctx) { return ctx.begin(); }
+
+  auto format(const venus::Shape<Rank> &shape, std::format_context &ctx) const {
+    std::ostringstream oss;
+    oss << shape;
+    return std::format_to(ctx.out(), "{}", oss.str());
+  }
+};
+
+namespace std {
+template <std::size_t Rank>
+struct tuple_size<venus::Shape<Rank>>
+    : std::integral_constant<std::size_t, Rank> {};
+
+template <std::size_t N, std::size_t Rank>
+struct tuple_element<N, venus::Shape<Rank>> {
+  static_assert(N < Rank, "Index out of bounds in tuple_elements for Shape");
+  using type = std::size_t;
+};
+
+} // namespace std
+
+inline constexpr std::size_t NUMBER_OF_LETTERS = 'z' - 'a' + 1;
+using AlphabetArray = std::array<std::int64_t, NUMBER_OF_LETTERS>;
+using PositionLabels = std::array<std::size_t, NUMBER_OF_LETTERS>;
 
 namespace venus {
 template <typename T>
@@ -753,42 +1095,31 @@ namespace venus::eager {
 // Details =====================================================
 namespace detail {
 
-template <template <typename, typename, std::size_t> class Tensor,
-          typename Elem1, typename Dev1, std::size_t Rank1, typename Elem2,
-          typename Dev2, std::size_t Rank2>
-  requires(Rank1 == Rank2) && std::is_same_v<Dev1, Dev2> &&
-          std::is_same_v<Dev1, Device::CPU>
-void validate_binary_op(const Tensor<Elem1, Dev1, Rank1> &t1,
-                        const Tensor<Elem2, Dev2, Rank2> &t2) {
-  if constexpr (Rank1 > 0) {
-    if (t1.shape() != t2.shape()) {
-      throw std::invalid_argument("Tensor shapes must match");
-    }
-  }
-}
-
 template <typename Op, template <typename, typename, std::size_t> class Tensor,
           typename Elem1, typename Dev1, std::size_t Rank1, typename Elem2,
           typename Dev2, std::size_t Rank2>
 auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
                            const Tensor<Elem2, Dev2, Rank2> &t2) {
 
-  validate_binary_op(t1, t2);
   using ResultElementType = std::common_type_t<Elem1, Elem2>;
 
   if constexpr (Rank1 == 0 && Rank2 == 0) {
     return Tensor<ResultElementType, Dev1, 0>(op(t1.value(), t2.value()));
   } else {
-    if (t1.shape() != t2.shape()) {
-      throw std::invalid_argument("Tensor shapes must match");
+    constexpr std::size_t RankOut = std::max(Rank1, Rank2);
+    auto out_shape = broadcast<RankOut>(t1.shape(), t2.shape());
+
+    auto result = Tensor<ResultElementType, Dev1, RankOut>(out_shape);
+
+    for (std::size_t flat = 0; flat < result.size(); ++flat) {
+      auto out_idx = out_shape.offsetToIdx(flat);
+
+      auto idx1 = project_broadcast_idx(out_idx, t1.shape());
+      auto idx2 = project_broadcast_idx(out_idx, t2.shape());
+
+      result.data()[flat] = op(t1[idx1], t2[idx2]);
     }
 
-    auto result = Tensor<ResultElementType, Dev1, Rank1>(t1.shape());
-    const auto computation =
-        std::views::zip(t1, t2) | std::views::transform([op](auto &&tuple) {
-          return std::apply(op, tuple);
-        });
-    std::ranges::copy(computation, result.begin());
     return result;
   }
 }
@@ -801,25 +1132,196 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
                             const Tensor<Elem2, Dev2, Rank2> &t2,
                             const Tensor<Elem3, Dev3, Rank3> &t3) {
 
-  validate_binary_op(t1, t2);
-  validate_binary_op(t2, t3);
   using ResultElementType = std::common_type_t<Elem1, Elem2, Elem3>;
 
   if constexpr (Rank1 == 0 && Rank2 == 0 && Rank3 == 0) {
     return Tensor<ResultElementType, Dev1, 0>(
         op(t1.value(), t2.value(), t3.value()));
   } else {
-    if (t1.shape() != t2.shape() || t2.shape() != t3.shape()) {
-      throw std::invalid_argument("Tensor shapes must match");
+    constexpr std::size_t RankOut = std::max({Rank1, Rank2, Rank3});
+    auto out_shape = broadcast<RankOut>(t1.shape(), t2.shape(), t3.shape());
+
+    auto result = Tensor<ResultElementType, Dev1, RankOut>(out_shape);
+
+    for (std::size_t flat = 0; flat < result.size(); ++flat) {
+      auto out_idx = out_shape.offsetToIdx(flat);
+
+      auto idx1 = project_broadcast_idx(out_idx, t1.shape());
+      auto idx2 = project_broadcast_idx(out_idx, t2.shape());
+      auto idx3 = project_broadcast_idx(out_idx, t3.shape());
+
+      result.data()[flat] = op(t1[idx1], t2[idx2], t3[idx3]);
     }
 
-    auto result = Tensor<ResultElementType, Dev1, Rank1>(t1.shape());
-    const auto computation =
-        std::views::zip(t1, t2, t3) | std::views::transform([op](auto &&tuple) {
-          return std::apply(op, tuple);
-        });
-    std::ranges::copy(computation, result.begin());
     return result;
+  }
+}
+
+consteval auto count_operands(const std::string_view eqn) {
+  auto lhs = eqn.substr(0, eqn.find("->"));
+  return std::ranges::count(lhs, ',') + 1;
+}
+
+consteval auto compute_occurences(const std::string_view eqn) -> AlphabetArray {
+  AlphabetArray occ{};
+  auto lhs = eqn.substr(0, eqn.find("->"));
+  for (char c : lhs)
+    if (c != ',')
+      occ[c - 'a']++;
+
+  return occ;
+}
+
+consteval auto compute_last_occurence(const std::string_view eqn)
+    -> AlphabetArray {
+  AlphabetArray last{};
+  last.fill(-1);
+  auto lhs = eqn.substr(0, eqn.find("->"));
+  std::int64_t operand = 0;
+  for (char c : lhs) {
+    if (c == ',') {
+      operand++;
+      continue;
+    }
+    last[c - 'a'] = operand;
+  }
+  return last;
+}
+
+consteval auto compute_sorted_position(const std::string_view eqn,
+                                       const AlphabetArray &occ)
+    -> AlphabetArray {
+  AlphabetArray pos{};
+  pos.fill(-1);
+  auto arrow = eqn.find("->");
+  std::int64_t dim = 0;
+  if (arrow != std::string_view::npos) {
+    auto rhs = eqn.substr(arrow + 2);
+    for (char c : rhs)
+      pos[c - 'a'] = dim++;
+  } else {
+    for (std::size_t i = 0; i < NUMBER_OF_LETTERS; i++)
+      if (occ[i] == 1)
+        pos[i] = dim++;
+  }
+  // summation indices
+  for (std::size_t i = 0; i < NUMBER_OF_LETTERS; i++)
+    if (occ[i] > 0 && pos[i] == -1)
+      pos[i] = dim++;
+  return pos;
+}
+
+consteval auto count_total_dimensions(std::string_view eqn) -> std::size_t {
+  auto occ = compute_occurences(eqn);
+  return std::ranges::count_if(occ, [](auto &&val) { return val > 0; });
+}
+
+consteval auto count_output_dimensions(std::string_view eqn,
+                                       const AlphabetArray &occ)
+    -> std::size_t {
+  auto arrow = eqn.find("->");
+  if (arrow != std::string_view::npos) {
+    return eqn.size() - (arrow + 2);
+  }
+  return std::ranges::count(occ, 1);
+}
+
+consteval auto compute_position_labels(const AlphabetArray &sorted_pos)
+    -> PositionLabels {
+  PositionLabels pos_labels{};
+  for (std::size_t letter = 0; letter < NUMBER_OF_LETTERS; letter++) {
+    if (sorted_pos[letter] >= 0)
+      pos_labels[static_cast<std::size_t>(sorted_pos[letter])] = letter;
+  }
+  return pos_labels;
+}
+
+consteval auto count_dims_for_op(std::string_view eqn, std::size_t op_idx) {
+  auto lhs = eqn.substr(0, eqn.find("->"));
+  std::size_t op = 0, n = 0;
+  for (char c : lhs) {
+    if (c == ',') {
+      ++op;
+      continue;
+    }
+    if (op == op_idx)
+      n++;
+  }
+  return n;
+}
+
+consteval auto compute_axes_for_op(std::string_view eqn, std::size_t op_idx)
+    -> AlphabetArray {
+  AlphabetArray axes{};
+  axes.fill(-1);
+
+  auto lhs = eqn.substr(0, eqn.find("->"));
+  std::size_t op = 0, dim = 0;
+  for (char c : lhs) {
+    if (c == ',') {
+      ++op;
+      dim = 0;
+      continue;
+    }
+    if (op == op_idx) {
+      auto letter = static_cast<std::size_t>(c - 'a');
+      if (axes[letter] != -1) {
+        throw "einsum repeated label in one operand is diagonal, unsupported";
+      }
+      axes[letter] = static_cast<std::int64_t>(dim++);
+    }
+  }
+
+  return axes;
+}
+
+consteval auto count_sum_dims_for_op(std::size_t op_idx,
+                                     const AlphabetArray &last_occ,
+                                     const AlphabetArray &sorted_pos,
+                                     std::size_t num_output_dims)
+    -> std::size_t {
+  std::size_t n = 0;
+  for (std::size_t letter = 0; letter < NUMBER_OF_LETTERS; ++letter) {
+    if (last_occ[letter] == static_cast<std::int64_t>(op_idx) &&
+        sorted_pos[letter] >= static_cast<std::int64_t>(num_output_dims)) {
+      ++n;
+    }
+  }
+  return n;
+}
+
+template <std::size_t OpIdx, ConstexprString Eqn>
+consteval auto compute_sum_dims_for_step() {
+  constexpr auto eqn = Eqn.view();
+  constexpr auto occ = compute_occurences(eqn);
+  constexpr auto last_occ = compute_last_occurence(eqn);
+  constexpr auto sorted_pos = compute_sorted_position(eqn, occ);
+  constexpr auto num_out = count_output_dimensions(eqn, occ);
+
+  constexpr auto count =
+      count_sum_dims_for_op(OpIdx, last_occ, sorted_pos, num_out);
+  std::array<std::size_t, count> dims{};
+  std::size_t n = 0;
+
+  for (std::size_t letter = 0; letter < NUMBER_OF_LETTERS; ++letter) {
+    if (last_occ[letter] == static_cast<std::int64_t>(OpIdx) &&
+        sorted_pos[letter] >= static_cast<std::int64_t>(num_out)) {
+      dims[n++] = static_cast<std::size_t>(sorted_pos[letter]);
+    }
+  }
+  return dims;
+}
+
+template <std::size_t ToRank,
+          template <typename, typename, std::size_t> class Tensor,
+          typename Elem, typename Dev, std::size_t FromRank>
+  requires VenusTensor<Tensor<Elem, Dev, FromRank>>
+auto squeeze_to_rank(const Tensor<Elem, Dev, FromRank> &tensor) {
+  if constexpr (ToRank == 0) {
+    return tensor.toScalar();
+  } else {
+    return tensor.template reshape<ToRank>(
+        tensor.shape().template slice<ToRank>());
   }
 }
 
@@ -875,7 +1377,6 @@ template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
            VenusTensor<Tensor<Elem2, Dev2, Rank2>>
 auto equal(const Tensor<Elem1, Dev1, Rank1> &t1,
            const Tensor<Elem2, Dev2, Rank2> &t2) -> bool {
-  detail::validate_binary_op(t1, t2);
   if (t1.shape() != t2.shape()) {
     return false;
   }
@@ -890,7 +1391,6 @@ template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
            VenusTensor<Tensor<Elem2, Dev2, Rank2>>
 auto inner(const Tensor<Elem1, Dev1, Rank1> &t1,
            const Tensor<Elem2, Dev2, Rank2> &t2) {
-  detail::validate_binary_op(t1, t2);
   using ResultElementType = std::common_type_t<Elem1, Elem2>;
   auto product =
       std::inner_product(t1.begin(), t1.end(), t2.begin(), ResultElementType{});
@@ -917,6 +1417,16 @@ auto iota(const Tensor<Elem, Dev, Rank> &tensor, Idx i) {
 #else
   std::iota(result.begin(), result.end(), i);
 #endif
+  return result;
+}
+
+// Out-Of-Place Identity
+template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+          typename Dev, std::size_t Rank>
+  requires VenusTensor<Tensor<Elem, Dev, Rank>> && (Rank > 2)
+auto eye_like(const Tensor<Elem, Dev, Rank> &tensor) {
+  auto result = Tensor<Elem, Dev, Rank>(tensor.shape());
+  result.eye();
   return result;
 }
 
@@ -1043,237 +1553,159 @@ auto where(T1 &&t1, T2 &&t2, T3 &&t3) {
   }
 }
 
+template <std::size_t Dim,
+          template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+          typename Dev, std::size_t Rank>
+  requires VenusTensor<Tensor<Elem, Dev, Rank>>
+auto sum_dim(const Tensor<Elem, Dev, Rank> &t) -> Tensor<Elem, Dev, Rank> {
+  static_assert(Dim < Rank, "sum dimension cannot be higher than tensor rank");
+
+  const auto &in_shape = t.shape();
+  std::array<std::size_t, Rank> out_ext;
+  for (std::size_t i = 0; i < Rank; i++) {
+    out_ext[i] = (i == Dim) ? 1 : in_shape[i];
+  }
+
+  auto out_shape = Shape<Rank>(out_ext);
+  auto result = Tensor<Elem, Dev, Rank>(out_shape);
+
+  for (auto [flat, val] :
+       std::views::zip(std::views::iota(std::size_t{0}, t.size()), t)) {
+    auto midx = in_shape.offsetToIdx(flat);
+    midx[Dim] = 0;
+    result[midx] += val;
+  }
+
+  return result;
+}
+
+template <std::size_t... Dims,
+          template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+          typename Dev, std::size_t Rank>
+  requires VenusTensor<Tensor<Elem, Dev, Rank>>
+auto sum_dims(const Tensor<Elem, Dev, Rank> &t) -> Tensor<Elem, Dev, Rank> {
+  auto result = t;
+  ((result = sum_dim<Dims>(result)), ...);
+  return result;
+}
+
+// Sumproduct pair
+template <std::size_t... SumDims,
+          template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
+          typename Dev1, Scalar Elem2, typename Dev2, std::size_t Rank1,
+          std::size_t Rank2>
+  requires VenusTensor<Tensor<Elem1, Dev1, Rank1>> &&
+           VenusTensor<Tensor<Elem2, Dev2, Rank2>>
+auto sumproduct_pair(const Tensor<Elem1, Dev1, Rank1> &t1,
+                     const Tensor<Elem2, Dev2, Rank2> &t2) {
+  auto product = t1 * t2;
+  return sum_dims<SumDims...>(product);
+}
+
+template <std::size_t OpIdx, ConstexprString Eqn,
+          template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+          typename Dev, std::size_t Rank>
+  requires VenusTensor<Tensor<Elem, Dev, Rank>>
+auto homogenize_operand(const Tensor<Elem, Dev, Rank> &t) {
+  constexpr auto eqn = Eqn.view();
+  constexpr auto occ = detail::compute_occurences(eqn);
+  constexpr auto sorted_pos = detail::compute_sorted_position(eqn, occ);
+  constexpr auto total_dims = detail::count_total_dimensions(eqn);
+  constexpr auto pos_labels = detail::compute_position_labels(sorted_pos);
+  constexpr auto axes = detail::compute_axes_for_op(eqn, OpIdx);
+
+  std::array<std::size_t, total_dims> homo_dims{};
+  for (std::size_t i = 0; i < total_dims; ++i) {
+    auto letter = pos_labels[i];
+    auto axis = axes[letter];
+    if (axis != -1) {
+      homo_dims[i] = t.shape()[axis];
+    } else {
+      homo_dims[i] = 1;
+    }
+  }
+
+  auto homo_shape = Shape<total_dims>(homo_dims);
+
+  auto project_homo_idx =
+      [pos_labels, axes](const std::array<std::size_t, total_dims> &out_idx) {
+        std::array<std::size_t, Rank> orig_idx{};
+        for (std::size_t i = 0; i < total_dims; ++i) {
+          auto letter = pos_labels[i];
+          auto axis = axes[letter];
+          if (axis != -1) {
+            orig_idx[static_cast<std::size_t>(axis)] = out_idx[i];
+          }
+        }
+        return orig_idx;
+      };
+
+  auto homogenized = Tensor<Elem, Dev, total_dims>(homo_shape);
+  for (std::size_t flat = 0; flat < homogenized.size(); ++flat) {
+    auto out_idx = homo_shape.offsetToIdx(flat);
+    auto orig_idx = project_homo_idx(out_idx);
+    homogenized.data()[flat] = t[orig_idx];
+  }
+
+  return homogenized;
+}
+
+template <ConstexprString Eqn, std::size_t NumOut,
+          typename... HomogenizedTensors>
+auto _einsum_contract(HomogenizedTensors... tensors) {
+  const auto &t0 = tensors...[0];
+  constexpr auto initial_sum_dims = detail::compute_sum_dims_for_step<0, Eqn>();
+
+  auto initial_result = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+    if constexpr (sizeof...(Is) > 0) {
+      return sum_dims<initial_sum_dims[Is]...>(t0);
+    } else {
+      return t0;
+    }
+  }(std::make_index_sequence<initial_sum_dims.size()>{});
+
+  auto final_contracted = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+    auto current = std::move(initial_result);
+    auto step = [&]<std::size_t OpIdx>() {
+      constexpr auto sum_dims = detail::compute_sum_dims_for_step<OpIdx, Eqn>();
+      const auto &next_op = tensors...[OpIdx];
+      current = [&]<std::size_t... Js>(std::index_sequence<Js...>) {
+        return sumproduct_pair<sum_dims[Js]...>(current, next_op);
+        ;
+      }(std::make_index_sequence<sum_dims.size()>{});
+    };
+    (step.template operator()<Is + 1>(), ...);
+    return current;
+  }(std::make_index_sequence<sizeof...(HomogenizedTensors) - 1>{});
+
+  return detail::squeeze_to_rank<NumOut>(final_contracted);
+}
+
+template <ConstexprString Eqn,
+          template <typename, typename, std::size_t> class... Tensors,
+          typename... Ts, typename... Devs, std::size_t... Ranks>
+  requires(VenusTensor<Tensors<Ts, Devs, Ranks>> && ...)
+auto einsum(const Tensors<Ts, Devs, Ranks> &...tensors) {
+  static_assert((std::is_same_v<Devs, Device::CPU> && ...),
+                "Einsum is currently only supported on CPU");
+  constexpr auto eqn = Eqn.view();
+  constexpr auto occ = detail::compute_occurences(eqn);
+  constexpr auto num_out = detail::count_output_dimensions(eqn, occ);
+
+  static_assert(detail::count_operands(eqn) == sizeof...(Tensors),
+                "operand count mismatch");
+
+  return [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+    return _einsum_contract<Eqn, num_out>(
+        homogenize_operand<Is, Eqn>(tensors)...);
+  }(std::make_index_sequence<sizeof...(Tensors)>{});
+}
+
 } // namespace venus::eager
 
 #undef REGISTER_BINARY_OP
 
-#include <algorithm>
-#include <array>
-#include <cassert>
-#include <cstddef>
-#include <format>
-#include <functional>
-#include <mdspan>
-#include <sstream>
-#include <stdexcept>
-#include <string_view>
-#include <type_traits>
-#include <utility>
 
-namespace venus {
-
-template <typename... Dimensions>
-concept SizeTLike = (std::is_convertible_v<Dimensions, std::size_t> and ...);
-
-template <std::size_t Rank> class Shape {
-  static_assert(Rank > 0);
-
-public:
-  static constexpr std::size_t rank = Rank;
-
-  constexpr explicit Shape() = default;
-
-  template <SizeTLike... Dimensions>
-    requires(sizeof...(Dimensions) == Rank)
-  constexpr explicit Shape(Dimensions... shapes)
-      : m_dims({static_cast<std::size_t>(shapes)...}) {}
-
-  template <SizeTLike... Dimensions>
-    requires(sizeof...(Dimensions) != Rank)
-  constexpr explicit Shape(Dimensions...) = delete;
-
-  constexpr auto operator==(const Shape &val) const -> bool {
-    return m_dims == val.m_dims;
-  }
-
-  template <size_t otherRank>
-  auto constexpr operator==(const Shape<otherRank> & /*unused*/) const -> bool {
-    return false;
-  }
-
-  [[nodiscard]] constexpr auto count() const -> std::size_t {
-    return std::ranges::fold_left(m_dims, static_cast<std::size_t>(1),
-                                  std::multiplies<>());
-  }
-
-  constexpr auto operator[](size_t idx) const -> std::size_t {
-    if (std::is_constant_evaluated()) {
-      if (idx >= rank) {
-        // TODO: This won't actually throw, do I really need comptime? (shape)
-        throw std::out_of_range("Index out of bounds for Shape");
-      }
-    } else {
-      assert(idx < rank);
-    }
-    return m_dims[idx];
-  }
-
-  constexpr auto offsetToIdx(std::size_t offset) const
-      -> std::array<std::size_t, rank> {
-    std::array<std::size_t, rank> result{};
-    for (int i = (int)rank - 1; i >= 0 && offset > 0; --i) {
-      result[i] = offset % m_dims[i];
-      offset /= m_dims[i];
-    }
-    if (offset != 0) {
-      throw std::runtime_error("Offset out of bounds!");
-    }
-    return result;
-  }
-
-  template <SizeTLike... Dimensions>
-  constexpr auto idxToOffset(Dimensions... indices) const -> std::size_t {
-    static_assert(sizeof...(Dimensions) == rank, "Wrong number of indices");
-
-    // ? The accessor policy in mdspan should be able to perform this (???)
-    // TODO: Move bounds checking up to tensor logic when mdspan::at lands
-    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p3383r0.html
-    const std::array<std::size_t, rank> idx_array = {
-        static_cast<std::size_t>(indices)...};
-    for (std::size_t i = 0; i < rank; ++i) {
-      if (idx_array[i] >= m_dims[i]) {
-        throw std::out_of_range("Index out of bounds in Shape::idxToOffset");
-      }
-    }
-
-    auto mapping = createMapping(std::make_index_sequence<rank>{});
-    return mapping(indices...);
-  }
-
-  constexpr static auto fromNestedInitializerList(auto nested_init_list)
-      -> Shape<rank> {
-    Shape<rank> shape;
-
-    auto extract = [](const auto &list, std::size_t level,
-                      std::array<std::size_t, rank> &dims,
-                      const auto &self_ref) -> void {
-      if constexpr (requires {
-                      list.size();
-                      list.size() > 0;
-                    }) {
-        dims[level] = list.size();
-
-        if (level + 1 < rank) {
-          if constexpr (requires { (*list.begin()).size(); }) {
-            const auto expected_size = (*list.begin()).size();
-
-            // Horizontal: Check all sibling lists at this level
-            for (const auto &sublist : list) {
-              if (sublist.size() != expected_size) {
-                throw std::invalid_argument(
-                    std::format("Inconsistent dimensions at dimension {}: "
-                                "expected size {}, got {}",
-                                level + 2, expected_size, sublist.size()));
-              }
-            }
-            // Vertical: Go deeper into each sublist
-            for (const auto &sublist : list) {
-              self_ref(sublist, level + 1, dims, self_ref);
-            }
-          }
-        }
-      }
-    };
-
-    extract(nested_init_list, 0, shape.m_dims, extract);
-    return shape;
-  }
-
-  // Range Ops
-  constexpr auto begin(this auto &&self) {
-    return std::forward<decltype(self)>(self).m_dims.begin();
-  }
-  constexpr auto end(this auto &&self) {
-    return std::forward<decltype(self)>(self).m_dims.end();
-  }
-
-  constexpr auto cbegin(this auto &&self) {
-    return std::as_const(self).m_dims.begin();
-  }
-  constexpr auto cend(this auto &&self) {
-    return std::as_const(self).m_dims.end();
-  }
-
-  constexpr auto size() const { return m_dims.size(); }
-
-private:
-  std::array<std::size_t, Rank> m_dims{};
-
-  template <std::size_t... Is>
-  constexpr auto createMapping(std::index_sequence<Is...> /*unused*/) const {
-    using Extents = std::dextents<std::size_t, rank>;
-    using Mapping = std::layout_right::mapping<Extents>;
-    return Mapping{Extents{m_dims[Is]...}};
-  }
-};
-
-template <> class Shape<0> {
-public:
-  static constexpr std::size_t rank = 0;
-
-  explicit Shape() = default;
-
-  static constexpr auto count() -> std::size_t { return 1; }
-
-  constexpr auto operator==(const Shape &val) const -> bool { return true; }
-
-  template <size_t otherRank>
-  auto constexpr operator==(const Shape<otherRank> & /*unused*/) const -> bool {
-    return false;
-  }
-};
-
-template <std::size_t Rank>
-auto operator<<(std::ostream &os, const Shape<Rank> &shape) -> std::ostream & {
-  os << std::string_view{"("};
-  std::size_t count = 0;
-  for (auto dim : shape) {
-    if (count > 0)
-      os << std::string_view{", "};
-    count++;
-    os << dim;
-  }
-  return os << std::string_view{")"};
-}
-
-template <std::size_t Rank = 0>
-auto operator<<(std::ostream &os, const Shape<0> &shape) -> std::ostream & {
-  return os << std::string_view{"()"};
-}
-
-template <SizeTLike... TShapeParameter>
-explicit Shape(TShapeParameter...) -> Shape<sizeof...(TShapeParameter)>;
-
-template <std::size_t N, std::size_t Rank>
-constexpr auto get(const Shape<Rank> &shape) noexcept -> std::size_t {
-  static_assert(N < Rank, "Index out of bounds in Shape::get");
-  return shape[N];
-}
-
-} // namespace venus
-
-template <std::size_t Rank> struct std::formatter<venus::Shape<Rank>> {
-  constexpr auto parse(std::format_parse_context &ctx) { return ctx.begin(); }
-
-  auto format(const venus::Shape<Rank> &shape, std::format_context &ctx) const {
-    std::ostringstream oss;
-    oss << shape;
-    return std::format_to(ctx.out(), "{}", oss.str());
-  }
-};
-
-namespace std {
-template <std::size_t Rank>
-struct tuple_size<venus::Shape<Rank>>
-    : std::integral_constant<std::size_t, Rank> {};
-
-template <std::size_t N, std::size_t Rank>
-struct tuple_element<N, venus::Shape<Rank>> {
-  static_assert(N < Rank, "Index out of bounds in tuple_elements for Shape");
-  using type = std::size_t;
-};
-
-} // namespace std
 #include <algorithm>
 #include <cassert>
 #include <compare>
@@ -1525,22 +1957,16 @@ public:
 
   auto shape() const noexcept -> const Shape<Rank> & { return m_shape; }
 
-  [[nodiscard]] auto numel() const noexcept -> std::size_t {
-    return m_shape.count();
-  }
-
   [[nodiscard]] auto unique() const -> bool { return not m_mem.isShared(); }
 
   auto clone() const -> Tensor { return Tensor(*this); }
 
   auto toScalar() const -> Tensor<TElem, TDevice, 0> {
-    static_assert(Rank == 1,
-                  "ToScalar can only be called on 1D tensors with 1 element.");
     if (size() != 1) {
-      throw std::runtime_error(
-          std::format("Cannot convert non-scalar tensor to scalar tensor: "
-                      "Tensor size is {}, while the size of a scalar is 1.",
-                      size()));
+      throw std::runtime_error(std::format(
+          "toScalar can only be called on tensors with exactly 1 element."
+          "Tensor size is {}, while the size of a scalar is 1.",
+          size()));
     }
     return Tensor<TElem, TDevice, 0>(*std::ranges::data(*this));
   }
@@ -1658,6 +2084,27 @@ public:
 #endif
   }
 
+  // In-Place Identity
+  void eye(this auto &&self)
+    requires(!std::is_const_v<std::remove_reference_t<decltype(self)>>)
+  {
+    for (auto [flat, val] :
+         std::views::zip(std::views::iota(std::size_t{0}, self.size()), self)) {
+      auto midx = self.m_shape.offsetToIdx(flat);
+      if (midx[Rank - 2] == midx[Rank - 1]) {
+        val = 1;
+      } else {
+        val = 0;
+      }
+    }
+  }
+
+  static auto eye(const Shape<rank>& shape) {
+    auto tensor = Tensor(shape);
+    tensor.eye();
+    return tensor;
+  }
+
   // * Proxy pattern for indexing elements (know when I'm reading vs writing)
   // ? Price to pay: have to specify all possible operator overloads that I want
   class ElementProxy {
@@ -1739,6 +2186,15 @@ public:
         self.m_shape.idxToOffset(static_cast<std::size_t>(indices)...);
     return self.data()[offset];
   }
+
+  auto operator[](this auto &&self,
+                  const std::array<std::size_t, Rank> &indices) {
+    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+                  "Indexing is currently only supported on CPU");
+    const auto offset = self.m_shape.idxToOffset(indices);
+    return self.data()[offset];
+  }
+
 #else
   // Tensor indexing
   template <typename... Indices>
@@ -1748,6 +2204,18 @@ public:
                   "Indexing is currently only supported on CPU");
     const auto offset =
         self.m_shape.idxToOffset(static_cast<std::size_t>(indices)...);
+    if constexpr (std::is_const_v<std::remove_reference_t<decltype(self)>>) {
+      return self.data()[offset];
+    } else {
+      return ElementProxy(self, self.data()[offset]);
+    }
+  }
+
+  auto operator[](this auto &&self,
+                  const std::array<std::size_t, Rank> &indices) {
+    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+                  "Indexing is currently only supported on CPU");
+    const auto offset = self.m_shape.idxToOffset(indices);
     if constexpr (std::is_const_v<std::remove_reference_t<decltype(self)>>) {
       return self.data()[offset];
     } else {
@@ -1795,6 +2263,17 @@ public:
 
   auto data(this auto &&self) -> decltype(auto) {
     return std::forward<decltype(self)>(self).m_mem.ptr();
+  }
+
+  template <std::size_t NewRank>
+  auto reshape(this auto &&self, Shape<NewRank> new_shape) {
+    if (new_shape.count() != self.size()) {
+      throw std::invalid_argument(std::format(
+          "Cannot reshape tensor of size {} to new shape of size {}",
+          self.size(), new_shape.count()));
+    }
+
+    return Tensor<ElementType, DeviceType, NewRank>(self.m_mem, new_shape);
   }
 };
 
@@ -1857,8 +2336,6 @@ public:
   }
 
   auto value() const noexcept { return data()[0]; }
-
-  [[nodiscard]] auto numel() const noexcept -> std::size_t { return 1; }
 
   auto operator==(const Tensor &tensor) const noexcept -> bool {
     return value() == tensor.value();
