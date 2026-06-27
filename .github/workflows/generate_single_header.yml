@@ -3,11 +3,15 @@ name: "Generate Single Header"
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
   run:
     name: Generate
     runs-on: ubuntu-latest
+    container:
+      image: gcc:16
 
     permissions:
       contents: write
