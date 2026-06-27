@@ -1,10 +1,10 @@
+#include "catch2/catch_template_test_macros.hpp"
 #include <cassert>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include <functional>
 #include <venus/memory/device.hpp>
 
-#include <cmath>
 #include <tuple>
 #include <venus/tensor/tensor.hpp>
 
@@ -232,5 +232,62 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
       REQUIRE(d.lowLevel().rawMemory()[i] ==
               a.lowLevel().rawMemory()[i] + b_col_bc.lowLevel().rawMemory()[i]);
     }
+  }
+}
+
+TEMPLATE_TEST_CASE_SIG("Sum across a single dimension",
+                       "[tensor][ops][sum_dim]",
+                       ((std::size_t target_dim), target_dim), 0, 1, 2) {
+  auto tensor = Tensor<int, Device::CPU, 3>(2, 3, 4);
+  tensor.iota(1);
+
+  auto result = venus::eager::sum_dim<target_dim>(tensor);
+  STATIC_REQUIRE(tensor.rank == result.rank);
+
+  auto [M, N, K] = tensor.shape();
+  auto expected_shape = Shape(target_dim == 0 ? 1 : M, target_dim == 1 ? 1 : N,
+                              target_dim == 2 ? 1 : K);
+  REQUIRE(result.shape() == expected_shape);
+  auto expected = Tensor<int, Device::CPU, 3>(expected_shape);
+
+  for (std::size_t i = 0; i < M; ++i) {
+    for (std::size_t j = 0; j < N; ++j) {
+      for (std::size_t k = 0; k < K; ++k) {
+        std::size_t ei = (target_dim == 0) ? 0 : i;
+        std::size_t ej = (target_dim == 1) ? 0 : j;
+        std::size_t ek = (target_dim == 2) ? 0 : k;
+        expected[ei, ej, ek] += tensor[i, j, k];
+      }
+    }
+  }
+
+  REQUIRE(venus::eager::equal(result, expected));
+}
+
+TEST_CASE("Sum across multiple dimensions", "[tensor][ops][sum_dims]") {
+  auto tensor = Tensor<int, Device::CPU, 3>(2, 3, 4);
+  tensor.iota(1);
+
+  SECTION("Composition: sum_dims<0, 1> == sum_dim<0> + sum_dim<1>") {
+    auto multi_sum = venus::eager::sum_dims<0, 1>(tensor);
+    auto seq_sum = venus::eager::sum_dim<0>(venus::eager::sum_dim<1>(tensor));
+
+    REQUIRE(multi_sum.shape() == Shape(1, 1, 4));
+    REQUIRE(venus::eager::equal(multi_sum, seq_sum));
+  }
+
+  SECTION("Order invariance: sum_dims<0, 2> == sum_dims<2, 0>") {
+    auto sum_02 = venus::eager::sum_dims<0, 2>(tensor);
+    auto sum_20 = venus::eager::sum_dims<2, 0>(tensor);
+
+    REQUIRE(sum_02.shape() == Shape(1, 3, 1));
+    REQUIRE(venus::eager::equal(sum_02, sum_20));
+  }
+
+  SECTION("Total reduction") {
+    auto total = venus::eager::sum_dims<0, 1, 2>(tensor);
+
+    REQUIRE(total.shape() == Shape(1, 1, 1));
+    REQUIRE(total.reshape<1>(Shape(1)).toScalar() == 300);
   }
 }
