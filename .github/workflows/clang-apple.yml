@@ -20,9 +20,9 @@ jobs:
           xcode-version: latest-stable
 
       - name: Setup CMake
-        uses: jwlawson/actions-setup-cmake@v1.14
+        uses: jwlawson/actions-setup-cmake@v2
         with:
-          cmake-version: "4.2.0"
+          cmake-version: "latest"
 
       - name: Create build directory
         run: mkdir -p build
@@ -30,8 +30,7 @@ jobs:
       - name: Configure with CMake
         working-directory: build
         run: |
-          export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DBUILD_TESTING=ON -DBUILD_DEMO=OFF
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBUILD_DEMO=OFF
 
       - name: Build
         working-directory: build

@@ -250,22 +250,16 @@ public:
 
   auto shape() const noexcept -> const Shape<Rank> & { return m_shape; }
 
-  [[nodiscard]] auto numel() const noexcept -> std::size_t {
-    return m_shape.count();
-  }
-
   [[nodiscard]] auto unique() const -> bool { return not m_mem.isShared(); }
 
   auto clone() const -> Tensor { return Tensor(*this); }
 
   auto toScalar() const -> Tensor<TElem, TDevice, 0> {
-    static_assert(Rank == 1,
-                  "ToScalar can only be called on 1D tensors with 1 element.");
     if (size() != 1) {
-      throw std::runtime_error(
-          std::format("Cannot convert non-scalar tensor to scalar tensor: "
-                      "Tensor size is {}, while the size of a scalar is 1.",
-                      size()));
+      throw std::runtime_error(std::format(
+          "toScalar can only be called on tensors with exactly 1 element."
+          "Tensor size is {}, while the size of a scalar is 1.",
+          size()));
     }
     return Tensor<TElem, TDevice, 0>(*std::ranges::data(*this));
   }
@@ -383,6 +377,27 @@ public:
 #endif
   }
 
+  // In-Place Identity
+  void eye(this auto &&self)
+    requires(!std::is_const_v<std::remove_reference_t<decltype(self)>>)
+  {
+    for (auto [flat, val] :
+         std::views::zip(std::views::iota(std::size_t{0}, self.size()), self)) {
+      auto midx = self.m_shape.offsetToIdx(flat);
+      if (midx[Rank - 2] == midx[Rank - 1]) {
+        val = 1;
+      } else {
+        val = 0;
+      }
+    }
+  }
+
+  static auto eye(const Shape<rank>& shape) {
+    auto tensor = Tensor(shape);
+    tensor.eye();
+    return tensor;
+  }
+
   // * Proxy pattern for indexing elements (know when I'm reading vs writing)
   // ? Price to pay: have to specify all possible operator overloads that I want
   class ElementProxy {
@@ -464,6 +479,15 @@ public:
         self.m_shape.idxToOffset(static_cast<std::size_t>(indices)...);
     return self.data()[offset];
   }
+
+  auto operator[](this auto &&self,
+                  const std::array<std::size_t, Rank> &indices) {
+    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+                  "Indexing is currently only supported on CPU");
+    const auto offset = self.m_shape.idxToOffset(indices);
+    return self.data()[offset];
+  }
+
 #else
   // Tensor indexing
   template <typename... Indices>
@@ -473,6 +497,18 @@ public:
                   "Indexing is currently only supported on CPU");
     const auto offset =
         self.m_shape.idxToOffset(static_cast<std::size_t>(indices)...);
+    if constexpr (std::is_const_v<std::remove_reference_t<decltype(self)>>) {
+      return self.data()[offset];
+    } else {
+      return ElementProxy(self, self.data()[offset]);
+    }
+  }
+
+  auto operator[](this auto &&self,
+                  const std::array<std::size_t, Rank> &indices) {
+    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+                  "Indexing is currently only supported on CPU");
+    const auto offset = self.m_shape.idxToOffset(indices);
     if constexpr (std::is_const_v<std::remove_reference_t<decltype(self)>>) {
       return self.data()[offset];
     } else {
@@ -520,6 +556,17 @@ public:
 
   auto data(this auto &&self) -> decltype(auto) {
     return std::forward<decltype(self)>(self).m_mem.ptr();
+  }
+
+  template <std::size_t NewRank>
+  auto reshape(this auto &&self, Shape<NewRank> new_shape) {
+    if (new_shape.count() != self.size()) {
+      throw std::invalid_argument(std::format(
+          "Cannot reshape tensor of size {} to new shape of size {}",
+          self.size(), new_shape.count()));
+    }
+
+    return Tensor<ElementType, DeviceType, NewRank>(self.m_mem, new_shape);
   }
 };
 
@@ -582,8 +629,6 @@ public:
   }
 
   auto value() const noexcept { return data()[0]; }
-
-  [[nodiscard]] auto numel() const noexcept -> std::size_t { return 1; }
 
   auto operator==(const Tensor &tensor) const noexcept -> bool {
     return value() == tensor.value();

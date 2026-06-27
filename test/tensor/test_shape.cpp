@@ -110,4 +110,32 @@ TEST_CASE("Shape semantics", "[shape]") {
         std::ranges::all_of(shape, [](const auto &x) { return x > 0; });
     REQUIRE(all_positive == true);
   }
+
+  SECTION("Slicing") {
+    constexpr auto shape = Shape<3>(2, 3, 4);
+
+    constexpr auto sliced = shape.slice<2, 0>();
+    STATIC_REQUIRE(sliced.rank == 2);
+    STATIC_REQUIRE(sliced.count() == 2 * 3);
+    REQUIRE(sliced[0] == 2);
+    REQUIRE(sliced[1] == 3);
+
+    constexpr auto sliced_offset = shape.slice<2, 1>();
+    STATIC_REQUIRE(sliced_offset.rank == 2);
+    STATIC_REQUIRE(sliced_offset.count() == 3 * 4);
+    REQUIRE(sliced_offset[0] == 3);
+    REQUIRE(sliced_offset[1] == 4);
+  }
+
+  SECTION("Broadcasting") {
+    constexpr auto s1 = Shape<3>(2, 3, 4);
+    constexpr auto s2 = Shape<3>(2, 1, 4);
+
+    constexpr auto broad_s = broadcast<3>(s1, s2);
+    STATIC_REQUIRE(broad_s.rank == 3);
+    STATIC_REQUIRE(broad_s.count() == 2 * 3 * 4);
+    REQUIRE(broad_s[0] == 2);
+    REQUIRE(broad_s[1] == 3);
+    REQUIRE(broad_s[2] == 4);
+  }
 }

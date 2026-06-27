@@ -35,6 +35,9 @@ public:
     requires(sizeof...(Dimensions) != Rank)
   constexpr explicit Shape(Dimensions...) = delete;
 
+  constexpr explicit Shape(std::array<std::size_t, Rank> dims) noexcept
+      : m_dims(std::move(dims)) {}
+
   constexpr auto operator==(const Shape &val) const -> bool {
     return m_dims == val.m_dims;
   }
@@ -72,6 +75,23 @@ public:
       throw std::runtime_error("Offset out of bounds!");
     }
     return result;
+  }
+
+  constexpr auto
+  idxToOffset(const std::array<std::size_t, rank> &idx_array) const
+      -> std::size_t {
+    for (std::size_t i = 0; i < rank; ++i) {
+      if (idx_array[i] >= m_dims[i]) {
+        throw std::out_of_range("Index out of bounds in Shape::idxToOffset");
+      }
+    }
+    std::size_t offset = 0;
+    std::size_t stride = 1;
+    for (int i = (int)rank - 1; i >= 0; --i) {
+      offset += idx_array[i] * stride;
+      stride *= m_dims[i];
+    }
+    return offset;
   }
 
   template <SizeTLike... Dimensions>
@@ -149,6 +169,16 @@ public:
 
   constexpr auto size() const { return m_dims.size(); }
 
+  template <std::size_t SubRank, std::size_t StartOffset = 0>
+    requires(StartOffset + SubRank <= rank)
+  constexpr auto slice() const -> Shape<SubRank> {
+    std::array<std::size_t, SubRank> sub_dims{};
+    for (std::size_t i = 0; i < SubRank; i++) {
+      sub_dims[i] = m_dims[StartOffset + i];
+    }
+    return Shape<SubRank>(sub_dims);
+  }
+
 private:
   std::array<std::size_t, Rank> m_dims{};
 
@@ -202,6 +232,59 @@ constexpr auto get(const Shape<Rank> &shape) noexcept -> std::size_t {
   static_assert(N < Rank, "Index out of bounds in Shape::get");
   return shape[N];
 }
+
+// -------------------------- BROADCASTING --------------------------
+template <std::size_t RankOut, std::size_t RankIn>
+constexpr auto
+project_broadcast_idx(const std::array<std::size_t, RankOut> &in_idx,
+                      const Shape<RankIn> &in_shape) {
+  std::array<std::size_t, RankIn> out_idx{};
+  constexpr auto offset = RankOut - RankIn;
+
+  for (std::size_t i = 0; i < RankIn; i++) {
+    out_idx[i] = in_shape[i] == 1 ? 0 : in_idx[i + offset];
+  }
+
+  return out_idx;
+}
+
+template <std::size_t RankOut, std::size_t Rank1, std::size_t Rank2>
+constexpr auto broadcast(const Shape<Rank1> &s1, const Shape<Rank2> &s2)
+    -> Shape<RankOut> {
+  std::array<std::size_t, RankOut> out{};
+
+  for (std::size_t i = 0; i < RankOut; i++) {
+    auto d1 = std::size_t{1};
+    auto d2 = std::size_t{1};
+
+    if (i >= RankOut - Rank1)
+      d1 = s1[i - (RankOut - Rank1)];
+    if (i >= RankOut - Rank2)
+      d2 = s2[i - (RankOut - Rank2)];
+
+    if (d1 != d2 && d1 != 1 && d2 != 1) {
+      throw std::invalid_argument(
+          std::format("Tensor shapes are not broadcastable, t1 has shape {}, "
+                      "whereas t2 has shape {}.",
+                      s1, s2));
+    }
+
+    out[i] = std::max(d1, d2);
+  }
+
+  return Shape<RankOut>(out);
+}
+
+template <std::size_t RankOut, std::size_t Rank1, std::size_t Rank2,
+          std::size_t Rank3>
+constexpr auto broadcast(const Shape<Rank1> &s1, const Shape<Rank2> &s2,
+                         const Shape<Rank3> &s3) {
+  constexpr auto Rank12 = std::max(Rank1, Rank2);
+  auto s12 = broadcast<Rank12>(s1, s2);
+  return broadcast<RankOut>(s12, s3);
+}
+
+// ------------------------------------------------------------------
 
 } // namespace venus
 

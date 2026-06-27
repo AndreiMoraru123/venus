@@ -1,10 +1,10 @@
+#include "catch2/catch_template_test_macros.hpp"
 #include <cassert>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include <functional>
 #include <venus/memory/device.hpp>
 
-#include <cmath>
 #include <tuple>
 #include <venus/tensor/tensor.hpp>
 
@@ -187,4 +187,194 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
       }
     }
   }
+
+  SECTION("Broadcasting") {
+    // clang-format off
+    auto a = Tensor<int, Device::CPU, 2>{{
+        {0,  1,  2,  3},
+        {4,  5,  6,  7},
+        {8,  9,  10, 11},
+        {12, 13, 14, 15}}};
+
+    auto b_row = Tensor<int, Device::CPU, 2>{{4, 3, 2, 1}};
+    auto b_col = Tensor<int, Device::CPU, 2>{
+      {4},
+      {3},
+      {2},
+      {1}};
+
+    auto c = a + b_row;
+    auto d = a + b_col;
+
+    REQUIRE(venus::eager::equal(c, b_row + a));
+    REQUIRE(venus::eager::equal(d, b_col + a));
+
+    REQUIRE(c.shape() == a.shape());
+    REQUIRE(d.shape() == a.shape());
+
+    auto b_row_bc = Tensor<int, Device::CPU, 2>{{
+      {4, 3, 2, 1},
+      {4, 3, 2, 1},
+      {4, 3, 2, 1},
+      {4, 3, 2, 1}
+    }};
+    auto b_col_bc = Tensor<int, Device::CPU, 2>{{
+      {4, 4, 4, 4},
+      {3, 3, 3, 3},
+      {2, 2, 2, 2},
+      {1, 1, 1, 1}
+    }};
+    // clang-format on
+
+    for (std::size_t i = 0; i < a.shape().count(); i++) {
+      REQUIRE(c.lowLevel().rawMemory()[i] ==
+              a.lowLevel().rawMemory()[i] + b_row_bc.lowLevel().rawMemory()[i]);
+      REQUIRE(d.lowLevel().rawMemory()[i] ==
+              a.lowLevel().rawMemory()[i] + b_col_bc.lowLevel().rawMemory()[i]);
+    }
+  }
+}
+
+TEMPLATE_TEST_CASE_SIG("Sum across a single dimension",
+                       "[tensor][ops][sum_dim]",
+                       ((std::size_t target_dim), target_dim), 0, 1, 2) {
+  auto tensor = Tensor<int, Device::CPU, 3>(2, 3, 4);
+  tensor.iota(1);
+
+  auto result = venus::eager::sum_dim<target_dim>(tensor);
+  STATIC_REQUIRE(tensor.rank == result.rank);
+
+  auto [M, N, K] = tensor.shape();
+  auto expected_shape = Shape(target_dim == 0 ? 1 : M, target_dim == 1 ? 1 : N,
+                              target_dim == 2 ? 1 : K);
+  REQUIRE(result.shape() == expected_shape);
+  auto expected = Tensor<int, Device::CPU, 3>(expected_shape);
+
+  for (std::size_t i = 0; i < M; ++i) {
+    for (std::size_t j = 0; j < N; ++j) {
+      for (std::size_t k = 0; k < K; ++k) {
+        std::size_t ei = (target_dim == 0) ? 0 : i;
+        std::size_t ej = (target_dim == 1) ? 0 : j;
+        std::size_t ek = (target_dim == 2) ? 0 : k;
+        expected[ei, ej, ek] += tensor[i, j, k];
+      }
+    }
+  }
+
+  REQUIRE(venus::eager::equal(result, expected));
+}
+
+TEST_CASE("Sum across multiple dimensions", "[tensor][ops][sum_dims]") {
+  auto tensor = Tensor<int, Device::CPU, 3>(2, 3, 4);
+  tensor.iota(1);
+
+  SECTION("Composition: sum_dims<0, 1> == sum_dim<0> + sum_dim<1>") {
+    auto multi_sum = venus::eager::sum_dims<0, 1>(tensor);
+    auto seq_sum = venus::eager::sum_dim<0>(venus::eager::sum_dim<1>(tensor));
+
+    REQUIRE(multi_sum.shape() == Shape(1, 1, 4));
+    REQUIRE(venus::eager::equal(multi_sum, seq_sum));
+  }
+
+  SECTION("Order invariance: sum_dims<0, 2> == sum_dims<2, 0>") {
+    auto sum_02 = venus::eager::sum_dims<0, 2>(tensor);
+    auto sum_20 = venus::eager::sum_dims<2, 0>(tensor);
+
+    REQUIRE(sum_02.shape() == Shape(1, 3, 1));
+    REQUIRE(venus::eager::equal(sum_02, sum_20));
+  }
+
+  SECTION("Total reduction") {
+    auto total = venus::eager::sum_dims<0, 1, 2>(tensor);
+
+    REQUIRE(total.shape() == Shape(1, 1, 1));
+    REQUIRE(total.toScalar() == 300);
+  }
+}
+
+TEST_CASE("Einsum", "[tensor][ops][einsum]") {
+
+  SECTION("Vector Inner (Dot) Product (i,i->)") {
+    auto a = Tensor<int, Device::CPU, 1>(3);
+    a.iota(1);
+
+    auto b = Tensor<int, Device::CPU, 1>(3);
+    b.iota(1);
+
+    auto result = venus::eager::einsum<"i,i->">(a, b);
+    REQUIRE(result == 1 * 1 + 2 * 2 + 3 * 3);
+  }
+
+  SECTION("Vector Outer Product (i,j->)") {
+    auto a = Tensor<int, Device::CPU, 1>(3);
+    a.iota(1);
+
+    auto b = Tensor<int, Device::CPU, 1>(3);
+    b.iota(1);
+
+    auto result = venus::eager::einsum<"i,j->">(a, b);
+    REQUIRE(result == std::ranges::fold_left(a, 0, std::plus{}) *
+                          std::ranges::fold_left(b, 0, std::plus{}));
+  }
+
+  SECTION("Vector Hadamard (Element-Wise) Product (i,j->)") {
+    auto a = Tensor<int, Device::CPU, 1>(3);
+    a.iota(1);
+
+    auto b = Tensor<int, Device::CPU, 1>(3);
+    b.iota(1);
+
+    auto result = venus::eager::einsum<"i,i->i">(a, b);
+    REQUIRE(result[0] == 1 * 1);
+    REQUIRE(result[1] == 2 * 2);
+    REQUIRE(result[2] == 3 * 3);
+  }
+
+  SECTION("Batched Matrix Multiplication (bij,bjk->bik)") {
+    auto a = Tensor<int, Device::CPU, 3>(2, 2, 2);
+    a.iota(1); // Batch 0: [[1, 2], [3, 4]]
+               // Batch 1: [[5, 6], [7, 8]]
+
+    auto b = venus::eager::eye_like(a);
+
+    // Identity
+    auto result = venus::eager::einsum<"bij,bjk->bik">(a, b);
+    REQUIRE(result.shape() == Shape(2, 2, 2));
+    REQUIRE(venus::eager::equal(result, a));
+  }
+
+  SECTION("Implicit Mode (ij,jk)") {
+    auto a = Tensor<int, Device::CPU, 2>(2, 3);
+    a.iota(1);
+    auto b = Tensor<int, Device::CPU, 2>(3, 2);
+    b.iota(1);
+
+    // Because 'i' and 'k' appear once, implicit mode sorts them alphabetically
+    // to "ik".
+    auto result_implicit = venus::eager::einsum<"ij,jk">(a, b);
+    auto result_explicit = venus::eager::einsum<"ij,jk->ik">(a, b);
+
+    REQUIRE(result_implicit.shape() == Shape(2, 2));
+    REQUIRE(venus::eager::equal(result_implicit, result_explicit));
+  }
+
+  // --- Diagonal not implemented for now ---
+  // SECTION("Matrix Trace (ii->)") {
+  //  auto matrix = Tensor<int, Device::CPU, 2>(3, 3);
+  //  matrix.iota(1);
+  //
+  //  auto result = venus::eager::einsum<"ii->">(matrix);
+  //  REQUIRE(result == 1 + 5 + 9);
+  //}
+  //
+  // SECTION("Matrix Diagonal Extraction (ii->i)") {
+  //  auto matrix = Tensor<int, Device::CPU, 2>(3, 3);
+  //  matrix.iota(1);
+  //
+  //  auto result = venus::eager::einsum<"ii->i">(matrix);
+  //  REQUIRE(result.shape() == Shape(3));
+  //  REQUIRE(result[0] == 1);
+  //  REQUIRE(result[1] == 5);
+  //  REQUIRE(result[2] == 9);
+  //}
 }
