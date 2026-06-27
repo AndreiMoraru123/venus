@@ -1,12 +1,10 @@
 name: MSVC Windows
 
 on:
-  # do this until msvc workflow addopts C++26 pack indexing
-  workflow_dispatch:
-#  push:
-#    branches: [main]
-#  pull_request:
-#    branches: [main]
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
   build-msvc:
