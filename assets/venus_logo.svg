@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 148.39 190">
+  <defs>
+    <style>
+      .uuid-d52590fb-4bb7-4374-9d1e-5ddeb2b54e42 {
+        fill: url(#uuid-f773dc12-da27-4ee6-88f8-484207b66f4e);
+      }
+
+      .uuid-d52590fb-4bb7-4374-9d1e-5ddeb2b54e42, .uuid-56da5c84-6bbb-493c-be2f-69a5ae8582dd, .uuid-3478b14c-75c0-4d4f-ab3f-d108b62de1fe, .uuid-604cfd5e-35c5-49cd-91fe-b3c86a16656a, .uuid-587d0668-b255-4931-a9e3-037119f0c200 {
+        stroke-width: 0px;
+      }
+
+      .uuid-56da5c84-6bbb-493c-be2f-69a5ae8582dd {
+        fill: url(#uuid-a0862f54-5a29-444e-8030-5e11238f3c79);
+      }
+
+      .uuid-3478b14c-75c0-4d4f-ab3f-d108b62de1fe {
+        fill: #fff;
+      }
+
+      .uuid-604cfd5e-35c5-49cd-91fe-b3c86a16656a {
+        fill: #dd5b7c;
+      }
+
+      .uuid-587d0668-b255-4931-a9e3-037119f0c200 {
+        fill: #00132e;
+      }
+    </style>
+    <radialGradient id="uuid-f773dc12-da27-4ee6-88f8-484207b66f4e" cx="53.11" cy="31.34" fx="53.11" fy="31.34" r="100.97" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff"/>
+      <stop offset=".02" stop-color="#fff6f4"/>
+      <stop offset=".2" stop-color="#ffb4a5"/>
+      <stop offset=".28" stop-color="#ff9a86"/>
+      <stop offset=".36" stop-color="#ff8c81"/>
+      <stop offset=".51" stop-color="#ff6a76"/>
+      <stop offset=".61" stop-color="#ff4f6d"/>
+      <stop offset=".75" stop-color="#bb385e"/>
+      <stop offset="1" stop-color="#3e0e42"/>
+    </radialGradient>
+    <radialGradient id="uuid-a0862f54-5a29-444e-8030-5e11238f3c79" cx="53.11" cy="31.34" fx="53.11" fy="31.34" r="100.97" xlink:href="#uuid-f773dc12-da27-4ee6-88f8-484207b66f4e"/>
+  </defs>
+
+  <g id="uuid-f7c63dbc-6567-4f8c-876a-9795c1d2eace" data-name="Layer 1">
+    <g>
+      <path class="uuid-3478b14c-75c0-4d4f-ab3f-d108b62de1fe" d="m4.58,159.61l7.98,18.87h1.64l7.98-18.87h4.54l-9.99,22.63h-6.79L0,159.61h4.58Z"/>
+      <path class="uuid-3478b14c-75c0-4d4f-ab3f-d108b62de1fe" d="m54.47,159.61v3.76h-16.08v5.44h14.49v3.72h-14.49v5.89h16.7v3.81h-20.87v-22.63h20.26Z"/>
+      <path class="uuid-3478b14c-75c0-4d4f-ab3f-d108b62de1fe" d="m67.36,159.61l15.02,16.82v-16.82h4.13v22.63h-4.21l-15.02-16.9v16.9h-4.09v-22.63h4.17Z"/>
+      <path class="uuid-3478b14c-75c0-4d4f-ab3f-d108b62de1fe" d="m98.91,159.61v11.58c0,4.83,2.25,7.94,7.33,7.94s7.37-3.11,7.37-7.94v-11.58h4.13v11.54c0,7.49-4.46,11.66-11.5,11.66s-11.5-4.17-11.5-11.66v-11.54h4.17Z"/>
+      <path class="uuid-3478b14c-75c0-4d4f-ab3f-d108b62de1fe" d="m145.6,165.25c-2.7-1.76-5.36-2.5-9.04-2.5-5.03,0-6.3,1.43-6.3,3.03,0,1.68,1.43,2.17,3.56,2.41l7.04.82c4.67.57,7.53,2.62,7.53,6.59,0,4.95-4.71,7.2-11.5,7.2-4.54,0-7.98-.94-11.46-3.44l1.96-3.23c3.15,2.13,6.14,3.03,10.11,3.03s6.87-1.15,6.87-3.48c0-1.68-1.1-2.54-3.52-2.78l-7.45-.82c-4.46-.53-7.24-2.21-7.24-6.26,0-4.62,4.71-6.75,10.39-6.75,4.09,0,7.57.66,11.05,3.11l-2.01,3.07Z"/>
+    </g>
+    <g>
+      <path class="uuid-d52590fb-4bb7-4374-9d1e-5ddeb2b54e42" d="m74.27,104.06c-.02-.11-.03-.22-.05-.33-.02.11-.03.22-.05.33-5.86-31.44-32.91-55.42-65.78-56.54-2.28,6.87-3.53,14.21-3.53,21.85,0,38.31,31.06,69.37,69.37,69.37s69.37-31.06,69.37-69.37c0-7.64-1.25-14.98-3.53-21.85-32.87,1.12-59.93,25.09-65.78,56.54Z"/>
+      <path class="uuid-56da5c84-6bbb-493c-be2f-69a5ae8582dd" d="m74.21,78.8c4.93-27.13,25.62-48.75,52.25-55.03C113.75,9.21,95.06,0,74.21,0S34.68,9.21,21.96,23.77c26.63,6.28,47.32,27.91,52.25,55.03Z"/>
+    </g>
+  </g>
+</svg>
