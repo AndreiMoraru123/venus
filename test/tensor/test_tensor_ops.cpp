@@ -317,7 +317,7 @@ TEST_CASE("Einsum", "[tensor][ops][einsum]") {
                           std::ranges::fold_left(b, 0, std::plus{}));
   }
 
-  SECTION("Vector Hadamard (Element-Wise) Product (i,j->)") {
+  SECTION("Vector Hadamard (Element-Wise) Product (i,i->i)") {
     auto a = Tensor<int, Device::CPU, 1>(3);
     a.iota(1);
 
