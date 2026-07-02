@@ -704,12 +704,8 @@ template <std::size_t N> struct ConstexprString {
   }
 };
 
-template <std::size_t N> ConstexprString(const char (&)[N]) -> ConstexprString<N>;
-
-template <ConstexprString Str> void print_str() {
-  std::println("{}", Str.view());
-  std::cout << Str.data << "\n";
-}
+template <std::size_t N>
+ConstexprString(const char (&)[N]) -> ConstexprString<N>;
 #include <algorithm>
 #include <array>
 #include <concepts>
