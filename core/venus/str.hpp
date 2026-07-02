@@ -7,14 +7,14 @@
 
 namespace venus {
 template <std::size_t N> struct ConstexprString {
-  char data[N]{};
+  std::array<char, N> data{};
 
-  constexpr ConstexprString(const char (&str)[N]) { std::copy_n(str, N, data); }
+  constexpr ConstexprString(const char (&str)[N]) : data(std::to_array(str)) {}
 
   constexpr auto operator<=>(const ConstexprString &) const = default;
 
   [[nodiscard]] constexpr auto view() const -> std::string_view {
-    return {data, N - 1};
+    return {data.data(), N - 1};
   }
 };
 
