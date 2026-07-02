@@ -1,10 +1,11 @@
+#pragma once
 
 #include <algorithm>
 #include <cstddef>
 #include <iostream>
-#include <print>
 #include <string_view>
 
+namespace venus {
 template <std::size_t N> struct ConstexprString {
   char data[N]{};
 
@@ -19,3 +20,4 @@ template <std::size_t N> struct ConstexprString {
 
 template <std::size_t N>
 ConstexprString(const char (&)[N]) -> ConstexprString<N>;
+} // namespace venus
