@@ -9,6 +9,7 @@
 #include <iomanip>
 #include <ios>
 #include <iterator>
+#include <mdspan>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -475,9 +476,12 @@ public:
       -> ElementType {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Indexing is currently only supported on CPU");
-    const auto offset =
-        self.m_shape.idxToOffset(static_cast<std::size_t>(indices)...);
-    return self.data()[offset];
+    auto make_view = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+      return std::mdspan<ElementType, std::dims<Rank>>(self.data(),
+                                                       self.m_shape[Is]...);
+    };
+    auto view = make_view(std::make_index_sequence<Rank>{});
+    return view.at(static_cast<std::size_t>(indices)...);
   }
 
   auto operator[](this auto &&self,
@@ -495,12 +499,20 @@ public:
   auto operator[](this auto &&self, Indices... indices) {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Indexing is currently only supported on CPU");
-    const auto offset =
-        self.m_shape.idxToOffset(static_cast<std::size_t>(indices)...);
-    if constexpr (std::is_const_v<std::remove_reference_t<decltype(self)>>) {
-      return self.data()[offset];
+
+    constexpr bool isConst =
+        std::is_const_v<std::remove_reference_t<decltype(self)>>;
+    using ViewElem =
+        std::conditional_t<isConst, const ElementType, ElementType>;
+    auto make_view = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+      return std::mdspan<ViewElem, std::dims<Rank>>(self.data(),
+                                                    self.m_shape[Is]...);
+    };
+    auto view = make_view(std::make_index_sequence<Rank>{});
+    if constexpr (isConst) {
+      return view.at(static_cast<std::size_t>(indices)...);
     } else {
-      return ElementProxy(self, self.data()[offset]);
+      return ElementProxy(self, view.at(static_cast<std::size_t>(indices)...));
     }
   }
 
