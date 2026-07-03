@@ -2096,7 +2096,7 @@ public:
     }
   }
 
-  static auto eye(const Shape<rank>& shape) {
+  static auto eye(const Shape<rank> &shape) {
     auto tensor = Tensor(shape);
     tensor.eye();
     return tensor;
