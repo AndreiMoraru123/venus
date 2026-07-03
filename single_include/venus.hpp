@@ -728,6 +728,7 @@ ConstexprString(const char (&)[N]) -> ConstexprString<N>;
 #include <cstddef>
 #include <format>
 #include <functional>
+#include <mdspan>
 #include <sstream>
 #include <stdexcept>
 #include <string_view>
@@ -819,9 +820,19 @@ public:
   constexpr auto idxToOffset(Dimensions... indices) const -> std::size_t {
     static_assert(sizeof...(Dimensions) == rank, "Wrong number of indices");
 
+    // ? The accessor policy in mdspan should be able to perform this (???)
+    // TODO: Move bounds checking up to tensor logic when mdspan::at lands
+    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p3383r0.html
     const std::array<std::size_t, rank> idx_array = {
         static_cast<std::size_t>(indices)...};
-    return idxToOffset(idx_array);
+    for (std::size_t i = 0; i < rank; ++i) {
+      if (idx_array[i] >= m_dims[i]) {
+        throw std::out_of_range("Index out of bounds in Shape::idxToOffset");
+      }
+    }
+
+    auto mapping = createMapping(std::make_index_sequence<rank>{});
+    return mapping(indices...);
   }
 
   constexpr static auto fromNestedInitializerList(auto nested_init_list)
@@ -892,6 +903,13 @@ public:
 
 private:
   std::array<std::size_t, Rank> m_dims{};
+
+  template <std::size_t... Is>
+  constexpr auto createMapping(std::index_sequence<Is...> /*unused*/) const {
+    using Extents = std::dextents<std::size_t, rank>;
+    using Mapping = std::layout_right::mapping<Extents>;
+    return Mapping{Extents{m_dims[Is]...}};
+  }
 };
 
 template <> class Shape<0> {
@@ -1695,7 +1713,6 @@ auto einsum(const Tensors<Ts, Devs, Ranks> &...tensors) {
 #include <iomanip>
 #include <ios>
 #include <iterator>
-#include <mdspan>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -2162,12 +2179,9 @@ public:
       -> ElementType {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Indexing is currently only supported on CPU");
-    auto make_view = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-      return std::mdspan<ElementType, std::dims<Rank>>(self.data(),
-                                                       self.m_shape[Is]...);
-    };
-    auto view = make_view(std::make_index_sequence<Rank>{});
-    return view.at(static_cast<std::size_t>(indices)...);
+    const auto offset =
+        self.m_shape.idxToOffset(static_cast<std::size_t>(indices)...);
+    return self.data()[offset];
   }
 
   auto operator[](this auto &&self,
@@ -2185,20 +2199,12 @@ public:
   auto operator[](this auto &&self, Indices... indices) {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Indexing is currently only supported on CPU");
-
-    constexpr bool isConst =
-        std::is_const_v<std::remove_reference_t<decltype(self)>>;
-    using ViewElem =
-        std::conditional_t<isConst, const ElementType, ElementType>;
-    auto make_view = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-      return std::mdspan<ViewElem, std::dims<Rank>>(self.data(),
-                                                    self.m_shape[Is]...);
-    };
-    auto view = make_view(std::make_index_sequence<Rank>{});
-    if constexpr (isConst) {
-      return view.at(static_cast<std::size_t>(indices)...);
+    const auto offset =
+        self.m_shape.idxToOffset(static_cast<std::size_t>(indices)...);
+    if constexpr (std::is_const_v<std::remove_reference_t<decltype(self)>>) {
+      return self.data()[offset];
     } else {
-      return ElementProxy(self, view.at(static_cast<std::size_t>(indices)...));
+      return ElementProxy(self, self.data()[offset]);
     }
   }
 
