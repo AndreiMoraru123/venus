@@ -15,16 +15,23 @@ template <>
 struct Allocator<Device::CPU> {
   template <typename TElem>
   static std::shared_ptr<TElem> alloc(std::size_t p_elemSize) {
-    TElem *raw_buf = new TElem[p_elemSize];
+    // TElem *raw_buf =
+    //     static_cast<TElem *>(::operator new(p_elemSize * sizeof(TElem)));
+    TElem *raw_buf = std::allocator<TElem>{}.allocate(p_elemSize);
 
-    if constexpr (std::is_trivially_constructible_v<TElem>) {
-      std::memset(raw_buf, 0, p_elemSize * sizeof(TElem));
-    } else {
-      for (std::size_t i = 0; i < p_elemSize; ++i) {
-        new (raw_buf + i) TElem();
-      }
+    for (std::size_t i = 0; i < p_elemSize; ++i) {
+      new (raw_buf + i) TElem();
     }
-    return std::shared_ptr<TElem>(raw_buf, [](TElem *ptr) { delete[] ptr; });
+
+    return std::shared_ptr<TElem>(raw_buf, [p_elemSize](TElem *ptr) {
+      if constexpr (!std::is_trivially_destructible_v<TElem>) {
+        for (std::size_t i = 0; i < p_elemSize; ++i) {
+          ptr[i].~TElem();
+        }
+      }
+      // ::operator delete(ptr);
+      std::allocator<TElem>{}.deallocate(ptr, p_elemSize);
+    });
   }
 };
 } // namespace venus
@@ -50,23 +57,30 @@ private:
       for (auto &pool : memBuffer) {
         auto &blocks = pool.second;
         for (const auto &block : blocks) {
-          char *buf = (char *)(block);
-          delete[] buf;
+          std::free(block);
         }
         blocks.clear();
       }
     }
   };
 
-  struct Deleter {
-    Deleter(std::deque<void *> &p_refPool) : m_refPool(p_refPool) {}
+  template <typename T> struct Deleter {
+    Deleter(std::deque<void *> &p_refPool, std::size_t p_count)
+        : m_refPool(p_refPool), m_count(p_count) {}
     void operator()(void *p_val) const {
+      if constexpr (!std::is_trivially_destructible_v<T>) {
+        T *typed = static_cast<T *>(p_val);
+        for (std::size_t i = 0; i < m_count; i++) {
+          typed[i].~T();
+        }
+      }
       std::scoped_lock<std::mutex> guard(m_mutex);
       m_refPool.push_back(p_val);
     }
 
   private:
     std::deque<void *> &m_refPool;
+    std::size_t m_count;
   };
 
 public:
@@ -90,22 +104,18 @@ public:
     auto &slot = m_pool.memBuffer[p_elemSize];
 
     if (slot.empty()) {
-      raw_buf = (T *)new char[p_elemSize];
+      raw_buf = static_cast<T *>(std::calloc(1, p_elemSize));
     } else {
       void *mem = slot.back();
       slot.pop_back();
       raw_buf = (T *)mem;
     }
 
-    if constexpr (std::is_trivially_constructible_v<T>) {
-      std::memset(raw_buf, 0, p_elemSize);
-    } else {
-      std::size_t count = p_elemSize / sizeof(T);
-      for (std::size_t i = 0; i < count; ++i) {
-        new (raw_buf + i) T();
-      }
+    std::size_t count = p_elemSize / sizeof(T);
+    for (std::size_t i = 0; i < count; ++i) {
+      new (raw_buf + i) T();
     }
-    return std::shared_ptr<T>(raw_buf, Deleter(slot));
+    return std::shared_ptr<T>(raw_buf, Deleter<T>(slot, count));
   }
 
 private:

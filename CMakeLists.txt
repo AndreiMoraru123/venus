@@ -58,7 +58,7 @@ if(CLANG_REPL_EXECUTABLE)
 
     add_custom_target(venus-interactive
         COMMAND ${REPL_COMMAND}
-                -Xcc=-std=c++23
+                -Xcc=-std=c++26
                 -Xcc=-I${CMAKE_CURRENT_SOURCE_DIR}/core
                 -Xcc=-I${CMAKE_CURRENT_SOURCE_DIR}
                 -Xcc=-DVENUS_INTERPRETER
