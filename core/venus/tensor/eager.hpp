@@ -53,11 +53,11 @@ concept BoolTensor =
     /* Tensor op Tensor */                                                     \
     if constexpr (MDTensor<T1> && MDTensor<T2>) {                              \
       return detail::binary_elementwise_op(std::std_op{}, t1, t2);             \
-    } /* Tensor op Scalar */                                                   \
-    else if constexpr (MDTensor<T1> && Scalar<T2>) {                           \
+    } /* Tensor/ScalarTensor op Scalar */                                      \
+    else if constexpr (VenusTensor<T1> && Scalar<T2>) {                        \
       return transform(t1, [s = t2](auto &&t) { return t op_symbol s; });      \
-    } /* Scalar op Tensor */                                                   \
-    else if constexpr (Scalar<T1> && MDTensor<T2>) {                           \
+    } /* Scalar op Tensor/ScalarTensor */                                      \
+    else if constexpr (Scalar<T1> && VenusTensor<T2>) {                        \
       return transform(t2, [s = t1](auto &&t) { return s op_symbol t; });      \
     } /* Tensor op ScalarTensor */                                             \
     else if constexpr (MDTensor<T1> && ScalarTensor<T2>) {                     \

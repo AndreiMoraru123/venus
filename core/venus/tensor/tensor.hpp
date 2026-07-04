@@ -20,7 +20,8 @@
 #include <venus/tensor/shape.hpp>
 
 #define REGISTER_SCALAR_BOOL_OP(op)                                            \
-  auto operator op(const ElementType &element) const noexcept                  \
+  template <typename OtherType>                                                \
+  auto operator op(const OtherType &element) const noexcept                    \
       -> Tensor<bool, DeviceType, 0> {                                         \
     return Tensor<bool, DeviceType, 0>(value() op element);                    \
   }
@@ -815,6 +816,54 @@ template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
 auto operator/(const Scalar &scalar,
                const venus::Tensor<TElem, TDevice, Rank> &tensor) {
   return venus::eager::div(scalar, tensor);
+}
+
+// Scalar-first Greater Than
+template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
+          std::size_t Rank>
+auto operator>(const Scalar &scalar,
+               const venus::Tensor<TElem, TDevice, Rank> &tensor) {
+  return venus::eager::gt(scalar, tensor);
+}
+
+// Scalar-first Greater Than or Equal
+template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
+          std::size_t Rank>
+auto operator>=(const Scalar &scalar,
+                const venus::Tensor<TElem, TDevice, Rank> &tensor) {
+  return venus::eager::gte(scalar, tensor);
+}
+
+// Scalar-first Less Than
+template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
+          std::size_t Rank>
+auto operator<(const Scalar &scalar,
+               const venus::Tensor<TElem, TDevice, Rank> &tensor) {
+  return venus::eager::lt(scalar, tensor);
+}
+
+// Scalar-first Less Than or Equal
+template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
+          std::size_t Rank>
+auto operator<=(const Scalar &scalar,
+                const venus::Tensor<TElem, TDevice, Rank> &tensor) {
+  return venus::eager::lte(scalar, tensor);
+}
+
+// Scalar-first Equal
+template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
+          std::size_t Rank>
+auto operator==(const Scalar &scalar,
+                const venus::Tensor<TElem, TDevice, Rank> &tensor) {
+  return venus::eager::eq(scalar, tensor);
+}
+
+// Scalar-first Not Equal
+template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
+          std::size_t Rank>
+auto operator!=(const Scalar &scalar,
+                const venus::Tensor<TElem, TDevice, Rank> &tensor) {
+  return venus::eager::neq(scalar, tensor);
 }
 
 #undef REGISTER_OPERATOR_EQUAL
