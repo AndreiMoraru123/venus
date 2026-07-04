@@ -1975,7 +1975,7 @@ public:
           "Tensor size is {}, while the size of a scalar is 1.",
           size()));
     }
-    return Tensor<TElem, TDevice, 0>(*std::ranges::data(*this));
+    return Tensor<TElem, TDevice, 0>(*(*this).data());
   }
 
   // Addition
