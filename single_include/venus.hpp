@@ -1124,14 +1124,28 @@ auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
     auto out_shape = broadcast<RankOut>(t1.shape(), t2.shape());
 
     auto result = Tensor<ResultElementType, Dev1, RankOut>(out_shape);
+    auto *out_ptr = result.data();
 
+    // Does not need broadcasting
+    if constexpr (Rank1 == Rank2) {
+      if (t1.shape() == t2.shape()) {
+        const auto *t1_ptr = t1.data();
+        const auto *t2_ptr = t2.data();
+        for (std::size_t flat = 0; flat < result.size(); ++flat) {
+          out_ptr[flat] = op(t1_ptr[flat], t2_ptr[flat]);
+        }
+        return result;
+      }
+    }
+
+    // Needs broadcasting
     for (std::size_t flat = 0; flat < result.size(); ++flat) {
       auto out_idx = out_shape.offsetToIdx(flat);
 
       auto idx1 = project_broadcast_idx(out_idx, t1.shape());
       auto idx2 = project_broadcast_idx(out_idx, t2.shape());
 
-      result.data()[flat] = op(t1[idx1], t2[idx2]);
+      out_ptr[flat] = op(t1[idx1], t2[idx2]);
     }
 
     return result;
@@ -1156,7 +1170,22 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
     auto out_shape = broadcast<RankOut>(t1.shape(), t2.shape(), t3.shape());
 
     auto result = Tensor<ResultElementType, Dev1, RankOut>(out_shape);
+    auto *out_ptr = result.data();
 
+    // Does not need broadcasting
+    if constexpr (Rank1 == Rank2 && Rank2 == Rank3) {
+      if (t1.shape() == t2.shape() && t2.shape() == t3.shape()) {
+        const auto *t1_ptr = t1.data();
+        const auto *t2_ptr = t2.data();
+        const auto *t3_ptr = t3.data();
+        for (std::size_t flat = 0; flat < result.size(); ++flat) {
+          out_ptr[flat] = op(t1_ptr[flat], t2_ptr[flat], t3_ptr[flat]);
+        }
+        return result;
+      }
+    }
+
+    // Needs broadcasting
     for (std::size_t flat = 0; flat < result.size(); ++flat) {
       auto out_idx = out_shape.offsetToIdx(flat);
 
@@ -1164,7 +1193,7 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
       auto idx2 = project_broadcast_idx(out_idx, t2.shape());
       auto idx3 = project_broadcast_idx(out_idx, t3.shape());
 
-      result.data()[flat] = op(t1[idx1], t2[idx2], t3[idx3]);
+      out_ptr[flat] = op(t1[idx1], t2[idx2], t3[idx3]);
     }
 
     return result;
