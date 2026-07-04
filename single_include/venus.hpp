@@ -3,6 +3,7 @@
 // Auto-generated main header
 
 #include <cstddef>
+#include <cstdlib>
 #include <cstring>
 #include <memory>
 namespace venus::Device {
@@ -43,6 +44,7 @@ struct Allocator<Device::CPU> {
 #else
 
 constexpr auto BLOCK_SIZE = 1024;
+constexpr auto ALIGN_SIZE = 64;
 
 // Memory pool allocator for compiled venus
 
@@ -89,10 +91,15 @@ private:
   };
 
 public:
-  template <typename T, std::size_t BlockSize = BLOCK_SIZE>
+  template <typename T, std::size_t BlockSize = BLOCK_SIZE,
+            std::size_t AlignSize = ALIGN_SIZE>
   static auto alloc(std::size_t p_elemSize) -> std::shared_ptr<T> {
     static_assert((BlockSize & (BlockSize - 1)) == 0,
                   "BlockSize must be a power of 2");
+    static_assert((AlignSize & (AlignSize - 1)) == 0,
+                  "AlignSize must be a power of 2");
+    static_assert((BlockSize & (AlignSize - 1)) == 0,
+                  "BlockSize must be a multiple of AlignSize");
 
     if (p_elemSize == 0) {
       return nullptr;
@@ -109,7 +116,7 @@ public:
     auto &slot = m_pool.memBuffer[p_elemSize];
 
     if (slot.empty()) {
-      raw_buf = static_cast<T *>(std::calloc(1, p_elemSize));
+      raw_buf = static_cast<T *>(std::aligned_alloc(AlignSize, p_elemSize));
     } else {
       void *mem = slot.back();
       slot.pop_back();
