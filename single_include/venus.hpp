@@ -43,14 +43,18 @@ struct Allocator<Device::CPU> {
 } // namespace venus
 #else
 
-constexpr auto BLOCK_SIZE = 1024;
-constexpr auto ALIGN_SIZE = 64;
-
 // Memory pool allocator for compiled venus
 
 #include <deque>
 #include <mutex>
 #include <unordered_map>
+
+#ifdef _WIN32
+#include <malloc.h>
+#endif
+
+constexpr auto BLOCK_SIZE = 1024;
+constexpr auto ALIGN_SIZE = 64;
 
 namespace venus {
 template <typename TDevice> struct Allocator;
@@ -64,7 +68,11 @@ private:
       for (auto &pool : memBuffer) {
         auto &blocks = pool.second;
         for (const auto &block : blocks) {
+#ifdef _WIN32
+          _aligned_free(block);
+#else
           std::free(block);
+#endif
         }
         blocks.clear();
       }
@@ -116,7 +124,11 @@ public:
     auto &slot = m_pool.memBuffer[p_elemSize];
 
     if (slot.empty()) {
+#ifdef _WIN32
+      raw_buf = static_cast<T *>(_aligned_malloc(p_elemSize, AlignSize));
+#else
       raw_buf = static_cast<T *>(std::aligned_alloc(AlignSize, p_elemSize));
+#endif
     } else {
       void *mem = slot.back();
       slot.pop_back();
