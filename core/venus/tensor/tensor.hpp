@@ -569,6 +569,10 @@ public:
 
     return Tensor<ElementType, DeviceType, NewRank>(self.m_mem, new_shape);
   }
+
+  auto view(this auto &&self) {
+    return Tensor<ElementType, DeviceType, Rank>(self.m_mem, self.m_shape);
+  }
 };
 
 // Scalar Tensor ===============================================
@@ -594,7 +598,9 @@ public:
 
   auto operator=(const Tensor &other) -> Tensor & {
     if (this != &other) {
-      m_mem = ContiguousMemory<ElementType, DeviceType>(1);
+      if (not unique()) {
+        m_mem = ContiguousMemory<ElementType, DeviceType>(1);
+      }
       setValue(other.value());
     }
     return *this;
@@ -687,6 +693,10 @@ public:
 
   auto data(this auto &&self) {
     return std::forward<decltype(self)>(self).m_mem.ptr();
+  }
+
+  auto view(this auto &&self) {
+    return Tensor<ElementType, DeviceType, 0>(self.m_mem);
   }
 
 private:
