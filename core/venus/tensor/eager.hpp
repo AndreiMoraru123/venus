@@ -596,13 +596,14 @@ template <std::size_t... Dims,
 auto sum_dims(const Tensor<Elem, Dev, Rank> &t) -> Tensor<Elem, Dev, Rank> {
   if constexpr (sizeof...(Dims) == 0) {
     return t.clone();
+  } else {
+    return []<std::size_t First, std::size_t... Rest>(
+               std::index_sequence<First, Rest...>, const auto &tensor) {
+      auto result = sum_dim<First>(tensor);
+      ((result = sum_dim<Rest>(result)), ...);
+      return result;
+    }(std::index_sequence<Dims...>{}, t);
   }
-  return []<std::size_t First, std::size_t... Rest>(
-             std::index_sequence<First, Rest...>, const auto &tensor) {
-    auto result = sum_dim<First>(tensor);
-    ((result = sum_dim<Rest>(result)), ...);
-    return result;
-  }(std::index_sequence<Dims...>{}, t);
 }
 
 // Sumproduct pair

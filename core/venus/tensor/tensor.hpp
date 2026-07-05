@@ -225,8 +225,11 @@ public:
 
   auto operator=(const Tensor &other) -> Tensor & {
     if (this != &other) {
+      if (not unique() || m_shape.count() != other.m_shape.count()) {
+        m_mem =
+            ContiguousMemory<ElementType, DeviceType>(other.m_shape.count());
+      }
       m_shape = other.m_shape;
-      m_mem = ContiguousMemory<ElementType, DeviceType>(m_shape.count());
       std::ranges::copy(other, this->begin());
     }
     return *this;
