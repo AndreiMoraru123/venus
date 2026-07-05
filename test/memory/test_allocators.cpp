@@ -61,8 +61,8 @@ TEST_CASE("Recycled memory blocks are zero-initialized",
     auto tensor = Tensor<float, Device::CPU, 1>(100);
     tensor.fill(99.0f);
 
-    REQUIRE(tensor.data()[0] == 99.0f);
-    REQUIRE(tensor.data()[99] == 99.0f);
+    REQUIRE(tensor[0] == 99.0f);
+    REQUIRE(tensor[99] == 99.0f);
 
     first_addr = reinterpret_cast<std::uintptr_t>(tensor.data());
   }
@@ -75,7 +75,7 @@ TEST_CASE("Recycled memory blocks are zero-initialized",
     REQUIRE(second_addr == first_addr);
 
     // Memory should be zero-initialized
-    REQUIRE(tensor.data()[0] == 0.0f);
-    REQUIRE(tensor.data()[99] == 0.0f);
+    REQUIRE(tensor[0] == 0.0f);
+    REQUIRE(tensor[99] == 0.0f);
   }
 }
