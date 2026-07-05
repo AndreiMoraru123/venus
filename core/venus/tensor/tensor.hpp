@@ -335,10 +335,7 @@ public:
   {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Transform is currently only supported on CPU");
-    auto computation =
-        self | std::views::transform(
-                   [f = std::forward<Fn>(fn)](auto &&t) { return f(t); });
-    std::ranges::copy(computation, self.begin());
+    std::ranges::transform(self, self.begin(), std::forward<Fn>(fn));
   }
 
   // In-Place Sort
