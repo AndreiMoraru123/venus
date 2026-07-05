@@ -594,9 +594,15 @@ template <std::size_t... Dims,
           typename Dev, std::size_t Rank>
   requires VenusTensor<Tensor<Elem, Dev, Rank>>
 auto sum_dims(const Tensor<Elem, Dev, Rank> &t) -> Tensor<Elem, Dev, Rank> {
-  auto result = t;
-  ((result = sum_dim<Dims>(result)), ...);
-  return result;
+  if constexpr (sizeof...(Dims) == 0) {
+    return t.clone();
+  }
+  return []<std::size_t First, std::size_t... Rest>(
+             std::index_sequence<First, Rest...>, const auto &tensor) {
+    auto result = sum_dim<First>(tensor);
+    ((result = sum_dim<Rest>(result)), ...);
+    return result;
+  }(std::index_sequence<Dims...>{}, t);
 }
 
 // Sumproduct pair
