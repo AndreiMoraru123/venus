@@ -2317,7 +2317,7 @@ public:
     return m_shape.count();
   }
 
-  auto data(this auto &&self) -> decltype(auto) {
+  auto data(this auto &&self) {
     return std::forward<decltype(self)>(self).m_mem.ptr();
   }
 
@@ -2445,9 +2445,9 @@ public:
     return LowLevelAccess<Self>(self);
   }
 
-  [[nodiscard]] constexpr auto size() const -> std::size_t { return 1; }
+  [[nodiscard]] constexpr auto size() const { return 1; }
 
-  auto data(this auto &&self) -> decltype(auto) {
+  auto data(this auto &&self) {
     return std::forward<decltype(self)>(self).m_mem.ptr();
   }
 
