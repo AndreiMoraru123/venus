@@ -335,6 +335,54 @@ auto squeeze_to_rank(const Tensor<Elem, Dev, FromRank> &tensor) {
   }
 }
 
+template <std::size_t OpIdx, ConstexprString Eqn,
+          template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+          typename Dev, std::size_t Rank>
+  requires VenusTensor<Tensor<Elem, Dev, Rank>>
+auto homogenize_operand(const Tensor<Elem, Dev, Rank> &t) {
+  constexpr auto eqn = Eqn.view();
+  constexpr auto occ = detail::compute_occurences(eqn);
+  constexpr auto sorted_pos = detail::compute_sorted_position(eqn, occ);
+  constexpr auto total_dims = detail::count_total_dimensions(eqn);
+  constexpr auto pos_labels = detail::compute_position_labels(sorted_pos);
+  constexpr auto axes = detail::compute_axes_for_op(eqn, OpIdx);
+
+  std::array<std::size_t, total_dims> homo_dims{};
+  for (std::size_t i = 0; i < total_dims; ++i) {
+    auto letter = pos_labels[i];
+    auto axis = axes[letter];
+    if (axis != -1) {
+      homo_dims[i] = t.shape()[axis];
+    } else {
+      homo_dims[i] = 1;
+    }
+  }
+
+  auto homo_shape = Shape<total_dims>(homo_dims);
+
+  auto project_homo_idx =
+      [pos_labels, axes](const std::array<std::size_t, total_dims> &out_idx) {
+        std::array<std::size_t, Rank> orig_idx{};
+        for (std::size_t i = 0; i < total_dims; ++i) {
+          auto letter = pos_labels[i];
+          auto axis = axes[letter];
+          if (axis != -1) {
+            orig_idx[static_cast<std::size_t>(axis)] = out_idx[i];
+          }
+        }
+        return orig_idx;
+      };
+
+  auto homogenized = Tensor<Elem, Dev, total_dims>(homo_shape);
+  for (std::size_t flat = 0; flat < homogenized.size(); ++flat) {
+    auto out_idx = homo_shape.offsetToIdx(flat);
+    auto orig_idx = project_homo_idx(out_idx);
+    homogenized.data()[flat] = t[orig_idx];
+  }
+
+  return homogenized;
+}
+
 } // namespace detail
 
 // Copy Transform
@@ -624,54 +672,6 @@ auto sumproduct_pair(const Tensor<Elem1, Dev1, Rank1> &t1,
   return sum_dims<SumDims...>(product);
 }
 
-template <std::size_t OpIdx, ConstexprString Eqn,
-          template <typename, typename, std::size_t> class Tensor, Scalar Elem,
-          typename Dev, std::size_t Rank>
-  requires VenusTensor<Tensor<Elem, Dev, Rank>>
-auto homogenize_operand(const Tensor<Elem, Dev, Rank> &t) {
-  constexpr auto eqn = Eqn.view();
-  constexpr auto occ = detail::compute_occurences(eqn);
-  constexpr auto sorted_pos = detail::compute_sorted_position(eqn, occ);
-  constexpr auto total_dims = detail::count_total_dimensions(eqn);
-  constexpr auto pos_labels = detail::compute_position_labels(sorted_pos);
-  constexpr auto axes = detail::compute_axes_for_op(eqn, OpIdx);
-
-  std::array<std::size_t, total_dims> homo_dims{};
-  for (std::size_t i = 0; i < total_dims; ++i) {
-    auto letter = pos_labels[i];
-    auto axis = axes[letter];
-    if (axis != -1) {
-      homo_dims[i] = t.shape()[axis];
-    } else {
-      homo_dims[i] = 1;
-    }
-  }
-
-  auto homo_shape = Shape<total_dims>(homo_dims);
-
-  auto project_homo_idx =
-      [pos_labels, axes](const std::array<std::size_t, total_dims> &out_idx) {
-        std::array<std::size_t, Rank> orig_idx{};
-        for (std::size_t i = 0; i < total_dims; ++i) {
-          auto letter = pos_labels[i];
-          auto axis = axes[letter];
-          if (axis != -1) {
-            orig_idx[static_cast<std::size_t>(axis)] = out_idx[i];
-          }
-        }
-        return orig_idx;
-      };
-
-  auto homogenized = Tensor<Elem, Dev, total_dims>(homo_shape);
-  for (std::size_t flat = 0; flat < homogenized.size(); ++flat) {
-    auto out_idx = homo_shape.offsetToIdx(flat);
-    auto orig_idx = project_homo_idx(out_idx);
-    homogenized.data()[flat] = t[orig_idx];
-  }
-
-  return homogenized;
-}
-
 template <ConstexprString Eqn, std::size_t NumOut,
           typename... HomogenizedTensors>
 auto _einsum_contract(HomogenizedTensors... tensors) {
@@ -719,7 +719,7 @@ auto einsum(const Tensors<Ts, Devs, Ranks> &...tensors) {
 
   return [&]<std::size_t... Is>(std::index_sequence<Is...>) {
     return _einsum_contract<Eqn, num_out>(
-        homogenize_operand<Is, Eqn>(tensors)...);
+        detail::homogenize_operand<Is, Eqn>(tensors)...);
   }(std::make_index_sequence<sizeof...(Tensors)>{});
 }
 
