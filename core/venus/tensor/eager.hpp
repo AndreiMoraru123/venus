@@ -514,52 +514,57 @@ auto where(const Tensor<Elem, Dev, Rank> &condition) {
 template <typename T1, typename T2, typename T3>
   requires VenusTensor<T1> && (VenusTensor<T2> || Scalar<T2>) &&
            (VenusTensor<T3> || Scalar<T3>)
-auto where(T1 &&t1, T2 &&t2, T3 &&t3) {
-  const auto v1 = [&] {
+auto where(T1 &&predicate, T2 &&true_tensor, T3 &&false_tensor) {
+  const auto pred_val = [&] {
     if constexpr (ScalarTensor<T1>) {
-      return t1.value();
+      return predicate.value();
     } else {
-      return std::forward<T1>(t1);
+      return std::forward<T1>(predicate);
     }
   }();
 
-  const auto v2 = [&] {
+  const auto true_val = [&] {
     if constexpr (ScalarTensor<T2>) {
-      return t2.value();
+      return true_tensor.value();
     } else {
-      return std::forward<T2>(t2);
+      return std::forward<T2>(true_tensor);
     }
   }();
 
-  const auto v3 = [&] {
+  const auto false_val = [&] {
     if constexpr (ScalarTensor<T3>) {
-      return t3.value();
+      return false_tensor.value();
     } else {
-      return std::forward<T3>(t3);
+      return std::forward<T3>(false_tensor);
     }
   }();
 
   // Tensor, Tensor, Tensor
   if constexpr (MDTensor<T1> && MDTensor<T2> && MDTensor<T3>) {
     return detail::ternary_elementwise_op(
-        [](auto &&a, auto &&b, auto &&c) { return a ? b : c; }, v1, v2, v3);
+        [](auto &&t1, auto &&t2, auto &&t3) { return t1 ? t2 : t3; }, pred_val,
+        true_val, false_val);
   }
 
   // Tensor, Scalar, Scalar
   else if constexpr (MDTensor<T1> && Scalar<T2> && Scalar<T3>) {
-    return transform(v1, [s2 = v2, s3 = v3](auto &&a) { return a ? s2 : s3; });
+    return transform(pred_val, [s2 = true_val, s3 = false_val](auto &&t1) {
+      return t1 ? s2 : s3;
+    });
   }
 
   // Tensor, Tensor, Scalar
   else if constexpr (MDTensor<T1> && MDTensor<T2> && Scalar<T3>) {
     return detail::binary_elementwise_op(
-        [s3 = v3](auto &&a, auto &&b) { return a ? b : s3; }, v1, v2);
+        [s3 = false_val](auto &&t1, auto &&t2) { return t1 ? t2 : s3; },
+        pred_val, true_val);
   }
 
   // Tensor, Scalar, Tensor
   else if constexpr (MDTensor<T1> && Scalar<T2> && MDTensor<T3>) {
     return detail::binary_elementwise_op(
-        [s2 = v2](auto &&a, auto &&c) { return a ? s2 : c; }, v1, v3);
+        [s2 = true_val](auto &&t1, auto &&t3) { return t1 ? s2 : t3; },
+        pred_val, false_val);
   }
 }
 
