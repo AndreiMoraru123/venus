@@ -1589,7 +1589,8 @@ template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
           typename Dev, std::size_t Rank>
   requires BoolTensor<Tensor<Elem, Dev, Rank>>
 auto where(const Tensor<Elem, Dev, Rank> &condition) {
-  auto result = Tensor<std::size_t, Dev, Rank>(condition.shape());
+  auto result = Tensor<int, Dev, Rank>(condition.shape());
+  result.fill(-1);
 
   auto result_ptr = std::ranges::data(result);
   auto indices = std::views::iota(std::size_t{0}, condition.size());
