@@ -1152,10 +1152,10 @@ auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
 
     // Needs broadcasting
     for (std::size_t flat = 0; flat < result.size(); ++flat) {
-      auto out_idx = out_shape.offsetToIdx(flat);
+      const auto out_idx = out_shape.offsetToIdx(flat);
 
-      auto idx1 = project_broadcast_idx(out_idx, t1.shape());
-      auto idx2 = project_broadcast_idx(out_idx, t2.shape());
+      const auto idx1 = project_broadcast_idx(out_idx, t1.shape());
+      const auto idx2 = project_broadcast_idx(out_idx, t2.shape());
 
       out_ptr[flat] = op(t1[idx1], t2[idx2]);
     }
@@ -1199,11 +1199,11 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
 
     // Needs broadcasting
     for (std::size_t flat = 0; flat < result.size(); ++flat) {
-      auto out_idx = out_shape.offsetToIdx(flat);
+      const auto out_idx = out_shape.offsetToIdx(flat);
 
-      auto idx1 = project_broadcast_idx(out_idx, t1.shape());
-      auto idx2 = project_broadcast_idx(out_idx, t2.shape());
-      auto idx3 = project_broadcast_idx(out_idx, t3.shape());
+      const auto idx1 = project_broadcast_idx(out_idx, t1.shape());
+      const auto idx2 = project_broadcast_idx(out_idx, t2.shape());
+      const auto idx3 = project_broadcast_idx(out_idx, t3.shape());
 
       out_ptr[flat] = op(t1[idx1], t2[idx2], t3[idx3]);
     }
