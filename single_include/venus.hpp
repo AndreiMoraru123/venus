@@ -1380,6 +1380,54 @@ auto squeeze_to_rank(const Tensor<Elem, Dev, FromRank> &tensor) {
   }
 }
 
+template <std::size_t OpIdx, ConstexprString Eqn,
+          template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+          typename Dev, std::size_t Rank>
+  requires VenusTensor<Tensor<Elem, Dev, Rank>>
+auto homogenize_operand(const Tensor<Elem, Dev, Rank> &t) {
+  constexpr auto eqn = Eqn.view();
+  constexpr auto occ = detail::compute_occurences(eqn);
+  constexpr auto sorted_pos = detail::compute_sorted_position(eqn, occ);
+  constexpr auto total_dims = detail::count_total_dimensions(eqn);
+  constexpr auto pos_labels = detail::compute_position_labels(sorted_pos);
+  constexpr auto axes = detail::compute_axes_for_op(eqn, OpIdx);
+
+  std::array<std::size_t, total_dims> homo_dims{};
+  for (std::size_t i = 0; i < total_dims; ++i) {
+    auto letter = pos_labels[i];
+    auto axis = axes[letter];
+    if (axis != -1) {
+      homo_dims[i] = t.shape()[axis];
+    } else {
+      homo_dims[i] = 1;
+    }
+  }
+
+  auto homo_shape = Shape<total_dims>(homo_dims);
+
+  auto project_homo_idx =
+      [pos_labels, axes](const std::array<std::size_t, total_dims> &out_idx) {
+        std::array<std::size_t, Rank> orig_idx{};
+        for (std::size_t i = 0; i < total_dims; ++i) {
+          auto letter = pos_labels[i];
+          auto axis = axes[letter];
+          if (axis != -1) {
+            orig_idx[static_cast<std::size_t>(axis)] = out_idx[i];
+          }
+        }
+        return orig_idx;
+      };
+
+  auto homogenized = Tensor<Elem, Dev, total_dims>(homo_shape);
+  for (std::size_t flat = 0; flat < homogenized.size(); ++flat) {
+    auto out_idx = homo_shape.offsetToIdx(flat);
+    auto orig_idx = project_homo_idx(out_idx);
+    homogenized.data()[flat] = t[orig_idx];
+  }
+
+  return homogenized;
+}
+
 } // namespace detail
 
 // Copy Transform
@@ -1559,52 +1607,57 @@ auto where(const Tensor<Elem, Dev, Rank> &condition) {
 template <typename T1, typename T2, typename T3>
   requires VenusTensor<T1> && (VenusTensor<T2> || Scalar<T2>) &&
            (VenusTensor<T3> || Scalar<T3>)
-auto where(T1 &&t1, T2 &&t2, T3 &&t3) {
-  const auto v1 = [&] {
+auto where(T1 &&predicate, T2 &&true_tensor, T3 &&false_tensor) {
+  const auto pred_val = [&] {
     if constexpr (ScalarTensor<T1>) {
-      return t1.value();
+      return predicate.value();
     } else {
-      return std::forward<T1>(t1);
+      return std::forward<T1>(predicate);
     }
   }();
 
-  const auto v2 = [&] {
+  const auto true_val = [&] {
     if constexpr (ScalarTensor<T2>) {
-      return t2.value();
+      return true_tensor.value();
     } else {
-      return std::forward<T2>(t2);
+      return std::forward<T2>(true_tensor);
     }
   }();
 
-  const auto v3 = [&] {
+  const auto false_val = [&] {
     if constexpr (ScalarTensor<T3>) {
-      return t3.value();
+      return false_tensor.value();
     } else {
-      return std::forward<T3>(t3);
+      return std::forward<T3>(false_tensor);
     }
   }();
 
   // Tensor, Tensor, Tensor
   if constexpr (MDTensor<T1> && MDTensor<T2> && MDTensor<T3>) {
     return detail::ternary_elementwise_op(
-        [](auto &&a, auto &&b, auto &&c) { return a ? b : c; }, v1, v2, v3);
+        [](auto &&t1, auto &&t2, auto &&t3) { return t1 ? t2 : t3; }, pred_val,
+        true_val, false_val);
   }
 
   // Tensor, Scalar, Scalar
   else if constexpr (MDTensor<T1> && Scalar<T2> && Scalar<T3>) {
-    return transform(v1, [s2 = v2, s3 = v3](auto &&a) { return a ? s2 : s3; });
+    return transform(pred_val, [s2 = true_val, s3 = false_val](auto &&t1) {
+      return t1 ? s2 : s3;
+    });
   }
 
   // Tensor, Tensor, Scalar
   else if constexpr (MDTensor<T1> && MDTensor<T2> && Scalar<T3>) {
     return detail::binary_elementwise_op(
-        [s3 = v3](auto &&a, auto &&b) { return a ? b : s3; }, v1, v2);
+        [s3 = false_val](auto &&t1, auto &&t2) { return t1 ? t2 : s3; },
+        pred_val, true_val);
   }
 
   // Tensor, Scalar, Tensor
   else if constexpr (MDTensor<T1> && Scalar<T2> && MDTensor<T3>) {
     return detail::binary_elementwise_op(
-        [s2 = v2](auto &&a, auto &&c) { return a ? s2 : c; }, v1, v3);
+        [s2 = true_val](auto &&t1, auto &&t3) { return t1 ? s2 : t3; },
+        pred_val, false_val);
   }
 }
 
@@ -1639,9 +1692,16 @@ template <std::size_t... Dims,
           typename Dev, std::size_t Rank>
   requires VenusTensor<Tensor<Elem, Dev, Rank>>
 auto sum_dims(const Tensor<Elem, Dev, Rank> &t) -> Tensor<Elem, Dev, Rank> {
-  auto result = t;
-  ((result = sum_dim<Dims>(result)), ...);
-  return result;
+  if constexpr (sizeof...(Dims) == 0) {
+    return t.clone();
+  } else {
+    return []<std::size_t First, std::size_t... Rest>(
+               std::index_sequence<First, Rest...>, const auto &tensor) {
+      auto result = sum_dim<First>(tensor);
+      ((result = sum_dim<Rest>(result)), ...);
+      return result;
+    }(std::index_sequence<Dims...>{}, t);
+  }
 }
 
 // Sumproduct pair
@@ -1655,54 +1715,6 @@ auto sumproduct_pair(const Tensor<Elem1, Dev1, Rank1> &t1,
                      const Tensor<Elem2, Dev2, Rank2> &t2) {
   auto product = t1 * t2;
   return sum_dims<SumDims...>(product);
-}
-
-template <std::size_t OpIdx, ConstexprString Eqn,
-          template <typename, typename, std::size_t> class Tensor, Scalar Elem,
-          typename Dev, std::size_t Rank>
-  requires VenusTensor<Tensor<Elem, Dev, Rank>>
-auto homogenize_operand(const Tensor<Elem, Dev, Rank> &t) {
-  constexpr auto eqn = Eqn.view();
-  constexpr auto occ = detail::compute_occurences(eqn);
-  constexpr auto sorted_pos = detail::compute_sorted_position(eqn, occ);
-  constexpr auto total_dims = detail::count_total_dimensions(eqn);
-  constexpr auto pos_labels = detail::compute_position_labels(sorted_pos);
-  constexpr auto axes = detail::compute_axes_for_op(eqn, OpIdx);
-
-  std::array<std::size_t, total_dims> homo_dims{};
-  for (std::size_t i = 0; i < total_dims; ++i) {
-    auto letter = pos_labels[i];
-    auto axis = axes[letter];
-    if (axis != -1) {
-      homo_dims[i] = t.shape()[axis];
-    } else {
-      homo_dims[i] = 1;
-    }
-  }
-
-  auto homo_shape = Shape<total_dims>(homo_dims);
-
-  auto project_homo_idx =
-      [pos_labels, axes](const std::array<std::size_t, total_dims> &out_idx) {
-        std::array<std::size_t, Rank> orig_idx{};
-        for (std::size_t i = 0; i < total_dims; ++i) {
-          auto letter = pos_labels[i];
-          auto axis = axes[letter];
-          if (axis != -1) {
-            orig_idx[static_cast<std::size_t>(axis)] = out_idx[i];
-          }
-        }
-        return orig_idx;
-      };
-
-  auto homogenized = Tensor<Elem, Dev, total_dims>(homo_shape);
-  for (std::size_t flat = 0; flat < homogenized.size(); ++flat) {
-    auto out_idx = homo_shape.offsetToIdx(flat);
-    auto orig_idx = project_homo_idx(out_idx);
-    homogenized.data()[flat] = t[orig_idx];
-  }
-
-  return homogenized;
 }
 
 template <ConstexprString Eqn, std::size_t NumOut,
@@ -1752,7 +1764,7 @@ auto einsum(const Tensors<Ts, Devs, Ranks> &...tensors) {
 
   return [&]<std::size_t... Is>(std::index_sequence<Is...>) {
     return _einsum_contract<Eqn, num_out>(
-        homogenize_operand<Is, Eqn>(tensors)...);
+        detail::homogenize_operand<Is, Eqn>(tensors)...);
   }(std::make_index_sequence<sizeof...(Tensors)>{});
 }
 
@@ -1987,8 +1999,11 @@ public:
 
   auto operator=(const Tensor &other) -> Tensor & {
     if (this != &other) {
+      if (not unique() || m_shape.count() != other.m_shape.count()) {
+        m_mem =
+            ContiguousMemory<ElementType, DeviceType>(other.m_shape.count());
+      }
       m_shape = other.m_shape;
-      m_mem = ContiguousMemory<ElementType, DeviceType>(m_shape.count());
       std::ranges::copy(other, this->begin());
     }
     return *this;
@@ -2097,10 +2112,7 @@ public:
   {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Transform is currently only supported on CPU");
-    auto computation =
-        self | std::views::transform(
-                   [f = std::forward<Fn>(fn)](auto &&t) { return f(t); });
-    std::ranges::copy(computation, self.begin());
+    std::ranges::transform(self, self.begin(), std::forward<Fn>(fn));
   }
 
   // In-Place Sort
@@ -2331,6 +2343,10 @@ public:
 
     return Tensor<ElementType, DeviceType, NewRank>(self.m_mem, new_shape);
   }
+
+  auto view(this auto &&self) {
+    return Tensor<ElementType, DeviceType, Rank>(self.m_mem, self.m_shape);
+  }
 };
 
 // Scalar Tensor ===============================================
@@ -2356,7 +2372,9 @@ public:
 
   auto operator=(const Tensor &other) -> Tensor & {
     if (this != &other) {
-      m_mem = ContiguousMemory<ElementType, DeviceType>(1);
+      if (not unique()) {
+        m_mem = ContiguousMemory<ElementType, DeviceType>(1);
+      }
       setValue(other.value());
     }
     return *this;
@@ -2449,6 +2467,10 @@ public:
 
   auto data(this auto &&self) {
     return std::forward<decltype(self)>(self).m_mem.ptr();
+  }
+
+  auto view(this auto &&self) {
+    return Tensor<ElementType, DeviceType, 0>(self.m_mem);
   }
 
 private:

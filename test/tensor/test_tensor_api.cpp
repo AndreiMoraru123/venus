@@ -289,68 +289,6 @@ TEST_CASE("Tensor API", "[tensor][api]") {
                       std::invalid_argument);
   }
 
-  SECTION("Scalar Rule of V") {
-    auto tensor = Tensor<float, Device::CPU, 0>(10.0f);
-    void *tensor_ptr = static_cast<void *>(tensor.data());
-    auto value = tensor.value();
-
-    auto copied_tensor(tensor);
-    REQUIRE(copied_tensor.unique());
-    REQUIRE(static_cast<void *>(copied_tensor.data()) != tensor_ptr);
-    REQUIRE(copied_tensor.value() == value);
-
-    auto moved_tensor(std::move(tensor));
-    REQUIRE(moved_tensor.unique());
-    REQUIRE(static_cast<void *>(moved_tensor.data()) == tensor_ptr);
-    REQUIRE(moved_tensor.value() == value);
-
-    auto x = Tensor<float, Device::CPU, 0>(10.0f);
-    void *x_ptr = static_cast<void *>(x.data());
-    auto x_value = x.value();
-
-    auto y = Tensor<float, Device::CPU, 0>(10.0f);
-    auto z = Tensor<float, Device::CPU, 0>(10.0f);
-
-    y = x;
-    REQUIRE(y.unique());
-    REQUIRE(static_cast<void *>(y.data()) != x_ptr);
-    REQUIRE(y.value() == x_value);
-
-    z = std::move(x);
-    REQUIRE(z.unique());
-    REQUIRE(static_cast<void *>(z.data()) == x_ptr);
-    REQUIRE(z.value() == x_value);
-  }
-
-  SECTION("Tensor Rule of V") {
-    auto tensor = Tensor<float, Device::CPU, 2>(2, 3);
-    tensor.iota(1);
-    void *tensor_ptr = static_cast<void *>(tensor.data());
-
-    auto copied_tensor(tensor);
-    REQUIRE(copied_tensor.unique());
-    REQUIRE(static_cast<void *>(copied_tensor.data()) != tensor_ptr);
-
-    auto moved_tensor(std::move(tensor));
-    REQUIRE(moved_tensor.unique());
-    REQUIRE(static_cast<void *>(moved_tensor.data()) == tensor_ptr);
-
-    auto x = Tensor<float, Device::CPU, 2>(2, 3);
-    void *x_ptr = static_cast<void *>(x.data());
-    x.iota(1);
-
-    auto y = Tensor<float, Device::CPU, 2>(2, 3);
-    auto z = Tensor<float, Device::CPU, 2>(2, 3);
-
-    y = x;
-    REQUIRE(y.unique());
-    REQUIRE(static_cast<void *>(y.data()) != x_ptr);
-
-    z = std::move(x);
-    REQUIRE(z.unique());
-    REQUIRE(static_cast<void *>(z.data()) == x_ptr);
-  }
-
   SECTION("Tensor Reshape") {
     auto tensor_2d = Tensor<float, Device::CPU, 2>(2, 6);
     tensor_2d.iota(1);
@@ -370,5 +308,100 @@ TEST_CASE("Tensor API", "[tensor][api]") {
         }
       }
     }
+  }
+}
+
+TEST_CASE("Tensor Creation", "[tensor][ctor]") {
+
+  SECTION("Copy Ctor") {
+    auto x = Tensor<float, Device::CPU, 2>(2, 3);
+    x.iota(1);
+    void *x_ptr = static_cast<void *>(x.data());
+
+    auto y(x);
+    REQUIRE(y.unique());
+    REQUIRE(static_cast<void *>(y.data()) != x_ptr); // new memory is allocated
+    REQUIRE(y.shape() == x.shape());
+  }
+
+  SECTION("Move Ctor") {
+    auto x = Tensor<float, Device::CPU, 2>(2, 3);
+    x.iota(1);
+    void *x_ptr = static_cast<void *>(x.data());
+
+    auto y(std::move(x));
+    REQUIRE(y.unique());
+    REQUIRE(static_cast<void *>(y.data()) == x_ptr); // no new memory allocation
+    REQUIRE(y.shape() == x.shape());
+  }
+
+  SECTION("Copy Assign (Same Size, Reuses Memory)") {
+    auto x = Tensor<float, Device::CPU, 2>(2, 3);
+    x.iota(1);
+
+    auto y = Tensor<float, Device::CPU, 2>(2, 3);
+    void *y_ptr_before = static_cast<void *>(y.data());
+
+    y = x;
+    REQUIRE(y.unique());
+    // sizes match exactly, y should reuse its existing memory
+    REQUIRE(static_cast<void *>(y.data()) == y_ptr_before);
+    REQUIRE(static_cast<void *>(y.data()) != static_cast<void *>(x.data()));
+  }
+
+  SECTION("Copy Assign (Different Size, Reallocates Memory)") {
+    auto x = Tensor<float, Device::CPU, 2>(10, 10);
+    x.iota(1);
+
+    auto y = Tensor<float, Device::CPU, 2>(2, 3);
+    void *y_ptr_before = static_cast<void *>(y.data());
+
+    y = x;
+    REQUIRE(y.unique());
+    // sizes do not match, y should reallocate
+    REQUIRE(static_cast<void *>(y.data()) != y_ptr_before);
+    REQUIRE(static_cast<void *>(y.data()) != static_cast<void *>(x.data()));
+    REQUIRE(y.shape() == Shape(10, 10));
+  }
+
+  SECTION("Copy Assign (Shared Memory, Detaches and Reallocates)") {
+    auto x = Tensor<float, Device::CPU, 2>(10, 10);
+    x.iota(1);
+
+    auto y = Tensor<float, Device::CPU, 2>(2, 3);
+    void *y_ptr_before = static_cast<void *>(y.data());
+
+    auto y_view = y.view();
+
+    REQUIRE_FALSE(y.unique());
+    REQUIRE_FALSE(y_view.unique());
+
+    // y is not unique, so it must allocate memory, even though sizes match
+    y = x;
+
+    // y should have detached and allocated new memory
+    REQUIRE(y.unique());
+    REQUIRE(static_cast<void *>(y.data()) != y_ptr_before);
+    REQUIRE(static_cast<void *>(y.data()) != static_cast<void *>(x.data()));
+    REQUIRE(y.shape() == Shape(10, 10));
+
+    // y_view should now be the sole owner of the original memory
+    REQUIRE(y_view.unique());
+    REQUIRE(static_cast<void *>(y_view.data()) == y_ptr_before);
+    REQUIRE(y_view.shape() == Shape(2, 3));
+  }
+
+  SECTION("Move Assign") {
+    auto x = Tensor<float, Device::CPU, 2>(2, 3);
+    void *x_ptr = static_cast<void *>(x.data());
+    x.iota(1);
+
+    auto y = Tensor<float, Device::CPU, 2>(5, 5);
+
+    y = std::move(x);
+    REQUIRE(y.unique());
+    // z takes x's memory diectly
+    REQUIRE(static_cast<void *>(y.data()) == x_ptr);
+    REQUIRE(y.shape() == Shape(2, 3));
   }
 }

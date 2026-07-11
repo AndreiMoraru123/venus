@@ -226,8 +226,11 @@ public:
 
   auto operator=(const Tensor &other) -> Tensor & {
     if (this != &other) {
+      if (not unique() || m_shape.count() != other.m_shape.count()) {
+        m_mem =
+            ContiguousMemory<ElementType, DeviceType>(other.m_shape.count());
+      }
       m_shape = other.m_shape;
-      m_mem = ContiguousMemory<ElementType, DeviceType>(m_shape.count());
       std::ranges::copy(other, this->begin());
     }
     return *this;
@@ -336,10 +339,7 @@ public:
   {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Transform is currently only supported on CPU");
-    auto computation =
-        self | std::views::transform(
-                   [f = std::forward<Fn>(fn)](auto &&t) { return f(t); });
-    std::ranges::copy(computation, self.begin());
+    std::ranges::transform(self, self.begin(), std::forward<Fn>(fn));
   }
 
   // In-Place Sort
@@ -581,6 +581,10 @@ public:
 
     return Tensor<ElementType, DeviceType, NewRank>(self.m_mem, new_shape);
   }
+
+  auto view(this auto &&self) {
+    return Tensor<ElementType, DeviceType, Rank>(self.m_mem, self.m_shape);
+  }
 };
 
 // Scalar Tensor ===============================================
@@ -606,7 +610,9 @@ public:
 
   auto operator=(const Tensor &other) -> Tensor & {
     if (this != &other) {
-      m_mem = ContiguousMemory<ElementType, DeviceType>(1);
+      if (not unique()) {
+        m_mem = ContiguousMemory<ElementType, DeviceType>(1);
+      }
       setValue(other.value());
     }
     return *this;
@@ -699,6 +705,10 @@ public:
 
   auto data(this auto &&self) {
     return std::forward<decltype(self)>(self).m_mem.ptr();
+  }
+
+  auto view(this auto &&self) {
+    return Tensor<ElementType, DeviceType, 0>(self.m_mem);
   }
 
 private:
