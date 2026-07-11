@@ -59,14 +59,11 @@ if(CLANG_REPL_EXECUTABLE)
     add_custom_target(venus-interactive
         COMMAND ${REPL_COMMAND}
                 -Xcc=-std=c++26
-                -Xcc=-I${CMAKE_CURRENT_SOURCE_DIR}/core
-                -Xcc=-I${CMAKE_CURRENT_SOURCE_DIR}
                 -Xcc=-DVENUS_INTERPRETER
                 -Xcc=-include
                 -Xcc=${CMAKE_CURRENT_SOURCE_DIR}/single_include/venus.hpp
                 -Xcc=-include
                 -Xcc=${CMAKE_CURRENT_SOURCE_DIR}/repl/pretty_print.hpp
-        DEPENDS venus
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         USES_TERMINAL
     )
