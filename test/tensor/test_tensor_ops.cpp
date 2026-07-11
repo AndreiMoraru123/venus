@@ -150,23 +150,72 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
     REQUIRE(venus::eager::equal(C, expected));
   }
 
-  SECTION("Where - Condition Only") {
-    auto x = Tensor<float, Device::CPU, 2>(3, 2);
-    auto y = Tensor<float, Device::CPU, 2>(3, 2);
+  SECTION("Nonzero / Where (1D)") {
+    auto x = Tensor<int, Device::CPU, 1>{0, 5, 0, 3, 0};
+    auto y = venus::eager::nonzero(x);
 
-    x.iota(1);
-    y.fill(1);
+    STATIC_REQUIRE(std::is_same_v<decltype(y)::ElementType, std::size_t>);
 
-    auto z = venus::eager::where(x > 3);
+    REQUIRE(y.shape() == Shape(2, 1)); // 2 non-zeros, 1 dimension
+    REQUIRE(y[0, 0] == 1);             // element 5 at index 1
+    REQUIRE(y[1, 0] == 3);             // element 3 at index 3
 
-    STATIC_REQUIRE(std::is_same_v<decltype(z)::ElementType, int>);
-    for (std::size_t i = 0; i < z.shape().count(); ++i) {
-      if (x.lowLevel().rawMemory()[i] > 3) {
-        REQUIRE(z.lowLevel().rawMemory()[i] == i);
-      } else {
-        REQUIRE(z.lowLevel().rawMemory()[i] == -1);
-      }
+    auto z = venus::eager::nonzero_flat(x);
+    for (std::size_t flat_idx = 0; flat_idx < z.size(); ++flat_idx) {
+      REQUIRE(y.data()[flat_idx] == z[flat_idx]);
     }
+  }
+
+  SECTION("Nonzero Flat / Where (1D)") {
+    auto x = Tensor<int, Device::CPU, 1>{0, 5, 0, 3, 0};
+    auto y = venus::eager::where(x);
+
+    STATIC_REQUIRE(std::is_same_v<decltype(y)::ElementType, std::size_t>);
+
+    REQUIRE(y.shape() == Shape(2)); // 2 non-zeros
+    REQUIRE(y[0] == 1);
+    REQUIRE(y[1] == 3);
+
+    auto z = venus::eager::nonzero_flat(x);
+    REQUIRE(venus::eager::equal(y, z));
+  }
+
+  SECTION("Nonzero / Where (2D)") {
+    auto x = Tensor<int, Device::CPU, 2>(2, 3);
+    x.iota(1); // [1, 2, 3,
+               //  4, 5, 6]
+    auto y = venus::eager::where(x > 3);
+
+    STATIC_REQUIRE(std::is_same_v<decltype(y)::ElementType, std::size_t>);
+
+    REQUIRE(y.shape() == Shape(3, 2)); // 3 non-zeros, 2 dimensions
+
+    // Row 0: Element 4 is at (1, 0)
+    REQUIRE(y[0, 0] == 1);
+    REQUIRE(y[0, 1] == 0);
+
+    // Row 1: Element 5 is at (1, 1)
+    REQUIRE(y[1, 0] == 1);
+    REQUIRE(y[1, 1] == 1);
+
+    // Row 2: Element 6 is at (1, 2)
+    REQUIRE(y[2, 0] == 1);
+    REQUIRE(y[2, 1] == 2);
+  }
+
+  SECTION("Nonzero Flat (2D)") {
+    auto x = Tensor<int, Device::CPU, 2>(2, 3);
+    x.iota(1); // [1, 2, 3,
+               //  4, 5, 6]
+    auto y = venus::eager::nonzero_flat(x > 3);
+
+    STATIC_REQUIRE(std::is_same_v<decltype(y)::ElementType, std::size_t>);
+
+    REQUIRE(y.shape() == Shape(3)); // 3 non-zeros
+
+    REQUIRE(y[0] == 3);
+    REQUIRE(y[1] == 4);
+    REQUIRE(y[2] == 5);
   }
 
   SECTION("Where - Ternary") {
@@ -179,11 +228,11 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
     auto z = venus::eager::where(x > 3, x, y);
 
     STATIC_REQUIRE(std::is_same_v<decltype(z)::ElementType, float>);
-    for (std::size_t i = 0; i < z.shape().count(); ++i) {
-      if (x.lowLevel().rawMemory()[i] > 3) {
-        REQUIRE(z.lowLevel().rawMemory()[i] == x.lowLevel().rawMemory()[i]);
+    for (std::size_t i = 0; i < z.size(); ++i) {
+      if (x.data()[i] > 3) {
+        REQUIRE(z.data()[i] == x.data()[i]);
       } else {
-        REQUIRE(z.lowLevel().rawMemory()[i] == y.lowLevel().rawMemory()[i]);
+        REQUIRE(z.data()[i] == y.data()[i]);
       }
     }
   }

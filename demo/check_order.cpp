@@ -10,5 +10,5 @@ auto check_order(const auto &ints) {
 auto main() -> int {
   const auto ints = Tensor<int, Device::CPU, 1>{5, 2, 4, 3, 1};
   std::println("Difference at indices: {}",
-               check_order(ints)); // venus::Tensor([0, 0, 2, 3, 4], shape=(5))
+               check_order(ints)); // venus::Tensor([0, 2, 3, 4], shape=(4))
 }
