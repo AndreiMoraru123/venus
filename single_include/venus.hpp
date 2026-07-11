@@ -1588,21 +1588,59 @@ auto mm(const Tensor<Elem1, Dev, 2> &t1, const Tensor<Elem2, Dev, 2> &t2) {
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
           typename Dev, std::size_t Rank>
   requires BoolTensor<Tensor<Elem, Dev, Rank>>
-auto where(const Tensor<Elem, Dev, Rank> &condition) {
-  auto result = Tensor<int, Dev, Rank>(condition.shape());
-  result.fill(-1);
+auto nonzero_flat(const Tensor<Elem, Dev, Rank> &condition) {
+  const auto nz_count = static_cast<std::size_t>(std::ranges::count_if(
+      condition, [](auto v) { return static_cast<bool>(v); }));
 
-  auto result_ptr = std::ranges::data(result);
-  auto indices = std::views::iota(std::size_t{0}, condition.size());
+  auto result = Tensor<std::size_t, Dev, 1>(nz_count);
+  auto out = result.data();
+
+  std::size_t pos = 0;
+  const auto indices = std::views::iota(std::size_t{0}, condition.size());
   std::ranges::for_each(std::views::zip(condition, indices),
-                        [result_ptr](auto &&pair) {
+                        [out, pos](auto &&pair) mutable {
                           const auto &[cond_val, idx] = pair;
                           if (static_cast<bool>(cond_val)) {
-                            result_ptr[idx] = idx;
+                            out[pos++] = idx;
                           }
                         });
 
   return result;
+}
+
+template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+          typename Dev, std::size_t Rank>
+  requires BoolTensor<Tensor<Elem, Dev, Rank>>
+auto nonzero(const Tensor<Elem, Dev, Rank> &condition) {
+  const auto nz_count = static_cast<std::size_t>(std::ranges::count_if(
+      condition, [](auto v) { return static_cast<bool>(v); }));
+
+  auto result = Tensor<std::size_t, Dev, 2>(nz_count, Rank);
+  auto out = result.data();
+
+  std::size_t row = 0;
+  for (std::size_t i = 0; i < condition.size(); ++i) {
+    if (static_cast<bool>(condition.data()[i])) {
+      const auto idx = condition.shape().offsetToIdx(i);
+      for (std::size_t d = 0; d < Rank; ++d) {
+        out[(row * Rank) + d] = idx[d];
+      }
+      ++row;
+    }
+  }
+
+  return result;
+}
+
+template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+          typename Dev, std::size_t Rank>
+  requires BoolTensor<Tensor<Elem, Dev, Rank>>
+auto where(const Tensor<Elem, Dev, Rank> &predicate) {
+  if constexpr (Rank == 1) {
+    return nonzero_flat(predicate);
+  } else {
+    return nonzero(predicate);
+  }
 }
 
 template <typename T1, typename T2, typename T3>
