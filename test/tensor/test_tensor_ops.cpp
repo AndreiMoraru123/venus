@@ -159,12 +159,12 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
 
     auto z = venus::eager::where(x > 3);
 
-    STATIC_REQUIRE(std::is_same_v<decltype(z)::ElementType, std::size_t>);
+    STATIC_REQUIRE(std::is_same_v<decltype(z)::ElementType, int>);
     for (std::size_t i = 0; i < z.shape().count(); ++i) {
       if (x.lowLevel().rawMemory()[i] > 3) {
         REQUIRE(z.lowLevel().rawMemory()[i] == i);
       } else {
-        REQUIRE(z.lowLevel().rawMemory()[i] == 0);
+        REQUIRE(z.lowLevel().rawMemory()[i] == -1);
       }
     }
   }
