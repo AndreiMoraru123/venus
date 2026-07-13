@@ -559,6 +559,19 @@ public:
     return std::forward<decltype(self)>(self).m_mem.ptr();
   }
 
+  template <SizeTLike... Dimensions>
+  auto reshape(this auto &&self, Dimensions... dims) {
+    const auto new_shape = Shape(dims...);
+    if (new_shape.count() != self.size()) {
+      throw std::invalid_argument(std::format(
+          "Cannot reshape tensor of size {} to new shape of size {}",
+          self.size(), new_shape.count()));
+    }
+
+    return Tensor<ElementType, DeviceType, new_shape.rank>(self.m_mem,
+                                                           new_shape);
+  }
+
   template <std::size_t NewRank>
   auto reshape(this auto &&self, Shape<NewRank> new_shape) {
     if (new_shape.count() != self.size()) {
