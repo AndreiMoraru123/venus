@@ -35,8 +35,7 @@ public:
   }
 
 public:
-  auto ptr() -> ElementType * { return m_mem.get(); }
-  auto ptr() const -> const ElementType * { return m_mem.get(); }
+  auto ptr(this auto &&self) -> ElementType * { return self.m_mem.get(); }
   [[nodiscard]] auto isShared() const -> bool { return m_mem.use_count() > 1; }
   [[nodiscard]] auto size() const -> std::size_t { return m_size; }
 
