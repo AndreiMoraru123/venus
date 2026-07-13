@@ -91,7 +91,7 @@ auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
     auto out_shape = broadcast<RankOut>(t1.shape(), t2.shape());
 
     auto result = Tensor<ResultElementType, Dev1, RankOut>(out_shape);
-    auto *out_ptr = result.data();
+    auto out_ptr = result.data();
 
     // Does not need broadcasting
     if constexpr (Rank1 == Rank2) {
@@ -137,7 +137,7 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
     auto out_shape = broadcast<RankOut>(t1.shape(), t2.shape(), t3.shape());
 
     auto result = Tensor<ResultElementType, Dev1, RankOut>(out_shape);
-    auto *out_ptr = result.data();
+    auto out_ptr = result.data();
 
     // Does not need broadcasting
     if constexpr (Rank1 == Rank2 && Rank2 == Rank3) {
@@ -548,15 +548,15 @@ auto nonzero_flat(const Tensor<Elem, Dev, Rank> &condition) {
       condition, [](auto v) { return static_cast<bool>(v); }));
 
   auto result = Tensor<std::size_t, Dev, 1>(nz_count);
-  auto out = result.data();
+  auto out_ptr = result.data();
 
   std::size_t pos = 0;
   const auto indices = std::views::iota(std::size_t{0}, condition.size());
   std::ranges::for_each(std::views::zip(condition, indices),
-                        [out, pos](auto &&pair) mutable {
+                        [out_ptr, pos](auto &&pair) mutable {
                           const auto &[cond_val, idx] = pair;
                           if (static_cast<bool>(cond_val)) {
-                            out[pos++] = idx;
+                            out_ptr[pos++] = idx;
                           }
                         });
 
@@ -571,14 +571,14 @@ auto nonzero(const Tensor<Elem, Dev, Rank> &condition) {
       condition, [](auto v) { return static_cast<bool>(v); }));
 
   auto result = Tensor<std::size_t, Dev, 2>(nz_count, Rank);
-  auto out = result.data();
+  auto out_ptr = result.data();
 
   std::size_t row = 0;
   for (std::size_t i = 0; i < condition.size(); ++i) {
     if (static_cast<bool>(condition.data()[i])) {
       const auto idx = condition.shape().offsetToIdx(i);
       for (std::size_t d = 0; d < Rank; ++d) {
-        out[(row * Rank) + d] = idx[d];
+        out_ptr[(row * Rank) + d] = idx[d];
       }
       ++row;
     }
