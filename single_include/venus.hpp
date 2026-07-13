@@ -779,8 +779,8 @@ public:
 
   template <SizeTLike... Dimensions>
     requires(sizeof...(Dimensions) == Rank)
-  constexpr explicit Shape(Dimensions... shapes)
-      : m_dims({static_cast<std::size_t>(shapes)...}) {}
+  constexpr explicit Shape(Dimensions... dims)
+      : m_dims({static_cast<std::size_t>(dims)...}) {}
 
   template <SizeTLike... Dimensions>
     requires(sizeof...(Dimensions) != Rank)
