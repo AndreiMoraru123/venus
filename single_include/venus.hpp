@@ -177,7 +177,7 @@ public:
     }
   }
 
-  auto shift(size_t pos) const {
+  auto shift(std::size_t pos) const {
     assert(pos < m_size);
     return ContiguousMemory(
         std::shared_ptr<ElementType>(m_mem, m_mem.get() + pos), m_size - pos);
@@ -792,7 +792,7 @@ public:
     return m_dims == val.m_dims;
   }
 
-  template <size_t otherRank>
+  template <std::size_t otherRank>
   auto constexpr operator==(const Shape<otherRank> & /*unused*/) const -> bool {
     return false;
   }
@@ -802,7 +802,7 @@ public:
                                   std::multiplies<>());
   }
 
-  constexpr auto operator[](size_t idx) const -> std::size_t {
+  constexpr auto operator[](std::size_t idx) const -> std::size_t {
     if (std::is_constant_evaluated()) {
       if (idx >= rank) {
         // TODO: This won't actually throw, do I really need comptime? (shape)
@@ -950,7 +950,7 @@ public:
 
   constexpr auto operator==(const Shape &val) const -> bool { return true; }
 
-  template <size_t otherRank>
+  template <std::size_t otherRank>
   auto constexpr operator==(const Shape<otherRank> & /*unused*/) const -> bool {
     return false;
   }
@@ -2736,7 +2736,7 @@ template <typename... TParameters> struct VarTypeDict {
     Values() = default;
 
     Values(Values &&val) noexcept {
-      for (size_t i = 0; i < sizeof...(Types); ++i) {
+      for (std::size_t i = 0; i < sizeof...(Types); ++i) {
         m_tuple[i] = std::move(val.m_tuple[i]);
       }
     }
