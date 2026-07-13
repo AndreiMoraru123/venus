@@ -69,10 +69,10 @@ TEST_CASE("Shape semantics", "[shape]") {
 
   SECTION("Offset to Index") {
     const auto shape = Shape<3>(3, 2, 2);
-    size_t input = 0;
-    for (size_t i = 0; i < 3; ++i) {
-      for (size_t j = 0; j < 2; ++j) {
-        for (size_t k = 0; k < 2; ++k) {
+    std::size_t input = 0;
+    for (std::size_t i = 0; i < 3; ++i) {
+      for (std::size_t j = 0; j < 2; ++j) {
+        for (std::size_t k = 0; k < 2; ++k) {
           auto res = shape.offsetToIdx(input);
           assert(res[0] == i);
           assert(res[1] == j);

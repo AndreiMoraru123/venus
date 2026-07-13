@@ -28,7 +28,7 @@ public:
     }
   }
 
-  auto shift(size_t pos) const {
+  auto shift(std::size_t pos) const {
     assert(pos < m_size);
     return ContiguousMemory(
         std::shared_ptr<ElementType>(m_mem, m_mem.get() + pos), m_size - pos);
