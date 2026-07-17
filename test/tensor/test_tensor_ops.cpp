@@ -129,13 +129,13 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
   }
 
   SECTION("2D Matrix Multiplication") {
-    auto A = Tensor<int, Device::CPU, 2>{{1, 2, 3}, {4, 5, 6}};
-    auto B = Tensor<int, Device::CPU, 2>{{7, 8}, {9, 10}, {11, 12}};
+    const auto A = Tensor<int, Device::CPU, 2>{{1, 2, 3}, {4, 5, 6}};
+    const auto B = Tensor<int, Device::CPU, 2>{{7, 8}, {9, 10}, {11, 12}};
 
-    auto C = venus::eager::mm(A, B);
+    const auto C = venus::eager::mm(A, B);
 
-    auto [I, K] = A.shape();
-    auto [K2, J] = B.shape();
+    const auto [I, K] = A.shape();
+    const auto [K2, J] = B.shape();
 
     auto expected = Tensor<int, Device::CPU, 2>(I, J);
 
