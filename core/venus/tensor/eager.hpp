@@ -174,7 +174,7 @@ consteval auto count_operands(const std::string_view eqn) {
 
 consteval auto compute_occurences(const std::string_view eqn) -> AlphabetArray {
   AlphabetArray occ{};
-  auto lhs = eqn.substr(0, eqn.find("->"));
+  const auto lhs = eqn.substr(0, eqn.find("->"));
   for (char c : lhs)
     if (c != ',')
       occ[c - 'a']++;
@@ -186,7 +186,7 @@ consteval auto compute_last_occurence(const std::string_view eqn)
     -> AlphabetArray {
   AlphabetArray last{};
   last.fill(-1);
-  auto lhs = eqn.substr(0, eqn.find("->"));
+  const auto lhs = eqn.substr(0, eqn.find("->"));
   std::int64_t operand = 0;
   for (char c : lhs) {
     if (c == ',') {
@@ -203,10 +203,10 @@ consteval auto compute_sorted_position(const std::string_view eqn,
     -> AlphabetArray {
   AlphabetArray pos{};
   pos.fill(-1);
-  auto arrow = eqn.find("->");
+  const auto arrow = eqn.find("->");
   std::int64_t dim = 0;
   if (arrow != std::string_view::npos) {
-    auto rhs = eqn.substr(arrow + 2);
+    const auto rhs = eqn.substr(arrow + 2);
     for (char c : rhs)
       pos[c - 'a'] = dim++;
   } else {
@@ -222,14 +222,14 @@ consteval auto compute_sorted_position(const std::string_view eqn,
 }
 
 consteval auto count_total_dimensions(std::string_view eqn) -> std::size_t {
-  auto occ = compute_occurences(eqn);
+  const auto occ = compute_occurences(eqn);
   return std::ranges::count_if(occ, [](auto &&val) { return val > 0; });
 }
 
 consteval auto count_output_dimensions(std::string_view eqn,
                                        const AlphabetArray &occ)
     -> std::size_t {
-  auto arrow = eqn.find("->");
+  const auto arrow = eqn.find("->");
   if (arrow != std::string_view::npos) {
     return eqn.size() - (arrow + 2);
   }
@@ -247,7 +247,7 @@ consteval auto compute_position_labels(const AlphabetArray &sorted_pos)
 }
 
 consteval auto count_dims_for_op(std::string_view eqn, std::size_t op_idx) {
-  auto lhs = eqn.substr(0, eqn.find("->"));
+  const auto lhs = eqn.substr(0, eqn.find("->"));
   std::size_t op = 0, n = 0;
   for (char c : lhs) {
     if (c == ',') {
@@ -265,7 +265,7 @@ consteval auto compute_axes_for_op(std::string_view eqn, std::size_t op_idx)
   AlphabetArray axes{};
   axes.fill(-1);
 
-  auto lhs = eqn.substr(0, eqn.find("->"));
+  const auto lhs = eqn.substr(0, eqn.find("->"));
   std::size_t op = 0, dim = 0;
   for (char c : lhs) {
     if (c == ',') {
@@ -274,7 +274,7 @@ consteval auto compute_axes_for_op(std::string_view eqn, std::size_t op_idx)
       continue;
     }
     if (op == op_idx) {
-      auto letter = static_cast<std::size_t>(c - 'a');
+      const auto letter = static_cast<std::size_t>(c - 'a');
       if (axes[letter] != -1) {
         throw "einsum repeated label in one operand is diagonal, unsupported";
       }
@@ -349,8 +349,8 @@ auto homogenize_operand(const Tensor<Elem, Dev, Rank> &t) {
 
   std::array<std::size_t, total_dims> homo_dims{};
   for (std::size_t i = 0; i < total_dims; ++i) {
-    auto letter = pos_labels[i];
-    auto axis = axes[letter];
+    const auto letter = pos_labels[i];
+    const auto axis = axes[letter];
     if (axis != -1) {
       homo_dims[i] = t.shape()[axis];
     } else {
@@ -358,14 +358,14 @@ auto homogenize_operand(const Tensor<Elem, Dev, Rank> &t) {
     }
   }
 
-  auto homo_shape = Shape<total_dims>(homo_dims);
+  const auto homo_shape = Shape<total_dims>(homo_dims);
 
   auto project_homo_idx =
       [pos_labels, axes](const std::array<std::size_t, total_dims> &out_idx) {
         std::array<std::size_t, Rank> orig_idx{};
         for (std::size_t i = 0; i < total_dims; ++i) {
-          auto letter = pos_labels[i];
-          auto axis = axes[letter];
+          const auto letter = pos_labels[i];
+          const auto axis = axes[letter];
           if (axis != -1) {
             orig_idx[static_cast<std::size_t>(axis)] = out_idx[i];
           }
@@ -375,8 +375,8 @@ auto homogenize_operand(const Tensor<Elem, Dev, Rank> &t) {
 
   auto homogenized = Tensor<Elem, Dev, total_dims>(homo_shape);
   for (std::size_t flat = 0; flat < homogenized.size(); ++flat) {
-    auto out_idx = homo_shape.offsetToIdx(flat);
-    auto orig_idx = project_homo_idx(out_idx);
+    const auto out_idx = homo_shape.offsetToIdx(flat);
+    const auto orig_idx = project_homo_idx(out_idx);
     homogenized.data()[flat] = t[orig_idx];
   }
 
@@ -717,15 +717,17 @@ auto _einsum_contract(HomogenizedTensors... tensors) {
   const auto &t0 = tensors...[0];
   constexpr auto initial_sum_dims = detail::compute_sum_dims_for_step<0, Eqn>();
 
-  auto initial_result = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-    if constexpr (sizeof...(Is) > 0) {
-      return sum_dims<initial_sum_dims[Is]...>(t0);
-    } else {
-      return t0;
-    }
-  }(std::make_index_sequence<initial_sum_dims.size()>{});
+  const auto initial_result =
+      [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+        if constexpr (sizeof...(Is) > 0) {
+          return sum_dims<initial_sum_dims[Is]...>(t0);
+        } else {
+          return t0;
+        }
+      }(std::make_index_sequence<initial_sum_dims.size()>{});
 
-  auto final_contracted = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+  const auto final_contracted = [&]<std::size_t... Is>(
+                                    std::index_sequence<Is...>) {
     auto current = std::move(initial_result);
     auto step = [&]<std::size_t OpIdx>() {
       constexpr auto sum_dims = detail::compute_sum_dims_for_step<OpIdx, Eqn>();
