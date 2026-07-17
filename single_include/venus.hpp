@@ -1563,8 +1563,8 @@ auto mm(const Tensor<Elem1, Dev, 2> &t1, const Tensor<Elem2, Dev, 2> &t2) {
 
   using ResultElementType = std::common_type_t<Elem1, Elem2>;
 
-  auto [I, K] = t1.shape();
-  auto [K2, J] = t2.shape();
+  const auto [I, K] = t1.shape();
+  const auto [K2, J] = t2.shape();
 
   if (K != K2) {
     throw std::invalid_argument(
