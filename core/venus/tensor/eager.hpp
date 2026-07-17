@@ -513,8 +513,8 @@ auto mm(const Tensor<Elem1, Dev, 2> &t1, const Tensor<Elem2, Dev, 2> &t2) {
 
   using ResultElementType = std::common_type_t<Elem1, Elem2>;
 
-  auto [M, K] = t1.shape();
-  auto [K2, N] = t2.shape();
+  auto [I, K] = t1.shape();
+  auto [K2, J] = t2.shape();
 
   if (K != K2) {
     throw std::invalid_argument(
@@ -523,15 +523,15 @@ auto mm(const Tensor<Elem1, Dev, 2> &t1, const Tensor<Elem2, Dev, 2> &t2) {
                     t1.shape(), t2.shape()));
   }
 
-  auto t3 = Tensor<ResultElementType, Dev, 2>(M, N);
+  auto t3 = Tensor<ResultElementType, Dev, 2>(I, J);
 
   // TODO: This is optimized for row major layout
-  for (std::size_t i{}; i < M; i++) {
-    for (std::size_t k{}; k < K; k++) {
+  for (std::size_t i = 0; i < I; i++) {
+    for (std::size_t k = 0; k < K; k++) {
       if (t1[i, k] == 0) {
         continue;
       }
-      for (std::size_t j{}; j < N; j++) {
+      for (std::size_t j = 0; j < J; j++) {
         t3[i, j] += t1[i, k] * t2[k, j];
       }
     }

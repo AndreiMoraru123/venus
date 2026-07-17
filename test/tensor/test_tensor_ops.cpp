@@ -134,13 +134,13 @@ TEST_CASE("Tensor Ops", "[tensor][ops]") {
 
     auto C = venus::eager::mm(A, B);
 
-    auto [M, K] = A.shape();
-    auto [K2, N] = B.shape();
+    auto [I, K] = A.shape();
+    auto [K2, J] = B.shape();
 
-    auto expected = Tensor<int, Device::CPU, 2>(M, N);
+    auto expected = Tensor<int, Device::CPU, 2>(I, J);
 
-    for (std::size_t i = 0; i < M; ++i) {
-      for (std::size_t j = 0; j < N; ++j) {
+    for (std::size_t i = 0; i < I; ++i) {
+      for (std::size_t j = 0; j < J; ++j) {
         for (std::size_t k = 0; k < K; ++k) {
           expected[i, j] += A[i, k] * B[k, j];
         }
