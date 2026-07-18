@@ -1067,7 +1067,7 @@ struct tuple_element<N, venus::Shape<Rank>> {
 
 } // namespace std
 
-inline constexpr std::size_t NUMBER_OF_LETTERS = 'z' - 'a' + 1;
+constexpr std::size_t NUMBER_OF_LETTERS = 'z' - 'a' + 1;
 using AlphabetArray = std::array<std::int64_t, NUMBER_OF_LETTERS>;
 using PositionLabels = std::array<std::size_t, NUMBER_OF_LETTERS>;
 
