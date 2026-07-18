@@ -38,6 +38,9 @@ public:
   constexpr explicit Shape(std::array<std::size_t, Rank> dims) noexcept
       : m_dims(std::move(dims)) {}
 
+  // only allow assignment for lvalues
+  auto operator=(const Shape &) & -> Shape & = default;
+
   constexpr auto operator==(const Shape &val) const -> bool {
     return m_dims == val.m_dims;
   }

@@ -252,7 +252,7 @@ public:
 
   ~Tensor() = default; // give back to mem-pool
 
-  auto shape() const noexcept -> const Shape<Rank> & { return m_shape; }
+  [[nodiscard]] auto shape() const noexcept -> Shape<rank> { return m_shape; }
 
   [[nodiscard]] auto unique() const -> bool { return not m_mem.isShared(); }
 
@@ -632,9 +632,8 @@ public:
 
   ~Tensor() = default; // give back to mem-pool
 
-  auto shape() const noexcept -> const auto & {
-    static const Shape<rank> shape;
-    return shape;
+  [[nodiscard]] constexpr auto shape() const noexcept -> Shape<rank> {
+    return Shape<rank>{};
   }
 
   [[nodiscard]] auto unique() const -> bool { return not m_mem.isShared(); }

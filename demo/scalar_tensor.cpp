@@ -1,4 +1,5 @@
 
+#include "venus/tensor/shape.hpp"
 #include <cassert>
 #include <venus/tensor/tensor.hpp>
 
@@ -15,4 +16,6 @@ auto main() -> int {
 
   auto bad = (tensor != 12.0f);
   assert(bad == false);
+
+  static_assert(tensor.shape() == Shape<0>{});
 }
