@@ -2421,7 +2421,7 @@ public:
   friend struct LowLevelAccess<const Tensor>;
 
   explicit Tensor(ElementType value = ElementType()) : m_mem(1) {
-    setValue(value);
+    assign(value);
   }
 
   explicit Tensor(Shape<0> /*unused*/) : Tensor() {};
@@ -2434,7 +2434,7 @@ public:
       if (not unique()) {
         m_mem = ContiguousMemory<ElementType, DeviceType>(1);
       }
-      setValue(other.value());
+      assign(other.value());
     }
     return *this;
   }
@@ -2446,7 +2446,7 @@ public:
     return *this;
   }
 
-  Tensor(const Tensor &other) : m_mem(1) { setValue(other.value()); }
+  Tensor(const Tensor &other) : m_mem(1) { assign(other.value()); }
 
   Tensor(Tensor &&other) noexcept : m_mem(std::move(other.m_mem)) {}
 
@@ -2459,9 +2459,9 @@ public:
 
   [[nodiscard]] auto unique() const -> bool { return not m_mem.isShared(); }
 
-  void setValue(ElementType value) const = delete;
+  void assign(ElementType value) const = delete;
 
-  void setValue(ElementType value) {
+  void assign(ElementType value) {
     if (not unique()) {
       throw std::runtime_error("Cannot write to shared scalar tensor.");
     }
