@@ -18,10 +18,10 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     REQUIRE(bool(scalar) == true);
     REQUIRE(scalar.unique());
 
-    scalar.setValue(100.0f);
+    scalar.assign(100.0f);
     REQUIRE(scalar.value() == 100.0f);
 
-    scalar.setValue(0.0f);
+    scalar.assign(0.0f);
     REQUIRE(bool(scalar) == false);
   }
 
@@ -30,7 +30,7 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     REQUIRE(scalar.value() == true);
     REQUIRE(scalar == true);
 
-    scalar.setValue(false);
+    scalar.assign(false);
     REQUIRE(scalar == false);
   }
 
