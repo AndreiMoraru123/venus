@@ -1,6 +1,5 @@
 #pragma once
 
-#include "venus/tensor/tensor_iterator.hpp"
 #include <algorithm>
 #include <cassert>
 #include <concepts>
@@ -18,6 +17,7 @@
 #include <venus/nested_initializer_list.hpp>
 #include <venus/tensor/eager.hpp>
 #include <venus/tensor/shape.hpp>
+#include <venus/tensor/tensor_iterator.hpp>
 
 #define REGISTER_SCALAR_BOOL_OP(op)                                            \
   template <typename OtherType>                                                \
