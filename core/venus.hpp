@@ -18,5 +18,6 @@
 #include <venus/tensor/eager.hpp>
 #include <venus/tensor/shape.hpp>
 #include <venus/tensor/tensor.hpp>
+#include <venus/tensor/tensor_iterator.hpp>
 #include <venus/traits.hpp>
 #include <venus/var_type_dict.hpp>
