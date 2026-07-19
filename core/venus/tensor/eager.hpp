@@ -328,7 +328,7 @@ template <std::size_t ToRank,
   requires VenusTensor<Tensor<Elem, Dev, FromRank>>
 auto squeeze_to_rank(const Tensor<Elem, Dev, FromRank> &tensor) {
   if constexpr (ToRank == 0) {
-    return tensor.toScalar();
+    return tensor.asScalar();
   } else {
     return tensor.template reshape<ToRank>(
         tensor.shape().template slice<ToRank>());

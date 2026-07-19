@@ -159,7 +159,7 @@ public:
 
   auto clone() const -> Tensor { return Tensor(*this); }
 
-  auto toScalar() const -> Tensor<TElem, TDevice, 0> {
+  auto asScalar() const -> Tensor<TElem, TDevice, 0> {
     if (size() != 1) {
       throw std::runtime_error(std::format(
           "toScalar can only be called on tensors with exactly 1 element."
