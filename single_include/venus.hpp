@@ -1822,16 +1822,15 @@ auto einsum(const Tensors<Ts, Devs, Ranks> &...tensors) {
 #undef REGISTER_BINARY_OP
 
 
+#include "venus/tensor/tensor_iterator.hpp"
 #include <algorithm>
 #include <cassert>
-#include <compare>
 #include <concepts>
 #include <cstddef>
 #include <format>
 #include <initializer_list>
 #include <iomanip>
 #include <ios>
-#include <iterator>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -1878,105 +1877,6 @@ auto einsum(const Tensors<Ts, Devs, Ranks> &...tensors) {
   }
 
 namespace venus {
-
-template <typename T> class tensor_iterator {
-public:
-  using iterator_category = std::contiguous_iterator_tag;
-  using value_type = T::ElementType;
-  using difference_type = std::ptrdiff_t;
-  using pointer =
-      std::conditional_t<std::is_const_v<T>, const value_type *, value_type *>;
-  using reference =
-      std::conditional_t<std::is_const_v<T>, const value_type &, value_type &>;
-
-private:
-  T *m_tensor;
-  std::size_t m_offset;
-
-public:
-  constexpr tensor_iterator() : m_tensor(nullptr), m_offset(0) {}
-  constexpr tensor_iterator(T *tensor, std::size_t offset)
-      : m_tensor(tensor), m_offset(offset) {}
-
-  constexpr auto operator*() const -> reference {
-    return m_tensor->data()[m_offset];
-  };
-
-  constexpr auto operator->() const -> pointer {
-    return &(m_tensor->data()[m_offset]);
-  }
-
-  constexpr auto operator++() -> tensor_iterator & {
-    ++m_offset;
-    return *this;
-  }
-
-  constexpr auto operator++(int) -> tensor_iterator {
-    auto temp = *this;
-    ++m_offset;
-    return temp;
-  }
-
-  constexpr auto operator--() -> tensor_iterator & {
-    --m_offset;
-    return *this;
-  }
-
-  constexpr auto operator--(int) -> tensor_iterator {
-    auto temp = *this;
-    --m_offset;
-    return temp;
-  }
-
-  constexpr auto operator+=(difference_type n) -> tensor_iterator & {
-    m_offset += n;
-    return *this;
-  }
-
-  constexpr auto operator-=(difference_type n) -> tensor_iterator & {
-    m_offset -= n;
-    return *this;
-  }
-
-  constexpr auto operator+(difference_type n) -> tensor_iterator {
-    return tensor_iterator(m_tensor, m_offset + n);
-  }
-
-  constexpr auto operator+(difference_type n) const -> tensor_iterator {
-    return tensor_iterator(m_tensor, m_offset + n);
-  }
-
-  constexpr auto operator-(difference_type n) -> tensor_iterator {
-    return tensor_iterator(m_tensor, m_offset - n);
-  }
-
-  constexpr auto operator-(difference_type n) const -> tensor_iterator {
-    return tensor_iterator(m_tensor, m_offset - n);
-  }
-
-  constexpr auto operator-(const tensor_iterator &other) const
-      -> difference_type {
-    return static_cast<difference_type>(m_offset) -
-           static_cast<difference_type>(other.m_offset);
-  }
-
-  constexpr auto operator==(const tensor_iterator &other) const -> bool {
-    return m_tensor == other.m_tensor && m_offset == other.m_offset;
-  }
-
-  constexpr auto operator<=>(const tensor_iterator &other) const {
-    if (m_tensor != other.m_tensor) {
-      // comparing different tensors alltogether
-      return std::compare_three_way{}(m_tensor, other.m_tensor);
-    }
-    // comparing offsets on the same tensor
-    return m_offset <=> other.m_offset;
-  }
-
-  constexpr auto operator[](difference_type n) const -> reference {
-    return *(*this + n);
-  }
-};
 
 template <typename TElem, typename TDevice, std::size_t Rank> class Tensor {
   static_assert(std::is_same_v<std::remove_cvref_t<TElem>, TElem>);
@@ -2357,14 +2257,14 @@ public:
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Range iteration is currently only supported on CPU");
     using Self = std::remove_reference_t<decltype(self)>;
-    return tensor_iterator<Self>(&self, 0);
+    return TensorIterator<Self>(&self, 0);
   }
 
   constexpr auto end(this auto &&self) {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Range iteration is currently only supported on CPU");
     using Self = std::remove_reference_t<decltype(self)>;
-    return tensor_iterator<Self>(&self, self.m_shape.count());
+    return TensorIterator<Self>(&self, self.m_shape.count());
   }
 
   constexpr auto cbegin(this auto &&self) {
@@ -2561,8 +2461,8 @@ private:
 
 // difference_type + iterator (for random_access_range | addition commutative)
 template <typename T>
-constexpr auto operator+(typename tensor_iterator<T>::difference_type n,
-                         const tensor_iterator<T> &it) -> tensor_iterator<T> {
+constexpr auto operator+(typename TensorIterator<T>::difference_type n,
+                         const TensorIterator<T> &it) -> TensorIterator<T> {
   return it + n;
 }
 
@@ -2715,6 +2615,110 @@ auto operator!=(const Scalar &scalar,
 #undef REGISTER_POST_OPERATOR
 #undef REGISTER_PRE_OPERATOR
 #undef REGISTER_SCALAR_BOOL_OP
+#include <compare>
+#include <iterator>
+
+namespace venus {
+
+template <typename T> class TensorIterator {
+public:
+  using iterator_category = std::contiguous_iterator_tag;
+  using value_type = T::ElementType;
+  using difference_type = std::ptrdiff_t;
+  using pointer =
+      std::conditional_t<std::is_const_v<T>, const value_type *, value_type *>;
+  using reference =
+      std::conditional_t<std::is_const_v<T>, const value_type &, value_type &>;
+
+private:
+  T *m_tensor;
+  std::size_t m_offset;
+
+public:
+  constexpr TensorIterator() : m_tensor(nullptr), m_offset(0) {}
+  constexpr TensorIterator(T *tensor, std::size_t offset)
+      : m_tensor(tensor), m_offset(offset) {}
+
+  constexpr auto operator*() const -> reference {
+    return m_tensor->data()[m_offset];
+  };
+
+  constexpr auto operator->() const -> pointer {
+    return &(m_tensor->data()[m_offset]);
+  }
+
+  constexpr auto operator++() -> TensorIterator & {
+    ++m_offset;
+    return *this;
+  }
+
+  constexpr auto operator++(int) -> TensorIterator {
+    auto temp = *this;
+    ++m_offset;
+    return temp;
+  }
+
+  constexpr auto operator--() -> TensorIterator & {
+    --m_offset;
+    return *this;
+  }
+
+  constexpr auto operator--(int) -> TensorIterator {
+    auto temp = *this;
+    --m_offset;
+    return temp;
+  }
+
+  constexpr auto operator+=(difference_type n) -> TensorIterator & {
+    m_offset += n;
+    return *this;
+  }
+
+  constexpr auto operator-=(difference_type n) -> TensorIterator & {
+    m_offset -= n;
+    return *this;
+  }
+
+  constexpr auto operator+(difference_type n) -> TensorIterator {
+    return TensorIterator(m_tensor, m_offset + n);
+  }
+
+  constexpr auto operator+(difference_type n) const -> TensorIterator {
+    return TensorIterator(m_tensor, m_offset + n);
+  }
+
+  constexpr auto operator-(difference_type n) -> TensorIterator {
+    return TensorIterator(m_tensor, m_offset - n);
+  }
+
+  constexpr auto operator-(difference_type n) const -> TensorIterator {
+    return TensorIterator(m_tensor, m_offset - n);
+  }
+
+  constexpr auto operator-(const TensorIterator &other) const
+      -> difference_type {
+    return static_cast<difference_type>(m_offset) -
+           static_cast<difference_type>(other.m_offset);
+  }
+
+  constexpr auto operator==(const TensorIterator &other) const -> bool {
+    return m_tensor == other.m_tensor && m_offset == other.m_offset;
+  }
+
+  constexpr auto operator<=>(const TensorIterator &other) const {
+    if (m_tensor != other.m_tensor) {
+      // comparing different tensors alltogether
+      return std::compare_three_way{}(m_tensor, other.m_tensor);
+    }
+    // comparing offsets on the same tensor
+    return m_offset <=> other.m_offset;
+  }
+
+  constexpr auto operator[](difference_type n) const -> reference {
+    return *(*this + n);
+  }
+};
+} // namespace venus
 
 #include <array>
 #include <cstddef>
