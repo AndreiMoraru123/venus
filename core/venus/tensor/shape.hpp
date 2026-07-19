@@ -27,8 +27,8 @@ public:
 
   template <SizeTLike... Dimensions>
     requires(sizeof...(Dimensions) == Rank)
-  constexpr explicit Shape(Dimensions... shapes)
-      : m_dims({static_cast<std::size_t>(shapes)...}) {}
+  constexpr explicit Shape(Dimensions... dims)
+      : m_dims({static_cast<std::size_t>(dims)...}) {}
 
   template <SizeTLike... Dimensions>
     requires(sizeof...(Dimensions) != Rank)
@@ -37,11 +37,14 @@ public:
   constexpr explicit Shape(std::array<std::size_t, Rank> dims) noexcept
       : m_dims(std::move(dims)) {}
 
+  // only allow assignment for lvalues
+  auto operator=(const Shape &) & -> Shape & = default;
+
   constexpr auto operator==(const Shape &val) const -> bool {
     return m_dims == val.m_dims;
   }
 
-  template <size_t otherRank>
+  template <std::size_t otherRank>
   auto constexpr operator==(const Shape<otherRank> & /*unused*/) const -> bool {
     return false;
   }
@@ -51,7 +54,7 @@ public:
                                   std::multiplies<>());
   }
 
-  constexpr auto operator[](size_t idx) const -> std::size_t {
+  constexpr auto operator[](std::size_t idx) const -> std::size_t {
     if (std::is_constant_evaluated()) {
       if (idx >= rank) {
         // TODO: This won't actually throw, do I really need comptime? (shape)
@@ -182,7 +185,7 @@ public:
 
   constexpr auto operator==(const Shape &val) const -> bool { return true; }
 
-  template <size_t otherRank>
+  template <std::size_t otherRank>
   auto constexpr operator==(const Shape<otherRank> & /*unused*/) const -> bool {
     return false;
   }

@@ -28,15 +28,20 @@ public:
     }
   }
 
-  auto shift(size_t pos) const {
+  auto shift(std::size_t pos) const {
     assert(pos < m_size);
     return ContiguousMemory(
         std::shared_ptr<ElementType>(m_mem, m_mem.get() + pos), m_size - pos);
   }
 
 public:
-  auto ptr() -> ElementType * { return m_mem.get(); }
-  auto ptr() const -> const ElementType * { return m_mem.get(); }
+  auto ptr(this auto &&self) {
+    if constexpr (std::is_const_v<std::remove_reference_t<decltype(self)>>) {
+      return static_cast<const ElementType *>(self.m_mem.get());
+    } else {
+      return self.m_mem.get();
+    }
+  }
   [[nodiscard]] auto isShared() const -> bool { return m_mem.use_count() > 1; }
   [[nodiscard]] auto size() const -> std::size_t { return m_size; }
 

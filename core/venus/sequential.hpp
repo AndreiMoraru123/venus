@@ -163,11 +163,11 @@ template <typename T> struct Size_;
 
 template <template <typename...> typename TCont, typename... T>
 struct Size_<TCont<T...>> {
-  static constexpr size_t value = sizeof...(T);
+  static constexpr std::size_t value = sizeof...(T);
 };
 
 template <typename T>
-static constexpr size_t Size = Size_<std::remove_cvref_t<T>>::value;
+static constexpr std::size_t Size = Size_<std::remove_cvref_t<T>>::value;
 // =============================================================
 
 // Head ========================================================

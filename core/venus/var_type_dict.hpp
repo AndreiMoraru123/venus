@@ -28,7 +28,7 @@ template <typename... TParameters> struct VarTypeDict {
     Values() = default;
 
     Values(Values &&val) noexcept {
-      for (size_t i = 0; i < sizeof...(Types); ++i) {
+      for (std::size_t i = 0; i < sizeof...(Types); ++i) {
         m_tuple[i] = std::move(val.m_tuple[i]);
       }
     }

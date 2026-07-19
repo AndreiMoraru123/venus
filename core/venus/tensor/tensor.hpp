@@ -1,14 +1,13 @@
 #pragma once
+
 #include <algorithm>
 #include <cassert>
-#include <compare>
 #include <concepts>
 #include <cstddef>
 #include <format>
 #include <initializer_list>
 #include <iomanip>
 #include <ios>
-#include <iterator>
 #include <mdspan>
 #include <stdexcept>
 #include <type_traits>
@@ -19,6 +18,7 @@
 #include <venus/nested_initializer_list.hpp>
 #include <venus/tensor/eager.hpp>
 #include <venus/tensor/shape.hpp>
+#include <venus/tensor/tensor_iterator.hpp>
 
 #define REGISTER_SCALAR_BOOL_OP(op)                                            \
   template <typename OtherType>                                                \
@@ -56,105 +56,6 @@
   }
 
 namespace venus {
-
-template <typename T> class tensor_iterator {
-public:
-  using iterator_category = std::contiguous_iterator_tag;
-  using value_type = T::ElementType;
-  using difference_type = std::ptrdiff_t;
-  using pointer =
-      std::conditional_t<std::is_const_v<T>, const value_type *, value_type *>;
-  using reference =
-      std::conditional_t<std::is_const_v<T>, const value_type &, value_type &>;
-
-private:
-  T *m_tensor;
-  std::size_t m_offset;
-
-public:
-  constexpr tensor_iterator() : m_tensor(nullptr), m_offset(0) {}
-  constexpr tensor_iterator(T *tensor, std::size_t offset)
-      : m_tensor(tensor), m_offset(offset) {}
-
-  constexpr auto operator*() const -> reference {
-    return m_tensor->data()[m_offset];
-  };
-
-  constexpr auto operator->() const -> pointer {
-    return &(m_tensor->data()[m_offset]);
-  }
-
-  constexpr auto operator++() -> tensor_iterator & {
-    ++m_offset;
-    return *this;
-  }
-
-  constexpr auto operator++(int) -> tensor_iterator {
-    auto temp = *this;
-    ++m_offset;
-    return temp;
-  }
-
-  constexpr auto operator--() -> tensor_iterator & {
-    --m_offset;
-    return *this;
-  }
-
-  constexpr auto operator--(int) -> tensor_iterator {
-    auto temp = *this;
-    --m_offset;
-    return temp;
-  }
-
-  constexpr auto operator+=(difference_type n) -> tensor_iterator & {
-    m_offset += n;
-    return *this;
-  }
-
-  constexpr auto operator-=(difference_type n) -> tensor_iterator & {
-    m_offset -= n;
-    return *this;
-  }
-
-  constexpr auto operator+(difference_type n) -> tensor_iterator {
-    return tensor_iterator(m_tensor, m_offset + n);
-  }
-
-  constexpr auto operator+(difference_type n) const -> tensor_iterator {
-    return tensor_iterator(m_tensor, m_offset + n);
-  }
-
-  constexpr auto operator-(difference_type n) -> tensor_iterator {
-    return tensor_iterator(m_tensor, m_offset - n);
-  }
-
-  constexpr auto operator-(difference_type n) const -> tensor_iterator {
-    return tensor_iterator(m_tensor, m_offset - n);
-  }
-
-  constexpr auto operator-(const tensor_iterator &other) const
-      -> difference_type {
-    return static_cast<difference_type>(m_offset) -
-           static_cast<difference_type>(other.m_offset);
-  }
-
-  constexpr auto operator==(const tensor_iterator &other) const -> bool {
-    return m_tensor == other.m_tensor && m_offset == other.m_offset;
-  }
-
-  constexpr auto operator<=>(const tensor_iterator &other) const {
-    if (m_tensor != other.m_tensor) {
-      // comparing different tensors alltogether
-      return std::compare_three_way{}(m_tensor, other.m_tensor);
-    }
-    // comparing offsets on the same tensor
-    return m_offset <=> other.m_offset;
-  }
-
-  constexpr auto operator[](difference_type n) const -> reference {
-    return *(*this + n);
-  }
-};
 
 template <typename TElem, typename TDevice, std::size_t Rank> class Tensor {
   static_assert(std::is_same_v<std::remove_cvref_t<TElem>, TElem>);
@@ -253,7 +154,7 @@ public:
 
   ~Tensor() = default; // give back to mem-pool
 
-  auto shape() const noexcept -> const Shape<Rank> & { return m_shape; }
+  [[nodiscard]] auto shape() const noexcept -> Shape<rank> { return m_shape; }
 
   [[nodiscard]] auto unique() const -> bool { return not m_mem.isShared(); }
 
@@ -546,14 +447,14 @@ public:
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Range iteration is currently only supported on CPU");
     using Self = std::remove_reference_t<decltype(self)>;
-    return tensor_iterator<Self>(&self, 0);
+    return TensorIterator<Self>(&self, 0);
   }
 
   constexpr auto end(this auto &&self) {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Range iteration is currently only supported on CPU");
     using Self = std::remove_reference_t<decltype(self)>;
-    return tensor_iterator<Self>(&self, self.m_shape.count());
+    return TensorIterator<Self>(&self, self.m_shape.count());
   }
 
   constexpr auto cbegin(this auto &&self) {
@@ -569,6 +470,19 @@ public:
 
   auto data(this auto &&self) {
     return std::forward<decltype(self)>(self).m_mem.ptr();
+  }
+
+  template <SizeTLike... Dimensions>
+  auto reshape(this auto &&self, Dimensions... dims) {
+    const auto new_shape = Shape(dims...);
+    if (new_shape.count() != self.size()) {
+      throw std::invalid_argument(std::format(
+          "Cannot reshape tensor of size {} to new shape of size {}",
+          self.size(), new_shape.count()));
+    }
+
+    return Tensor<ElementType, DeviceType, new_shape.rank>(self.m_mem,
+                                                           new_shape);
   }
 
   template <std::size_t NewRank>
@@ -600,7 +514,7 @@ public:
   friend struct LowLevelAccess<const Tensor>;
 
   explicit Tensor(ElementType value = ElementType()) : m_mem(1) {
-    setValue(value);
+    assign(value);
   }
 
   explicit Tensor(Shape<0> /*unused*/) : Tensor() {};
@@ -613,7 +527,7 @@ public:
       if (not unique()) {
         m_mem = ContiguousMemory<ElementType, DeviceType>(1);
       }
-      setValue(other.value());
+      assign(other.value());
     }
     return *this;
   }
@@ -625,22 +539,21 @@ public:
     return *this;
   }
 
-  Tensor(const Tensor &other) : m_mem(1) { setValue(other.value()); }
+  Tensor(const Tensor &other) : m_mem(1) { assign(other.value()); }
 
   Tensor(Tensor &&other) noexcept : m_mem(std::move(other.m_mem)) {}
 
   ~Tensor() = default; // give back to mem-pool
 
-  auto shape() const noexcept -> const auto & {
-    static const Shape<rank> shape;
-    return shape;
+  [[nodiscard]] constexpr auto shape() const noexcept -> Shape<rank> {
+    return Shape<rank>{};
   }
 
   [[nodiscard]] auto unique() const -> bool { return not m_mem.isShared(); }
 
-  void setValue(ElementType value) const = delete;
+  void assign(ElementType value) const = delete;
 
-  void setValue(ElementType value) {
+  void assign(ElementType value) {
     if (not unique()) {
       throw std::runtime_error("Cannot write to shared scalar tensor.");
     }
@@ -738,8 +651,8 @@ private:
 
 // difference_type + iterator (for random_access_range | addition commutative)
 template <typename T>
-constexpr auto operator+(typename tensor_iterator<T>::difference_type n,
-                         const tensor_iterator<T> &it) -> tensor_iterator<T> {
+constexpr auto operator+(typename TensorIterator<T>::difference_type n,
+                         const TensorIterator<T> &it) -> TensorIterator<T> {
   return it + n;
 }
 

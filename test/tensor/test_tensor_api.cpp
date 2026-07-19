@@ -18,10 +18,10 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     REQUIRE(bool(scalar) == true);
     REQUIRE(scalar.unique());
 
-    scalar.setValue(100.0f);
+    scalar.assign(100.0f);
     REQUIRE(scalar.value() == 100.0f);
 
-    scalar.setValue(0.0f);
+    scalar.assign(0.0f);
     REQUIRE(bool(scalar) == false);
   }
 
@@ -30,7 +30,7 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     REQUIRE(scalar.value() == true);
     REQUIRE(scalar == true);
 
-    scalar.setValue(false);
+    scalar.assign(false);
     REQUIRE(scalar == false);
   }
 
@@ -293,13 +293,13 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     auto tensor_2d = Tensor<float, Device::CPU, 2>(2, 6);
     tensor_2d.iota(1);
 
-    auto tensor_1d = tensor_2d.reshape<1>(Shape<1>{12});
+    auto tensor_1d = tensor_2d.reshape(12);
     REQUIRE(tensor_1d.shape() == Shape<1>{12});
     for (std::size_t i{}; i < 12; i++) {
       REQUIRE(tensor_1d[i] == tensor_2d.lowLevel().rawMemory()[i]);
     }
 
-    auto tensor_3d = tensor_2d.reshape<3>(Shape<3>{2, 2, 3});
+    auto tensor_3d = tensor_2d.reshape(2, 2, 3);
     REQUIRE(tensor_3d.shape() == Shape<3>{2, 2, 3});
     for (std::size_t i{}; i < 2; i++) {
       for (std::size_t j{}; j < 2; j++) {

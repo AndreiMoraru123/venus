@@ -17,7 +17,7 @@
 #include <venus/str.hpp>
 #include <venus/tensor/shape.hpp>
 
-inline constexpr std::size_t NUMBER_OF_LETTERS = 'z' - 'a' + 1;
+constexpr std::size_t NUMBER_OF_LETTERS = 'z' - 'a' + 1;
 using AlphabetArray = std::array<std::int64_t, NUMBER_OF_LETTERS>;
 using PositionLabels = std::array<std::size_t, NUMBER_OF_LETTERS>;
 
@@ -91,7 +91,7 @@ auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
     auto out_shape = broadcast<RankOut>(t1.shape(), t2.shape());
 
     auto result = Tensor<ResultElementType, Dev1, RankOut>(out_shape);
-    auto *out_ptr = result.data();
+    auto out_ptr = result.data();
 
     // Does not need broadcasting
     if constexpr (Rank1 == Rank2) {
@@ -107,10 +107,10 @@ auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
 
     // Needs broadcasting
     for (std::size_t flat = 0; flat < result.size(); ++flat) {
-      auto out_idx = out_shape.offsetToIdx(flat);
+      const auto out_idx = out_shape.offsetToIdx(flat);
 
-      auto idx1 = project_broadcast_idx(out_idx, t1.shape());
-      auto idx2 = project_broadcast_idx(out_idx, t2.shape());
+      const auto idx1 = project_broadcast_idx(out_idx, t1.shape());
+      const auto idx2 = project_broadcast_idx(out_idx, t2.shape());
 
       out_ptr[flat] = op(t1[idx1], t2[idx2]);
     }
@@ -137,7 +137,7 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
     auto out_shape = broadcast<RankOut>(t1.shape(), t2.shape(), t3.shape());
 
     auto result = Tensor<ResultElementType, Dev1, RankOut>(out_shape);
-    auto *out_ptr = result.data();
+    auto out_ptr = result.data();
 
     // Does not need broadcasting
     if constexpr (Rank1 == Rank2 && Rank2 == Rank3) {
@@ -154,11 +154,11 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
 
     // Needs broadcasting
     for (std::size_t flat = 0; flat < result.size(); ++flat) {
-      auto out_idx = out_shape.offsetToIdx(flat);
+      const auto out_idx = out_shape.offsetToIdx(flat);
 
-      auto idx1 = project_broadcast_idx(out_idx, t1.shape());
-      auto idx2 = project_broadcast_idx(out_idx, t2.shape());
-      auto idx3 = project_broadcast_idx(out_idx, t3.shape());
+      const auto idx1 = project_broadcast_idx(out_idx, t1.shape());
+      const auto idx2 = project_broadcast_idx(out_idx, t2.shape());
+      const auto idx3 = project_broadcast_idx(out_idx, t3.shape());
 
       out_ptr[flat] = op(t1[idx1], t2[idx2], t3[idx3]);
     }
@@ -174,7 +174,7 @@ consteval auto count_operands(const std::string_view eqn) {
 
 consteval auto compute_occurences(const std::string_view eqn) -> AlphabetArray {
   AlphabetArray occ{};
-  auto lhs = eqn.substr(0, eqn.find("->"));
+  const auto lhs = eqn.substr(0, eqn.find("->"));
   for (char c : lhs)
     if (c != ',')
       occ[c - 'a']++;
@@ -186,7 +186,7 @@ consteval auto compute_last_occurence(const std::string_view eqn)
     -> AlphabetArray {
   AlphabetArray last{};
   last.fill(-1);
-  auto lhs = eqn.substr(0, eqn.find("->"));
+  const auto lhs = eqn.substr(0, eqn.find("->"));
   std::int64_t operand = 0;
   for (char c : lhs) {
     if (c == ',') {
@@ -203,10 +203,10 @@ consteval auto compute_sorted_position(const std::string_view eqn,
     -> AlphabetArray {
   AlphabetArray pos{};
   pos.fill(-1);
-  auto arrow = eqn.find("->");
+  const auto arrow = eqn.find("->");
   std::int64_t dim = 0;
   if (arrow != std::string_view::npos) {
-    auto rhs = eqn.substr(arrow + 2);
+    const auto rhs = eqn.substr(arrow + 2);
     for (char c : rhs)
       pos[c - 'a'] = dim++;
   } else {
@@ -222,14 +222,14 @@ consteval auto compute_sorted_position(const std::string_view eqn,
 }
 
 consteval auto count_total_dimensions(std::string_view eqn) -> std::size_t {
-  auto occ = compute_occurences(eqn);
+  const auto occ = compute_occurences(eqn);
   return std::ranges::count_if(occ, [](auto &&val) { return val > 0; });
 }
 
 consteval auto count_output_dimensions(std::string_view eqn,
                                        const AlphabetArray &occ)
     -> std::size_t {
-  auto arrow = eqn.find("->");
+  const auto arrow = eqn.find("->");
   if (arrow != std::string_view::npos) {
     return eqn.size() - (arrow + 2);
   }
@@ -247,7 +247,7 @@ consteval auto compute_position_labels(const AlphabetArray &sorted_pos)
 }
 
 consteval auto count_dims_for_op(std::string_view eqn, std::size_t op_idx) {
-  auto lhs = eqn.substr(0, eqn.find("->"));
+  const auto lhs = eqn.substr(0, eqn.find("->"));
   std::size_t op = 0, n = 0;
   for (char c : lhs) {
     if (c == ',') {
@@ -265,7 +265,7 @@ consteval auto compute_axes_for_op(std::string_view eqn, std::size_t op_idx)
   AlphabetArray axes{};
   axes.fill(-1);
 
-  auto lhs = eqn.substr(0, eqn.find("->"));
+  const auto lhs = eqn.substr(0, eqn.find("->"));
   std::size_t op = 0, dim = 0;
   for (char c : lhs) {
     if (c == ',') {
@@ -274,7 +274,7 @@ consteval auto compute_axes_for_op(std::string_view eqn, std::size_t op_idx)
       continue;
     }
     if (op == op_idx) {
-      auto letter = static_cast<std::size_t>(c - 'a');
+      const auto letter = static_cast<std::size_t>(c - 'a');
       if (axes[letter] != -1) {
         throw "einsum repeated label in one operand is diagonal, unsupported";
       }
@@ -349,8 +349,8 @@ auto homogenize_operand(const Tensor<Elem, Dev, Rank> &t) {
 
   std::array<std::size_t, total_dims> homo_dims{};
   for (std::size_t i = 0; i < total_dims; ++i) {
-    auto letter = pos_labels[i];
-    auto axis = axes[letter];
+    const auto letter = pos_labels[i];
+    const auto axis = axes[letter];
     if (axis != -1) {
       homo_dims[i] = t.shape()[axis];
     } else {
@@ -358,14 +358,14 @@ auto homogenize_operand(const Tensor<Elem, Dev, Rank> &t) {
     }
   }
 
-  auto homo_shape = Shape<total_dims>(homo_dims);
+  const auto homo_shape = Shape<total_dims>(homo_dims);
 
   auto project_homo_idx =
       [pos_labels, axes](const std::array<std::size_t, total_dims> &out_idx) {
         std::array<std::size_t, Rank> orig_idx{};
         for (std::size_t i = 0; i < total_dims; ++i) {
-          auto letter = pos_labels[i];
-          auto axis = axes[letter];
+          const auto letter = pos_labels[i];
+          const auto axis = axes[letter];
           if (axis != -1) {
             orig_idx[static_cast<std::size_t>(axis)] = out_idx[i];
           }
@@ -375,8 +375,8 @@ auto homogenize_operand(const Tensor<Elem, Dev, Rank> &t) {
 
   auto homogenized = Tensor<Elem, Dev, total_dims>(homo_shape);
   for (std::size_t flat = 0; flat < homogenized.size(); ++flat) {
-    auto out_idx = homo_shape.offsetToIdx(flat);
-    auto orig_idx = project_homo_idx(out_idx);
+    const auto out_idx = homo_shape.offsetToIdx(flat);
+    const auto orig_idx = project_homo_idx(out_idx);
     homogenized.data()[flat] = t[orig_idx];
   }
 
@@ -513,8 +513,8 @@ auto mm(const Tensor<Elem1, Dev, 2> &t1, const Tensor<Elem2, Dev, 2> &t2) {
 
   using ResultElementType = std::common_type_t<Elem1, Elem2>;
 
-  auto [M, K] = t1.shape();
-  auto [K2, N] = t2.shape();
+  const auto [I, K] = t1.shape();
+  const auto [K2, J] = t2.shape();
 
   if (K != K2) {
     throw std::invalid_argument(
@@ -523,15 +523,15 @@ auto mm(const Tensor<Elem1, Dev, 2> &t1, const Tensor<Elem2, Dev, 2> &t2) {
                     t1.shape(), t2.shape()));
   }
 
-  auto t3 = Tensor<ResultElementType, Dev, 2>(M, N);
+  auto t3 = Tensor<ResultElementType, Dev, 2>(I, J);
 
   // TODO: This is optimized for row major layout
-  for (std::size_t i{}; i < M; i++) {
-    for (std::size_t k{}; k < K; k++) {
+  for (std::size_t i = 0; i < I; i++) {
+    for (std::size_t k = 0; k < K; k++) {
       if (t1[i, k] == 0) {
         continue;
       }
-      for (std::size_t j{}; j < N; j++) {
+      for (std::size_t j = 0; j < J; j++) {
         t3[i, j] += t1[i, k] * t2[k, j];
       }
     }
@@ -543,20 +543,59 @@ auto mm(const Tensor<Elem1, Dev, 2> &t1, const Tensor<Elem2, Dev, 2> &t2) {
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
           typename Dev, std::size_t Rank>
   requires BoolTensor<Tensor<Elem, Dev, Rank>>
-auto where(const Tensor<Elem, Dev, Rank> &condition) {
-  auto result = Tensor<std::size_t, Dev, Rank>(condition.shape());
+auto nonzero_flat(const Tensor<Elem, Dev, Rank> &condition) {
+  const auto nz_count = static_cast<std::size_t>(std::ranges::count_if(
+      condition, [](auto v) { return static_cast<bool>(v); }));
 
-  auto result_ptr = std::ranges::data(result);
-  auto indices = std::views::iota(std::size_t{0}, condition.size());
+  auto result = Tensor<std::size_t, Dev, 1>(nz_count);
+  auto out_ptr = result.data();
+
+  std::size_t pos = 0;
+  const auto indices = std::views::iota(std::size_t{0}, condition.size());
   std::ranges::for_each(std::views::zip(condition, indices),
-                        [result_ptr](auto &&pair) {
+                        [out_ptr, pos](auto &&pair) mutable {
                           const auto &[cond_val, idx] = pair;
                           if (static_cast<bool>(cond_val)) {
-                            result_ptr[idx] = idx;
+                            out_ptr[pos++] = idx;
                           }
                         });
 
   return result;
+}
+
+template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+          typename Dev, std::size_t Rank>
+  requires BoolTensor<Tensor<Elem, Dev, Rank>>
+auto nonzero(const Tensor<Elem, Dev, Rank> &condition) {
+  const auto nz_count = static_cast<std::size_t>(std::ranges::count_if(
+      condition, [](auto v) { return static_cast<bool>(v); }));
+
+  auto result = Tensor<std::size_t, Dev, 2>(nz_count, Rank);
+  auto out_ptr = result.data();
+
+  std::size_t row = 0;
+  for (std::size_t i = 0; i < condition.size(); ++i) {
+    if (static_cast<bool>(condition.data()[i])) {
+      const auto idx = condition.shape().offsetToIdx(i);
+      for (std::size_t d = 0; d < Rank; ++d) {
+        out_ptr[(row * Rank) + d] = idx[d];
+      }
+      ++row;
+    }
+  }
+
+  return result;
+}
+
+template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+          typename Dev, std::size_t Rank>
+  requires BoolTensor<Tensor<Elem, Dev, Rank>>
+auto where(const Tensor<Elem, Dev, Rank> &predicate) {
+  if constexpr (Rank == 1) {
+    return nonzero_flat(predicate);
+  } else {
+    return nonzero(predicate);
+  }
 }
 
 template <typename T1, typename T2, typename T3>
@@ -678,15 +717,17 @@ auto _einsum_contract(HomogenizedTensors... tensors) {
   const auto &t0 = tensors...[0];
   constexpr auto initial_sum_dims = detail::compute_sum_dims_for_step<0, Eqn>();
 
-  auto initial_result = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-    if constexpr (sizeof...(Is) > 0) {
-      return sum_dims<initial_sum_dims[Is]...>(t0);
-    } else {
-      return t0;
-    }
-  }(std::make_index_sequence<initial_sum_dims.size()>{});
+  const auto initial_result =
+      [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+        if constexpr (sizeof...(Is) > 0) {
+          return sum_dims<initial_sum_dims[Is]...>(t0);
+        } else {
+          return t0;
+        }
+      }(std::make_index_sequence<initial_sum_dims.size()>{});
 
-  auto final_contracted = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+  const auto final_contracted = [&]<std::size_t... Is>(
+                                    std::index_sequence<Is...>) {
     auto current = std::move(initial_result);
     auto step = [&]<std::size_t OpIdx>() {
       constexpr auto sum_dims = detail::compute_sum_dims_for_step<OpIdx, Eqn>();

@@ -177,15 +177,20 @@ public:
     }
   }
 
-  auto shift(size_t pos) const {
+  auto shift(std::size_t pos) const {
     assert(pos < m_size);
     return ContiguousMemory(
         std::shared_ptr<ElementType>(m_mem, m_mem.get() + pos), m_size - pos);
   }
 
 public:
-  auto ptr() -> ElementType * { return m_mem.get(); }
-  auto ptr() const -> const ElementType * { return m_mem.get(); }
+  auto ptr(this auto &&self) {
+    if constexpr (std::is_const_v<std::remove_reference_t<decltype(self)>>) {
+      return static_cast<const ElementType *>(self.m_mem.get());
+    } else {
+      return self.m_mem.get();
+    }
+  }
   [[nodiscard]] auto isShared() const -> bool { return m_mem.use_count() > 1; }
   [[nodiscard]] auto size() const -> std::size_t { return m_size; }
 
@@ -468,11 +473,11 @@ template <typename T> struct Size_;
 
 template <template <typename...> typename TCont, typename... T>
 struct Size_<TCont<T...>> {
-  static constexpr size_t value = sizeof...(T);
+  static constexpr std::size_t value = sizeof...(T);
 };
 
 template <typename T>
-static constexpr size_t Size = Size_<std::remove_cvref_t<T>>::value;
+static constexpr std::size_t Size = Size_<std::remove_cvref_t<T>>::value;
 // =============================================================
 
 // Head ========================================================
@@ -779,8 +784,8 @@ public:
 
   template <SizeTLike... Dimensions>
     requires(sizeof...(Dimensions) == Rank)
-  constexpr explicit Shape(Dimensions... shapes)
-      : m_dims({static_cast<std::size_t>(shapes)...}) {}
+  constexpr explicit Shape(Dimensions... dims)
+      : m_dims({static_cast<std::size_t>(dims)...}) {}
 
   template <SizeTLike... Dimensions>
     requires(sizeof...(Dimensions) != Rank)
@@ -789,11 +794,14 @@ public:
   constexpr explicit Shape(std::array<std::size_t, Rank> dims) noexcept
       : m_dims(std::move(dims)) {}
 
+  // only allow assignment for lvalues
+  auto operator=(const Shape &) & -> Shape & = default;
+
   constexpr auto operator==(const Shape &val) const -> bool {
     return m_dims == val.m_dims;
   }
 
-  template <size_t otherRank>
+  template <std::size_t otherRank>
   auto constexpr operator==(const Shape<otherRank> & /*unused*/) const -> bool {
     return false;
   }
@@ -803,7 +811,7 @@ public:
                                   std::multiplies<>());
   }
 
-  constexpr auto operator[](size_t idx) const -> std::size_t {
+  constexpr auto operator[](std::size_t idx) const -> std::size_t {
     if (std::is_constant_evaluated()) {
       if (idx >= rank) {
         // TODO: This won't actually throw, do I really need comptime? (shape)
@@ -951,7 +959,7 @@ public:
 
   constexpr auto operator==(const Shape &val) const -> bool { return true; }
 
-  template <size_t otherRank>
+  template <std::size_t otherRank>
   auto constexpr operator==(const Shape<otherRank> & /*unused*/) const -> bool {
     return false;
   }
@@ -1062,7 +1070,7 @@ struct tuple_element<N, venus::Shape<Rank>> {
 
 } // namespace std
 
-inline constexpr std::size_t NUMBER_OF_LETTERS = 'z' - 'a' + 1;
+constexpr std::size_t NUMBER_OF_LETTERS = 'z' - 'a' + 1;
 using AlphabetArray = std::array<std::int64_t, NUMBER_OF_LETTERS>;
 using PositionLabels = std::array<std::size_t, NUMBER_OF_LETTERS>;
 
@@ -1136,7 +1144,7 @@ auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
     auto out_shape = broadcast<RankOut>(t1.shape(), t2.shape());
 
     auto result = Tensor<ResultElementType, Dev1, RankOut>(out_shape);
-    auto *out_ptr = result.data();
+    auto out_ptr = result.data();
 
     // Does not need broadcasting
     if constexpr (Rank1 == Rank2) {
@@ -1152,10 +1160,10 @@ auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
 
     // Needs broadcasting
     for (std::size_t flat = 0; flat < result.size(); ++flat) {
-      auto out_idx = out_shape.offsetToIdx(flat);
+      const auto out_idx = out_shape.offsetToIdx(flat);
 
-      auto idx1 = project_broadcast_idx(out_idx, t1.shape());
-      auto idx2 = project_broadcast_idx(out_idx, t2.shape());
+      const auto idx1 = project_broadcast_idx(out_idx, t1.shape());
+      const auto idx2 = project_broadcast_idx(out_idx, t2.shape());
 
       out_ptr[flat] = op(t1[idx1], t2[idx2]);
     }
@@ -1182,7 +1190,7 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
     auto out_shape = broadcast<RankOut>(t1.shape(), t2.shape(), t3.shape());
 
     auto result = Tensor<ResultElementType, Dev1, RankOut>(out_shape);
-    auto *out_ptr = result.data();
+    auto out_ptr = result.data();
 
     // Does not need broadcasting
     if constexpr (Rank1 == Rank2 && Rank2 == Rank3) {
@@ -1199,11 +1207,11 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
 
     // Needs broadcasting
     for (std::size_t flat = 0; flat < result.size(); ++flat) {
-      auto out_idx = out_shape.offsetToIdx(flat);
+      const auto out_idx = out_shape.offsetToIdx(flat);
 
-      auto idx1 = project_broadcast_idx(out_idx, t1.shape());
-      auto idx2 = project_broadcast_idx(out_idx, t2.shape());
-      auto idx3 = project_broadcast_idx(out_idx, t3.shape());
+      const auto idx1 = project_broadcast_idx(out_idx, t1.shape());
+      const auto idx2 = project_broadcast_idx(out_idx, t2.shape());
+      const auto idx3 = project_broadcast_idx(out_idx, t3.shape());
 
       out_ptr[flat] = op(t1[idx1], t2[idx2], t3[idx3]);
     }
@@ -1219,7 +1227,7 @@ consteval auto count_operands(const std::string_view eqn) {
 
 consteval auto compute_occurences(const std::string_view eqn) -> AlphabetArray {
   AlphabetArray occ{};
-  auto lhs = eqn.substr(0, eqn.find("->"));
+  const auto lhs = eqn.substr(0, eqn.find("->"));
   for (char c : lhs)
     if (c != ',')
       occ[c - 'a']++;
@@ -1231,7 +1239,7 @@ consteval auto compute_last_occurence(const std::string_view eqn)
     -> AlphabetArray {
   AlphabetArray last{};
   last.fill(-1);
-  auto lhs = eqn.substr(0, eqn.find("->"));
+  const auto lhs = eqn.substr(0, eqn.find("->"));
   std::int64_t operand = 0;
   for (char c : lhs) {
     if (c == ',') {
@@ -1248,10 +1256,10 @@ consteval auto compute_sorted_position(const std::string_view eqn,
     -> AlphabetArray {
   AlphabetArray pos{};
   pos.fill(-1);
-  auto arrow = eqn.find("->");
+  const auto arrow = eqn.find("->");
   std::int64_t dim = 0;
   if (arrow != std::string_view::npos) {
-    auto rhs = eqn.substr(arrow + 2);
+    const auto rhs = eqn.substr(arrow + 2);
     for (char c : rhs)
       pos[c - 'a'] = dim++;
   } else {
@@ -1267,14 +1275,14 @@ consteval auto compute_sorted_position(const std::string_view eqn,
 }
 
 consteval auto count_total_dimensions(std::string_view eqn) -> std::size_t {
-  auto occ = compute_occurences(eqn);
+  const auto occ = compute_occurences(eqn);
   return std::ranges::count_if(occ, [](auto &&val) { return val > 0; });
 }
 
 consteval auto count_output_dimensions(std::string_view eqn,
                                        const AlphabetArray &occ)
     -> std::size_t {
-  auto arrow = eqn.find("->");
+  const auto arrow = eqn.find("->");
   if (arrow != std::string_view::npos) {
     return eqn.size() - (arrow + 2);
   }
@@ -1292,7 +1300,7 @@ consteval auto compute_position_labels(const AlphabetArray &sorted_pos)
 }
 
 consteval auto count_dims_for_op(std::string_view eqn, std::size_t op_idx) {
-  auto lhs = eqn.substr(0, eqn.find("->"));
+  const auto lhs = eqn.substr(0, eqn.find("->"));
   std::size_t op = 0, n = 0;
   for (char c : lhs) {
     if (c == ',') {
@@ -1310,7 +1318,7 @@ consteval auto compute_axes_for_op(std::string_view eqn, std::size_t op_idx)
   AlphabetArray axes{};
   axes.fill(-1);
 
-  auto lhs = eqn.substr(0, eqn.find("->"));
+  const auto lhs = eqn.substr(0, eqn.find("->"));
   std::size_t op = 0, dim = 0;
   for (char c : lhs) {
     if (c == ',') {
@@ -1319,7 +1327,7 @@ consteval auto compute_axes_for_op(std::string_view eqn, std::size_t op_idx)
       continue;
     }
     if (op == op_idx) {
-      auto letter = static_cast<std::size_t>(c - 'a');
+      const auto letter = static_cast<std::size_t>(c - 'a');
       if (axes[letter] != -1) {
         throw "einsum repeated label in one operand is diagonal, unsupported";
       }
@@ -1394,8 +1402,8 @@ auto homogenize_operand(const Tensor<Elem, Dev, Rank> &t) {
 
   std::array<std::size_t, total_dims> homo_dims{};
   for (std::size_t i = 0; i < total_dims; ++i) {
-    auto letter = pos_labels[i];
-    auto axis = axes[letter];
+    const auto letter = pos_labels[i];
+    const auto axis = axes[letter];
     if (axis != -1) {
       homo_dims[i] = t.shape()[axis];
     } else {
@@ -1403,14 +1411,14 @@ auto homogenize_operand(const Tensor<Elem, Dev, Rank> &t) {
     }
   }
 
-  auto homo_shape = Shape<total_dims>(homo_dims);
+  const auto homo_shape = Shape<total_dims>(homo_dims);
 
   auto project_homo_idx =
       [pos_labels, axes](const std::array<std::size_t, total_dims> &out_idx) {
         std::array<std::size_t, Rank> orig_idx{};
         for (std::size_t i = 0; i < total_dims; ++i) {
-          auto letter = pos_labels[i];
-          auto axis = axes[letter];
+          const auto letter = pos_labels[i];
+          const auto axis = axes[letter];
           if (axis != -1) {
             orig_idx[static_cast<std::size_t>(axis)] = out_idx[i];
           }
@@ -1420,8 +1428,8 @@ auto homogenize_operand(const Tensor<Elem, Dev, Rank> &t) {
 
   auto homogenized = Tensor<Elem, Dev, total_dims>(homo_shape);
   for (std::size_t flat = 0; flat < homogenized.size(); ++flat) {
-    auto out_idx = homo_shape.offsetToIdx(flat);
-    auto orig_idx = project_homo_idx(out_idx);
+    const auto out_idx = homo_shape.offsetToIdx(flat);
+    const auto orig_idx = project_homo_idx(out_idx);
     homogenized.data()[flat] = t[orig_idx];
   }
 
@@ -1558,8 +1566,8 @@ auto mm(const Tensor<Elem1, Dev, 2> &t1, const Tensor<Elem2, Dev, 2> &t2) {
 
   using ResultElementType = std::common_type_t<Elem1, Elem2>;
 
-  auto [M, K] = t1.shape();
-  auto [K2, N] = t2.shape();
+  const auto [I, K] = t1.shape();
+  const auto [K2, J] = t2.shape();
 
   if (K != K2) {
     throw std::invalid_argument(
@@ -1568,15 +1576,15 @@ auto mm(const Tensor<Elem1, Dev, 2> &t1, const Tensor<Elem2, Dev, 2> &t2) {
                     t1.shape(), t2.shape()));
   }
 
-  auto t3 = Tensor<ResultElementType, Dev, 2>(M, N);
+  auto t3 = Tensor<ResultElementType, Dev, 2>(I, J);
 
   // TODO: This is optimized for row major layout
-  for (std::size_t i{}; i < M; i++) {
-    for (std::size_t k{}; k < K; k++) {
+  for (std::size_t i = 0; i < I; i++) {
+    for (std::size_t k = 0; k < K; k++) {
       if (t1[i, k] == 0) {
         continue;
       }
-      for (std::size_t j{}; j < N; j++) {
+      for (std::size_t j = 0; j < J; j++) {
         t3[i, j] += t1[i, k] * t2[k, j];
       }
     }
@@ -1588,20 +1596,59 @@ auto mm(const Tensor<Elem1, Dev, 2> &t1, const Tensor<Elem2, Dev, 2> &t2) {
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
           typename Dev, std::size_t Rank>
   requires BoolTensor<Tensor<Elem, Dev, Rank>>
-auto where(const Tensor<Elem, Dev, Rank> &condition) {
-  auto result = Tensor<std::size_t, Dev, Rank>(condition.shape());
+auto nonzero_flat(const Tensor<Elem, Dev, Rank> &condition) {
+  const auto nz_count = static_cast<std::size_t>(std::ranges::count_if(
+      condition, [](auto v) { return static_cast<bool>(v); }));
 
-  auto result_ptr = std::ranges::data(result);
-  auto indices = std::views::iota(std::size_t{0}, condition.size());
+  auto result = Tensor<std::size_t, Dev, 1>(nz_count);
+  auto out_ptr = result.data();
+
+  std::size_t pos = 0;
+  const auto indices = std::views::iota(std::size_t{0}, condition.size());
   std::ranges::for_each(std::views::zip(condition, indices),
-                        [result_ptr](auto &&pair) {
+                        [out_ptr, pos](auto &&pair) mutable {
                           const auto &[cond_val, idx] = pair;
                           if (static_cast<bool>(cond_val)) {
-                            result_ptr[idx] = idx;
+                            out_ptr[pos++] = idx;
                           }
                         });
 
   return result;
+}
+
+template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+          typename Dev, std::size_t Rank>
+  requires BoolTensor<Tensor<Elem, Dev, Rank>>
+auto nonzero(const Tensor<Elem, Dev, Rank> &condition) {
+  const auto nz_count = static_cast<std::size_t>(std::ranges::count_if(
+      condition, [](auto v) { return static_cast<bool>(v); }));
+
+  auto result = Tensor<std::size_t, Dev, 2>(nz_count, Rank);
+  auto out_ptr = result.data();
+
+  std::size_t row = 0;
+  for (std::size_t i = 0; i < condition.size(); ++i) {
+    if (static_cast<bool>(condition.data()[i])) {
+      const auto idx = condition.shape().offsetToIdx(i);
+      for (std::size_t d = 0; d < Rank; ++d) {
+        out_ptr[(row * Rank) + d] = idx[d];
+      }
+      ++row;
+    }
+  }
+
+  return result;
+}
+
+template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+          typename Dev, std::size_t Rank>
+  requires BoolTensor<Tensor<Elem, Dev, Rank>>
+auto where(const Tensor<Elem, Dev, Rank> &predicate) {
+  if constexpr (Rank == 1) {
+    return nonzero_flat(predicate);
+  } else {
+    return nonzero(predicate);
+  }
 }
 
 template <typename T1, typename T2, typename T3>
@@ -1723,15 +1770,17 @@ auto _einsum_contract(HomogenizedTensors... tensors) {
   const auto &t0 = tensors...[0];
   constexpr auto initial_sum_dims = detail::compute_sum_dims_for_step<0, Eqn>();
 
-  auto initial_result = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-    if constexpr (sizeof...(Is) > 0) {
-      return sum_dims<initial_sum_dims[Is]...>(t0);
-    } else {
-      return t0;
-    }
-  }(std::make_index_sequence<initial_sum_dims.size()>{});
+  const auto initial_result =
+      [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+        if constexpr (sizeof...(Is) > 0) {
+          return sum_dims<initial_sum_dims[Is]...>(t0);
+        } else {
+          return t0;
+        }
+      }(std::make_index_sequence<initial_sum_dims.size()>{});
 
-  auto final_contracted = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+  const auto final_contracted = [&]<std::size_t... Is>(
+                                    std::index_sequence<Is...>) {
     auto current = std::move(initial_result);
     auto step = [&]<std::size_t OpIdx>() {
       constexpr auto sum_dims = detail::compute_sum_dims_for_step<OpIdx, Eqn>();
@@ -1775,14 +1824,12 @@ auto einsum(const Tensors<Ts, Devs, Ranks> &...tensors) {
 
 #include <algorithm>
 #include <cassert>
-#include <compare>
 #include <concepts>
 #include <cstddef>
 #include <format>
 #include <initializer_list>
 #include <iomanip>
 #include <ios>
-#include <iterator>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -1792,6 +1839,110 @@ auto einsum(const Tensors<Ts, Devs, Ranks> &...tensors) {
 
 
 
+#include <compare>
+#include <iterator>
+
+namespace venus {
+
+template <typename T> class TensorIterator {
+public:
+  using iterator_category = std::contiguous_iterator_tag;
+  using value_type = T::ElementType;
+  using difference_type = std::ptrdiff_t;
+  using pointer =
+      std::conditional_t<std::is_const_v<T>, const value_type *, value_type *>;
+  using reference =
+      std::conditional_t<std::is_const_v<T>, const value_type &, value_type &>;
+
+private:
+  T *m_tensor;
+  std::size_t m_offset;
+
+public:
+  constexpr TensorIterator() : m_tensor(nullptr), m_offset(0) {}
+  constexpr TensorIterator(T *tensor, std::size_t offset)
+      : m_tensor(tensor), m_offset(offset) {}
+
+  constexpr auto operator*() const -> reference {
+    return m_tensor->data()[m_offset];
+  };
+
+  constexpr auto operator->() const -> pointer {
+    return &(m_tensor->data()[m_offset]);
+  }
+
+  constexpr auto operator++() -> TensorIterator & {
+    ++m_offset;
+    return *this;
+  }
+
+  constexpr auto operator++(int) -> TensorIterator {
+    auto temp = *this;
+    ++m_offset;
+    return temp;
+  }
+
+  constexpr auto operator--() -> TensorIterator & {
+    --m_offset;
+    return *this;
+  }
+
+  constexpr auto operator--(int) -> TensorIterator {
+    auto temp = *this;
+    --m_offset;
+    return temp;
+  }
+
+  constexpr auto operator+=(difference_type n) -> TensorIterator & {
+    m_offset += n;
+    return *this;
+  }
+
+  constexpr auto operator-=(difference_type n) -> TensorIterator & {
+    m_offset -= n;
+    return *this;
+  }
+
+  constexpr auto operator+(difference_type n) -> TensorIterator {
+    return TensorIterator(m_tensor, m_offset + n);
+  }
+
+  constexpr auto operator+(difference_type n) const -> TensorIterator {
+    return TensorIterator(m_tensor, m_offset + n);
+  }
+
+  constexpr auto operator-(difference_type n) -> TensorIterator {
+    return TensorIterator(m_tensor, m_offset - n);
+  }
+
+  constexpr auto operator-(difference_type n) const -> TensorIterator {
+    return TensorIterator(m_tensor, m_offset - n);
+  }
+
+  constexpr auto operator-(const TensorIterator &other) const
+      -> difference_type {
+    return static_cast<difference_type>(m_offset) -
+           static_cast<difference_type>(other.m_offset);
+  }
+
+  constexpr auto operator==(const TensorIterator &other) const -> bool {
+    return m_tensor == other.m_tensor && m_offset == other.m_offset;
+  }
+
+  constexpr auto operator<=>(const TensorIterator &other) const {
+    if (m_tensor != other.m_tensor) {
+      // comparing different tensors alltogether
+      return std::compare_three_way{}(m_tensor, other.m_tensor);
+    }
+    // comparing offsets on the same tensor
+    return m_offset <=> other.m_offset;
+  }
+
+  constexpr auto operator[](difference_type n) const -> reference {
+    return *(*this + n);
+  }
+};
+} // namespace venus
 
 #define REGISTER_SCALAR_BOOL_OP(op)                                            \
   template <typename OtherType>                                                \
@@ -1829,105 +1980,6 @@ auto einsum(const Tensors<Ts, Devs, Ranks> &...tensors) {
   }
 
 namespace venus {
-
-template <typename T> class tensor_iterator {
-public:
-  using iterator_category = std::contiguous_iterator_tag;
-  using value_type = T::ElementType;
-  using difference_type = std::ptrdiff_t;
-  using pointer =
-      std::conditional_t<std::is_const_v<T>, const value_type *, value_type *>;
-  using reference =
-      std::conditional_t<std::is_const_v<T>, const value_type &, value_type &>;
-
-private:
-  T *m_tensor;
-  std::size_t m_offset;
-
-public:
-  constexpr tensor_iterator() : m_tensor(nullptr), m_offset(0) {}
-  constexpr tensor_iterator(T *tensor, std::size_t offset)
-      : m_tensor(tensor), m_offset(offset) {}
-
-  constexpr auto operator*() const -> reference {
-    return m_tensor->data()[m_offset];
-  };
-
-  constexpr auto operator->() const -> pointer {
-    return &(m_tensor->data()[m_offset]);
-  }
-
-  constexpr auto operator++() -> tensor_iterator & {
-    ++m_offset;
-    return *this;
-  }
-
-  constexpr auto operator++(int) -> tensor_iterator {
-    auto temp = *this;
-    ++m_offset;
-    return temp;
-  }
-
-  constexpr auto operator--() -> tensor_iterator & {
-    --m_offset;
-    return *this;
-  }
-
-  constexpr auto operator--(int) -> tensor_iterator {
-    auto temp = *this;
-    --m_offset;
-    return temp;
-  }
-
-  constexpr auto operator+=(difference_type n) -> tensor_iterator & {
-    m_offset += n;
-    return *this;
-  }
-
-  constexpr auto operator-=(difference_type n) -> tensor_iterator & {
-    m_offset -= n;
-    return *this;
-  }
-
-  constexpr auto operator+(difference_type n) -> tensor_iterator {
-    return tensor_iterator(m_tensor, m_offset + n);
-  }
-
-  constexpr auto operator+(difference_type n) const -> tensor_iterator {
-    return tensor_iterator(m_tensor, m_offset + n);
-  }
-
-  constexpr auto operator-(difference_type n) -> tensor_iterator {
-    return tensor_iterator(m_tensor, m_offset - n);
-  }
-
-  constexpr auto operator-(difference_type n) const -> tensor_iterator {
-    return tensor_iterator(m_tensor, m_offset - n);
-  }
-
-  constexpr auto operator-(const tensor_iterator &other) const
-      -> difference_type {
-    return static_cast<difference_type>(m_offset) -
-           static_cast<difference_type>(other.m_offset);
-  }
-
-  constexpr auto operator==(const tensor_iterator &other) const -> bool {
-    return m_tensor == other.m_tensor && m_offset == other.m_offset;
-  }
-
-  constexpr auto operator<=>(const tensor_iterator &other) const {
-    if (m_tensor != other.m_tensor) {
-      // comparing different tensors alltogether
-      return std::compare_three_way{}(m_tensor, other.m_tensor);
-    }
-    // comparing offsets on the same tensor
-    return m_offset <=> other.m_offset;
-  }
-
-  constexpr auto operator[](difference_type n) const -> reference {
-    return *(*this + n);
-  }
-};
 
 template <typename TElem, typename TDevice, std::size_t Rank> class Tensor {
   static_assert(std::is_same_v<std::remove_cvref_t<TElem>, TElem>);
@@ -2026,7 +2078,7 @@ public:
 
   ~Tensor() = default; // give back to mem-pool
 
-  auto shape() const noexcept -> const Shape<Rank> & { return m_shape; }
+  [[nodiscard]] auto shape() const noexcept -> Shape<rank> { return m_shape; }
 
   [[nodiscard]] auto unique() const -> bool { return not m_mem.isShared(); }
 
@@ -2308,14 +2360,14 @@ public:
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Range iteration is currently only supported on CPU");
     using Self = std::remove_reference_t<decltype(self)>;
-    return tensor_iterator<Self>(&self, 0);
+    return TensorIterator<Self>(&self, 0);
   }
 
   constexpr auto end(this auto &&self) {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Range iteration is currently only supported on CPU");
     using Self = std::remove_reference_t<decltype(self)>;
-    return tensor_iterator<Self>(&self, self.m_shape.count());
+    return TensorIterator<Self>(&self, self.m_shape.count());
   }
 
   constexpr auto cbegin(this auto &&self) {
@@ -2331,6 +2383,19 @@ public:
 
   auto data(this auto &&self) {
     return std::forward<decltype(self)>(self).m_mem.ptr();
+  }
+
+  template <SizeTLike... Dimensions>
+  auto reshape(this auto &&self, Dimensions... dims) {
+    const auto new_shape = Shape(dims...);
+    if (new_shape.count() != self.size()) {
+      throw std::invalid_argument(std::format(
+          "Cannot reshape tensor of size {} to new shape of size {}",
+          self.size(), new_shape.count()));
+    }
+
+    return Tensor<ElementType, DeviceType, new_shape.rank>(self.m_mem,
+                                                           new_shape);
   }
 
   template <std::size_t NewRank>
@@ -2362,7 +2427,7 @@ public:
   friend struct LowLevelAccess<const Tensor>;
 
   explicit Tensor(ElementType value = ElementType()) : m_mem(1) {
-    setValue(value);
+    assign(value);
   }
 
   explicit Tensor(Shape<0> /*unused*/) : Tensor() {};
@@ -2375,7 +2440,7 @@ public:
       if (not unique()) {
         m_mem = ContiguousMemory<ElementType, DeviceType>(1);
       }
-      setValue(other.value());
+      assign(other.value());
     }
     return *this;
   }
@@ -2387,22 +2452,21 @@ public:
     return *this;
   }
 
-  Tensor(const Tensor &other) : m_mem(1) { setValue(other.value()); }
+  Tensor(const Tensor &other) : m_mem(1) { assign(other.value()); }
 
   Tensor(Tensor &&other) noexcept : m_mem(std::move(other.m_mem)) {}
 
   ~Tensor() = default; // give back to mem-pool
 
-  auto shape() const noexcept -> const auto & {
-    static const Shape<rank> shape;
-    return shape;
+  [[nodiscard]] constexpr auto shape() const noexcept -> Shape<rank> {
+    return Shape<rank>{};
   }
 
   [[nodiscard]] auto unique() const -> bool { return not m_mem.isShared(); }
 
-  void setValue(ElementType value) const = delete;
+  void assign(ElementType value) const = delete;
 
-  void setValue(ElementType value) {
+  void assign(ElementType value) {
     if (not unique()) {
       throw std::runtime_error("Cannot write to shared scalar tensor.");
     }
@@ -2500,8 +2564,8 @@ private:
 
 // difference_type + iterator (for random_access_range | addition commutative)
 template <typename T>
-constexpr auto operator+(typename tensor_iterator<T>::difference_type n,
-                         const tensor_iterator<T> &it) -> tensor_iterator<T> {
+constexpr auto operator+(typename TensorIterator<T>::difference_type n,
+                         const TensorIterator<T> &it) -> TensorIterator<T> {
   return it + n;
 }
 
@@ -2655,6 +2719,7 @@ auto operator!=(const Scalar &scalar,
 #undef REGISTER_PRE_OPERATOR
 #undef REGISTER_SCALAR_BOOL_OP
 
+
 #include <array>
 #include <cstddef>
 #include <memory>
@@ -2685,7 +2750,7 @@ template <typename... TParameters> struct VarTypeDict {
     Values() = default;
 
     Values(Values &&val) noexcept {
-      for (size_t i = 0; i < sizeof...(Types); ++i) {
+      for (std::size_t i = 0; i < sizeof...(Types); ++i) {
         m_tuple[i] = std::move(val.m_tuple[i]);
       }
     }

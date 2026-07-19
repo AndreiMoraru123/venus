@@ -13,7 +13,7 @@ auto main() -> int {
   y.iota(1);
 
   std::println("{}", x);
-  auto x_vec = x.reshape(Shape(6));
+  auto x_vec = x.reshape(6);
 
   auto x_sum = eager::einsum<"i->">(x_vec);
   std::println("{}", x_sum);
