@@ -485,7 +485,7 @@ auto iota(const Tensor<Elem, Dev, Rank> &tensor, Idx i) {
 // Out-Of-Place Identity
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
           typename Dev, std::size_t Rank>
-  requires VenusTensor<Tensor<Elem, Dev, Rank>> && (Rank > 2)
+  requires VenusTensor<Tensor<Elem, Dev, Rank>> && (Rank >= 2)
 auto eye_like(const Tensor<Elem, Dev, Rank> &tensor) {
   auto result = Tensor<Elem, Dev, Rank>(tensor.shape());
   result.eye();
