@@ -876,7 +876,7 @@ public:
       -> Shape<rank> {
     Shape<rank> shape;
 
-    auto extract = [](const auto &list, std::size_t level,
+    auto extract = [](auto list, std::size_t level,
                       std::array<std::size_t, rank> &dims,
                       const auto &self_ref) -> void {
       if constexpr (requires {
