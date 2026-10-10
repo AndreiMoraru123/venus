@@ -162,7 +162,7 @@ public:
   auto asScalar() const -> Tensor<TElem, TDevice, 0> {
     if (size() != 1) {
       throw std::runtime_error(std::format(
-          "toScalar can only be called on tensors with exactly 1 element."
+          "asScalar can only be called on tensors with exactly 1 element."
           "Tensor size is {}, while the size of a scalar is 1.",
           size()));
     }
