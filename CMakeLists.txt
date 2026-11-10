@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.25.1)
 project(venus LANGUAGES CXX)
 
-# CMake has no C++26 flag for MSVC; its C++23 flag is -std:c++latest
-if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+# Until CMake has a C++26 flag for MSVC, 23 maps to -std:c++latest
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND CMAKE_CXX_STANDARD_LATEST LESS 26)
     set(CMAKE_CXX_STANDARD 23)
 else()
     set(CMAKE_CXX_STANDARD 26)
