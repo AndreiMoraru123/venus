@@ -1,4 +1,4 @@
-name: LLVM Clang:22 Linux
+name: LLVM Clang:23 Linux
 on:
   push:
     branches:
@@ -15,13 +15,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install LLVM and Clang 22
+      - name: Install LLVM and Clang 23
         run: |
-          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo add-apt-repository "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main"
+          sudo mkdir -p /etc/apt/keyrings
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/keyrings/apt.llvm.org.asc > /dev/null
+          codename=$(lsb_release -cs)
+          echo "deb [signed-by=/etc/apt/keyrings/apt.llvm.org.asc] http://apt.llvm.org/$codename/ llvm-toolchain-$codename-23 main" | sudo tee /etc/apt/sources.list.d/llvm.list
           sudo apt-get update
-          sudo apt-get install -y clang-22 libc++-22-dev libc++abi-22-dev lld-22
-          clang-22 --version
+          sudo apt-get install -y clang-23 libc++-23-dev libc++abi-23-dev lld-23
+          clang-23 --version
 
       - name: Setup CMake
         uses: jwlawson/actions-setup-cmake@v2
@@ -36,8 +38,8 @@ jobs:
         run: |
           cmake .. \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_CXX_COMPILER=clang++-22 \
-            -DCMAKE_C_COMPILER=clang-22 \
+            -DCMAKE_CXX_COMPILER=clang++-23 \
+            -DCMAKE_C_COMPILER=clang-23 \
             -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
             -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++" \
             -DBUILD_TESTING=ON \
