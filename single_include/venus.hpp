@@ -876,7 +876,7 @@ public:
       -> Shape<rank> {
     Shape<rank> shape;
 
-    auto extract = [](const auto &list, std::size_t level,
+    auto extract = [](auto list, std::size_t level,
                       std::array<std::size_t, rank> &dims,
                       const auto &self_ref) -> void {
       if constexpr (requires {
@@ -1381,7 +1381,7 @@ template <std::size_t ToRank,
   requires VenusTensor<Tensor<Elem, Dev, FromRank>>
 auto squeeze_to_rank(const Tensor<Elem, Dev, FromRank> &tensor) {
   if constexpr (ToRank == 0) {
-    return tensor.toScalar();
+    return tensor.asScalar();
   } else {
     return tensor.template reshape<ToRank>(
         tensor.shape().template slice<ToRank>());
@@ -1488,10 +1488,14 @@ template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
            VenusTensor<Tensor<Elem2, Dev2, Rank2>>
 auto equal(const Tensor<Elem1, Dev1, Rank1> &t1,
            const Tensor<Elem2, Dev2, Rank2> &t2) -> bool {
-  if (t1.shape() != t2.shape()) {
+  if constexpr (Rank1 != Rank2) {
     return false;
+  } else {
+    if (t1.shape() != t2.shape()) {
+      return false;
+    }
+    return std::ranges::equal(t1, t2);
   }
-  return std::ranges::equal(t1, t2);
 }
 
 // Inner product
@@ -1534,7 +1538,7 @@ auto iota(const Tensor<Elem, Dev, Rank> &tensor, Idx i) {
 // Out-Of-Place Identity
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
           typename Dev, std::size_t Rank>
-  requires VenusTensor<Tensor<Elem, Dev, Rank>> && (Rank > 2)
+  requires VenusTensor<Tensor<Elem, Dev, Rank>> && (Rank >= 2)
 auto eye_like(const Tensor<Elem, Dev, Rank> &tensor) {
   auto result = Tensor<Elem, Dev, Rank>(tensor.shape());
   result.eye();
@@ -2084,10 +2088,10 @@ public:
 
   auto clone() const -> Tensor { return Tensor(*this); }
 
-  auto toScalar() const -> Tensor<TElem, TDevice, 0> {
+  auto asScalar() const -> Tensor<TElem, TDevice, 0> {
     if (size() != 1) {
       throw std::runtime_error(std::format(
-          "toScalar can only be called on tensors with exactly 1 element."
+          "asScalar can only be called on tensors with exactly 1 element."
           "Tensor size is {}, while the size of a scalar is 1.",
           size()));
     }

@@ -216,9 +216,9 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     x.iota(1);
     y.iota(1);
 
-    REQUIRE_THROWS_AS(y.toScalar(), std::runtime_error);
+    REQUIRE_THROWS_AS(y.asScalar(), std::runtime_error);
 
-    auto scalar = x.toScalar();
+    auto scalar = x.asScalar();
 
     REQUIRE(x.unique());
     REQUIRE(scalar.unique());

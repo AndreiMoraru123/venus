@@ -337,7 +337,7 @@ TEST_CASE("Sum across multiple dimensions", "[tensor][ops][sum_dims]") {
     auto total = venus::eager::sum_dims<0, 1, 2>(tensor);
 
     REQUIRE(total.shape() == Shape(1, 1, 1));
-    REQUIRE(total.toScalar() == 300);
+    REQUIRE(total.asScalar() == 300);
   }
 }
 
