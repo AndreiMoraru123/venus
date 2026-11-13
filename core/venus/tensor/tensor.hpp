@@ -8,6 +8,7 @@
 #include <initializer_list>
 #include <iomanip>
 #include <ios>
+#include <ranges>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -55,6 +56,16 @@
   }
 
 namespace venus {
+
+// Axis selector for tensor[...], the `:` in numpy's t[0, 0, :]
+struct all_t {
+  explicit constexpr all_t() = default;
+};
+inline constexpr all_t all{};
+
+template <typename T>
+concept AxisSelector =
+    std::same_as<T, all_t> or std::is_convertible_v<T, std::size_t>;
 
 template <typename TElem, typename TDevice, std::size_t Rank> class Tensor {
   static_assert(std::is_same_v<std::remove_cvref_t<TElem>, TElem>);
@@ -372,7 +383,7 @@ public:
 #ifdef VENUS_INTERPRETER
   // Simple direct indexing for interpreter mode (no proxy)
   template <typename... Indices>
-    requires(sizeof...(Indices) == Rank)
+    requires(sizeof...(Indices) == Rank) && SizeTLike<Indices...>
   constexpr auto operator[](this auto &&self, Indices... indices)
       -> ElementType {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
@@ -393,7 +404,7 @@ public:
 #else
   // Tensor indexing
   template <typename... Indices>
-    requires(sizeof...(Indices) == Rank)
+    requires(sizeof...(Indices) == Rank) && SizeTLike<Indices...>
   auto operator[](this auto &&self, Indices... indices) {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Indexing is currently only supported on CPU");
@@ -418,6 +429,38 @@ public:
     }
   }
 #endif
+
+  // Axis slicing: t[0, 0, all] walks the axis marked `all`, others fixed.
+  // Returns a view into this tensor, so lvalues only (an rvalue would dangle).
+  template <AxisSelector... Selectors>
+    requires(sizeof...(Selectors) == Rank) &&
+            ((std::same_as<Selectors, all_t> + ...) == 1)
+  auto operator[](this auto &self, Selectors... selectors) {
+    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+                  "Slicing is currently only supported on CPU");
+    std::array<std::size_t, Rank> start{};
+    std::size_t axis = 0;
+    std::size_t dim = 0;
+    auto place = [&](auto selector) {
+      if constexpr (std::same_as<decltype(selector), all_t>) {
+        axis = dim;
+      } else {
+        start[dim] = static_cast<std::size_t>(selector);
+      }
+      ++dim;
+    };
+    (place(selectors), ...);
+
+    std::size_t stride = 1;
+    for (std::size_t i = axis + 1; i < Rank; ++i) {
+      stride *= self.m_shape[i];
+    }
+    auto *base = self.data() + self.m_shape.idxToOffset(start);
+    return std::views::iota(std::size_t{0}, self.m_shape[axis]) |
+           std::views::transform([base, stride](std::size_t i) -> auto & {
+             return base[i * stride];
+           });
+  }
 
   auto evalRegister() const;
 
