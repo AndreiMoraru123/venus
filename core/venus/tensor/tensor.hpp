@@ -7,12 +7,11 @@
 #include <cstddef>
 #include <format>
 #include <initializer_list>
-#include <iomanip>
-#include <ios>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
 #endif
+#include <venus/concepts.hpp>
 #include <venus/memory/contiguous_memory.hpp>
 #include <venus/memory/device.hpp>
 #include <venus/memory/lower_access.hpp>
@@ -646,70 +645,7 @@ constexpr auto operator+(typename TensorIterator<T>::difference_type n,
   return it + n;
 }
 
-// Print Tensor ================================================
-template <typename T>
-concept StringLike = requires(T str) {
-  { str.c_str() } -> std::convertible_to<const char *>;
-} or std::convertible_to<T, const char *>;
-
-template <typename T>
-concept CharLike = std::same_as<T, char> || std::same_as<T, signed char> ||
-                   std::same_as<T, unsigned char> || std::same_as<T, wchar_t> ||
-                   std::same_as<T, char8_t> || std::same_as<T, char16_t> ||
-                   std::same_as<T, char32_t>;
-
-template <typename TElem, typename TDevice, std::size_t Rank>
-auto operator<<(std::ostream &os, const Tensor<TElem, TDevice, Rank> &tensor)
-    -> std::ostream & {
-  os << "venus::Tensor([";
-
-  std::size_t count = 0;
-  for (auto elem : tensor) {
-    if (count > 0)
-      os << ", ";
-    count++;
-    if constexpr (StringLike<TElem>) {
-      os << "\"" << static_cast<TElem>(elem) << "\"";
-    } else if constexpr (CharLike<TElem>) {
-      os << "'" << static_cast<TElem>(elem) << "'";
-    } else if constexpr (std::floating_point<TElem>) {
-      os << std::fixed << std::setprecision(2) << static_cast<TElem>(elem);
-    } else {
-      os << static_cast<TElem>(elem);
-    }
-  }
-
-  return os << "], " << "shape=" << tensor.shape() << ")";
-}
-
-template <typename TElem, typename TDevice>
-auto operator<<(std::ostream &os, const Tensor<TElem, TDevice, 0> &tensor)
-    -> std::ostream & {
-  if constexpr (StringLike<TElem>) {
-    return os << "venus::Tensor(" << "\"" << tensor.value() << "\"" << ")";
-  } else if constexpr (CharLike<TElem>) {
-    return os << "venus::Tensor(" << "'" << tensor.value() << "'" << ")";
-  } else if constexpr (std::floating_point<TElem>) {
-    return os << std::fixed << std::setprecision(2) << "venus::Tensor("
-              << tensor.value() << ")";
-  } else {
-    return os << "venus::Tensor(" << tensor.value() << ")";
-  }
-}
-
 } // namespace venus
-
-template <typename TElem, typename TDevice, std::size_t Rank>
-struct std::formatter<venus::Tensor<TElem, TDevice, Rank>> {
-  constexpr auto parse(std::format_parse_context &ctx) { return ctx.begin(); }
-
-  auto format(const venus::Tensor<TElem, TDevice, Rank> &tensor,
-              std::format_context &ctx) const {
-    ostringstream oss;
-    oss << tensor;
-    return std::format_to(ctx.out(), "{}", oss.str());
-  }
-};
 
 // Scalar-first Addition
 template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,

@@ -2,6 +2,7 @@
 
 // Auto-generated main header
 
+#include <venus/concepts.hpp>
 #include <venus/memory/allocators.hpp>
 #include <venus/memory/contiguous_memory.hpp>
 #include <venus/memory/device.hpp>
@@ -18,6 +19,7 @@
 #include <venus/tensor/eager.hpp>
 #include <venus/tensor/shape.hpp>
 #include <venus/tensor/tensor.hpp>
+#include <venus/tensor/tensor_format.hpp>
 #include <venus/tensor/tensor_iterator.hpp>
 #include <venus/traits.hpp>
 #include <venus/var_type_dict.hpp>
