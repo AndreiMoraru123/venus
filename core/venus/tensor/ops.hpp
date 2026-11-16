@@ -274,15 +274,22 @@ auto dispatch(const Operands &...operands) {
 }
 
 // Composite ops ================================================
+// No runtime needs an action for these. They have no rule, since their result
+// is whatever the ops they call return
 
-struct DotOp {
+struct Composite {};
+
+template <typename Op>
+concept CompositeOp = std::derived_from<Op, Composite>;
+
+struct DotOp : Composite {
   template <typename A, typename B>
   static auto compose(const A &a, const B &b) {
     return dispatch<InnerOp>(a, b);
   }
 };
 
-template <std::size_t... Dims> struct SumDimsOp {
+template <std::size_t... Dims> struct SumDimsOp : Composite {
   template <typename T> static auto compose(const T &t) {
     if constexpr (sizeof...(Dims) == 0) {
       return t;
@@ -297,14 +304,14 @@ template <std::size_t... Dims> struct SumDimsOp {
   }
 };
 
-template <std::size_t... SumDims> struct SumproductPairOp {
+template <std::size_t... SumDims> struct SumproductPairOp : Composite {
   template <typename A, typename B>
   static auto compose(const A &a, const B &b) {
     return dispatch<SumDimsOp<SumDims...>>(dispatch<MulOp>(a, b));
   }
 };
 
-template <ConstexprString Eqn> struct EinsumOp {
+template <ConstexprString Eqn> struct EinsumOp : Composite {
   template <typename... Ts> static auto compose(const Ts &...tensors) {
     constexpr auto eqn = Eqn.view();
     static_assert(detail::count_operands(eqn) == sizeof...(Ts),

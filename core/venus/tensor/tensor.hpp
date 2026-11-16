@@ -166,6 +166,11 @@ public:
 
   [[nodiscard]] auto shape() const noexcept -> Shape<rank> { return m_shape; }
 
+  // What a runtime's actions read and build tensors from
+  [[nodiscard]] auto storage() const noexcept -> const StorageType & {
+    return m_mem;
+  }
+
   [[nodiscard]] auto unique() const -> bool
     requires Writable<TRuntime>
   {
@@ -484,6 +489,10 @@ public:
 
   explicit Tensor(StorageType p_mem) : m_mem(std::move(p_mem)) {}
 
+  // The same form as the higher ranks, so an action builds any rank alike
+  explicit Tensor(StorageType p_mem, Shape<0> /*unused*/)
+      : m_mem(std::move(p_mem)) {}
+
   auto operator=(const Tensor &other) -> Tensor &
     requires Writable<TRuntime>
   {
@@ -519,6 +528,10 @@ public:
 
   [[nodiscard]] constexpr auto shape() const noexcept -> Shape<rank> {
     return Shape<rank>{};
+  }
+
+  [[nodiscard]] auto storage() const noexcept -> const StorageType & {
+    return m_mem;
   }
 
   [[nodiscard]] auto unique() const -> bool
