@@ -10,6 +10,7 @@
 #include <iomanip>
 #include <ios>
 #include <stdexcept>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #endif
@@ -661,17 +662,19 @@ concept CharLike = std::same_as<T, char> || std::same_as<T, signed char> ||
 template <typename TElem, typename TDevice, std::size_t Rank>
 auto operator<<(std::ostream &os, const Tensor<TElem, TDevice, Rank> &tensor)
     -> std::ostream & {
-  os << "venus::Tensor([";
+  os << std::string_view{"venus::Tensor(["};
 
   std::size_t count = 0;
   for (auto elem : tensor) {
     if (count > 0)
-      os << ", ";
+      os << std::string_view{", "};
     count++;
     if constexpr (StringLike<TElem>) {
-      os << "\"" << static_cast<TElem>(elem) << "\"";
+      os << std::string_view{"\""} << static_cast<TElem>(elem)
+         << std::string_view{"\""};
     } else if constexpr (CharLike<TElem>) {
-      os << "'" << static_cast<TElem>(elem) << "'";
+      os << std::string_view{"'"} << static_cast<TElem>(elem)
+         << std::string_view{"'"};
     } else if constexpr (std::floating_point<TElem>) {
       os << std::fixed << std::setprecision(2) << static_cast<TElem>(elem);
     } else {
@@ -679,21 +682,26 @@ auto operator<<(std::ostream &os, const Tensor<TElem, TDevice, Rank> &tensor)
     }
   }
 
-  return os << "], " << "shape=" << tensor.shape() << ")";
+  return os << std::string_view{"], shape="} << tensor.shape()
+            << std::string_view{")"};
 }
 
 template <typename TElem, typename TDevice>
 auto operator<<(std::ostream &os, const Tensor<TElem, TDevice, 0> &tensor)
     -> std::ostream & {
   if constexpr (StringLike<TElem>) {
-    return os << "venus::Tensor(" << "\"" << tensor.value() << "\"" << ")";
+    return os << std::string_view{"venus::Tensor(\""} << tensor.value()
+              << std::string_view{"\")"};
   } else if constexpr (CharLike<TElem>) {
-    return os << "venus::Tensor(" << "'" << tensor.value() << "'" << ")";
+    return os << std::string_view{"venus::Tensor('"} << tensor.value()
+              << std::string_view{"')"};
   } else if constexpr (std::floating_point<TElem>) {
-    return os << std::fixed << std::setprecision(2) << "venus::Tensor("
-              << tensor.value() << ")";
+    return os << std::fixed << std::setprecision(2)
+              << std::string_view{"venus::Tensor("} << tensor.value()
+              << std::string_view{")"};
   } else {
-    return os << "venus::Tensor(" << tensor.value() << ")";
+    return os << std::string_view{"venus::Tensor("} << tensor.value()
+              << std::string_view{")"};
   }
 }
 
