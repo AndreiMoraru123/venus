@@ -52,8 +52,8 @@ struct Allocator<Device::CPU> {
 #endif
 #endif
 
-constexpr std::size_t BLOCK_SIZE = 1024;
-constexpr std::size_t ALIGN_SIZE = 64;
+inline constexpr std::size_t BLOCK_SIZE = 1024;
+inline constexpr std::size_t ALIGN_SIZE = 64;
 
 namespace venus {
 template <typename TDevice> struct Allocator;
