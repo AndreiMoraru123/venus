@@ -48,16 +48,6 @@ if(VENUS_BUILD_MODULE)
         FILES ${CMAKE_CURRENT_SOURCE_DIR}/module/venus.cppm
     )
     target_link_libraries(venus_module PUBLIC venus)
-
-    # Each venus header, except the policy macros, as a file holding import venus
-    set(VENUS_IMPORT_HEADERS_DIR ${CMAKE_CURRENT_BINARY_DIR}/venus_import_headers)
-    foreach(header ${VENUS_HEADERS})
-        file(RELATIVE_PATH header ${CMAKE_CURRENT_SOURCE_DIR}/core ${header})
-        if(NOT header MATCHES "policy_macro_")
-            file(CONFIGURE OUTPUT ${VENUS_IMPORT_HEADERS_DIR}/${header}
-                CONTENT "#pragma once\nimport venus;\n")
-        endif()
-    endforeach()
 endif()
 
 if(BUILD_TESTING)

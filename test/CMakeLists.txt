@@ -9,10 +9,9 @@ target_link_libraries(all_tests
     Catch2::Catch2WithMain
 )
 
-# The tests include venus headers, which become import venus with the module
 if(VENUS_BUILD_MODULE)
     target_link_libraries(all_tests PRIVATE venus_module)
-    target_include_directories(all_tests BEFORE PRIVATE ${VENUS_IMPORT_HEADERS_DIR})
+    target_compile_definitions(all_tests PRIVATE VENUS_IMPORT)
 else()
     target_link_libraries(all_tests PRIVATE venus)
 endif()
