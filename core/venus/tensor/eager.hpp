@@ -15,6 +15,7 @@
 #include <type_traits>
 #include <utility>
 #endif
+#include <venus/concepts.hpp>
 #include <venus/memory/device.hpp>
 #include <venus/str.hpp>
 #include <venus/tensor/shape.hpp>
@@ -22,31 +23,6 @@
 inline constexpr std::size_t NUMBER_OF_LETTERS = 'z' - 'a' + 1;
 using AlphabetArray = std::array<std::int64_t, NUMBER_OF_LETTERS>;
 using PositionLabels = std::array<std::size_t, NUMBER_OF_LETTERS>;
-
-namespace venus {
-template <typename T>
-concept VenusTensor = requires {
-  typename std::remove_cvref_t<T>::ElementType;
-  typename std::remove_cvref_t<T>::DeviceType;
-  { std::remove_cvref_t<T>::rank } -> std::convertible_to<std::size_t>;
-};
-
-template <typename T>
-concept Scalar = std::is_arithmetic_v<std::remove_cvref_t<T>>;
-
-template <typename T>
-concept ScalarTensor =
-    VenusTensor<std::remove_cvref_t<T>> && (std::remove_cvref_t<T>::rank == 0);
-
-template <typename T>
-concept MDTensor =
-    VenusTensor<std::remove_cvref_t<T>> && (std::remove_cvref_t<T>::rank > 0);
-
-template <typename T>
-concept BoolTensor =
-    VenusTensor<std::remove_cvref_t<T>> &&
-    std::is_convertible_v<typename std::remove_cvref_t<T>::ElementType, bool>;
-} // namespace venus
 
 #define REGISTER_BINARY_OP(op_name, std_op, op_symbol)                         \
   template <typename T1, typename T2>                                          \

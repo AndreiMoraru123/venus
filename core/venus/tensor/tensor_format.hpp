@@ -8,20 +8,10 @@
 #include <ostream>
 #include <print>
 #endif
+#include <venus/concepts.hpp>
 #include <venus/tensor/tensor.hpp>
 
 namespace venus {
-
-template <typename T>
-concept StringLike = requires(T str) {
-  { str.c_str() } -> std::convertible_to<const char *>;
-} or std::convertible_to<T, const char *>;
-
-template <typename T>
-concept CharLike = std::same_as<T, char> || std::same_as<T, signed char> ||
-                   std::same_as<T, unsigned char> || std::same_as<T, wchar_t> ||
-                   std::same_as<T, char8_t> || std::same_as<T, char16_t> ||
-                   std::same_as<T, char32_t>;
 
 // Read by every print; a format spec such as {:t4e1.0} overrides it for one
 struct PrintOptions {
@@ -48,11 +38,12 @@ auto formatElement(TOut out, const TElem &elem, const PrintOptions &options)
   }
 }
 
-template <typename TElem, typename TDevice, std::size_t Rank, typename TOut>
-auto formatTo(TOut out, const Tensor<TElem, TDevice, Rank> &tensor,
-              const PrintOptions &options) -> TOut {
+template <VenusTensor TTensor, typename TOut>
+auto formatTo(TOut out, const TTensor &tensor, const PrintOptions &options)
+    -> TOut {
+  using TElem = typename TTensor::ElementType;
   out = std::format_to(out, "venus::Tensor(");
-  if constexpr (Rank == 0) {
+  if constexpr (ScalarTensor<TTensor>) {
     out = formatElement(out, tensor.value(), options);
     return std::format_to(out, ")");
   } else {
