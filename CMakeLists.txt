@@ -14,9 +14,12 @@ enable_testing()
 include(CTest)
 include(FetchContent)
 
+set(VENUS_GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
+
 add_library(venus INTERFACE)
 target_include_directories(venus INTERFACE
      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/core>
+     $<BUILD_INTERFACE:${VENUS_GENERATED_DIR}>
      $<INSTALL_INTERFACE:include>
 )
 
@@ -24,10 +27,19 @@ file(GLOB_RECURSE VENUS_HEADERS CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/core/*.hpp"
 )
 
+# venus.hpp includes every header under core/, so a new header needs no edit
+set(VENUS_INCLUDES "")
+foreach(header IN LISTS VENUS_HEADERS)
+    cmake_path(RELATIVE_PATH header BASE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/core)
+    string(APPEND VENUS_INCLUDES "#include <${header}>\n")
+endforeach()
+file(CONFIGURE OUTPUT ${VENUS_GENERATED_DIR}/venus.hpp
+    CONTENT "#pragma once\n\n// Auto-generated main header\n\n${VENUS_INCLUDES}" @ONLY)
+
 target_sources(venus INTERFACE
     FILE_SET HEADERS
-    BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/core
-    FILES ${VENUS_HEADERS}
+    BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/core ${VENUS_GENERATED_DIR}
+    FILES ${VENUS_HEADERS} ${VENUS_GENERATED_DIR}/venus.hpp
 )
 
 option(VENUS_BUILD_MODULE "Build the venus module and run tests and demos against it" ON)
@@ -100,9 +112,10 @@ if(CLANG_REPL_EXECUTABLE)
             COMMAND ${CMAKE_CXX_COMPILER} ${REPL_FLAGS} -Wno-reserved-module-identifier
                     --precompile ${std_source} -o ${PCM_DIR}/std.pcm
             COMMAND ${CMAKE_CXX_COMPILER} ${REPL_FLAGS} -I${CMAKE_CURRENT_SOURCE_DIR}/core
-                    -fmodule-file=std=${PCM_DIR}/std.pcm
+                    -I${VENUS_GENERATED_DIR} -fmodule-file=std=${PCM_DIR}/std.pcm
                     --precompile ${CMAKE_CURRENT_SOURCE_DIR}/module/venus.cppm -o ${PCM_DIR}/venus.pcm
             DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/module/venus.cppm ${VENUS_HEADERS}
+                    ${VENUS_GENERATED_DIR}/venus.hpp
         )
         set(REPL_INPUTS -fmodule-file=std=${PCM_DIR}/std.pcm -fmodule-file=venus=${PCM_DIR}/venus.pcm)
         set(REPL_DEPENDS ${PCM_DIR}/venus.pcm)
