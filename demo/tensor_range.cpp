@@ -1,4 +1,4 @@
-import venus;
+import venus; // or #include <venus.hpp> and using namespace venus
 
 // clang-format off
 auto main() -> int {

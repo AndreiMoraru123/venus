@@ -13,7 +13,7 @@ Venus leverages C++20 ranges, providing both powerful optimizations and beautifu
 ```cpp
 // demo/tensor_range.cpp
 
-import venus;
+import venus; // or #include <venus.hpp> and using namespace venus
 
 // clang-format off
 auto main() -> int {
@@ -51,7 +51,7 @@ print(check_order(ints)  # tensor([0, 2, 3, 4])
 in Venus:
 
 ```cpp
-import venus;
+import venus; // or #include <venus.hpp> and using namespace venus
 
 auto check_order(const auto &ints) {
   return eager::where(eager::sort(ints) != ints);

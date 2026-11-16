@@ -1,4 +1,4 @@
-import venus;
+import venus; // or #include <venus.hpp> and using namespace venus
 
 auto check_order(const auto &ints) {
   return eager::where(eager::sort(ints) != ints);
