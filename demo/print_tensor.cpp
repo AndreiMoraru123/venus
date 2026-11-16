@@ -17,4 +17,12 @@ auto main() -> int {
   std::println("{}", float_tensor);      // venus::Tensor([0.00, 0.00, 0.00, 0.00, 0.00, 0.00], shape=(1, 2, 3))
   std::println("{}", ch_tensor);         // venus::Tensor(['', '', '', '', '', ''], shape=(1, 2, 3))
   std::println("{}", str_tensor);        // venus::Tensor(["", "", "", "", "", ""], shape=(1, 2, 3))
+
+  auto big_tensor = Tensor<int, Device::CPU, 2>(1000, 1000);
+  big_tensor.iota(0);
+  std::println("{}", big_tensor);        // venus::Tensor([0, 1, 2, ..., 999997, 999998, 999999], shape=(1000, 1000))
+
+  auto big_float_tensor = Tensor<float, Device::CPU, 1>(2000);
+  big_float_tensor.iota(0);
+  std::println("{}", big_float_tensor);  // venus::Tensor([0.00, 1.00, 2.00, ..., 1997.00, 1998.00, 1999.00], shape=(2000))
 }

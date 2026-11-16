@@ -3,7 +3,9 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <cmath>
+#include <format>
 #include <stdexcept>
+#include <string>
 #ifdef VENUS_IMPORT
 import venus;
 #else
@@ -407,5 +409,22 @@ TEST_CASE("Tensor Creation", "[tensor][ctor]") {
     // z takes x's memory diectly
     REQUIRE(static_cast<void *>(y.data()) == x_ptr);
     REQUIRE(y.shape() == Shape(2, 3));
+  }
+}
+
+TEST_CASE("Tensor Printing", "[tensor][print]") {
+  SECTION("Past 1000 elements, only the ends") {
+    auto x = Tensor<int, Device::CPU, 2>(2, 1000);
+    x.iota(0);
+    REQUIRE(std::format("{}", x) ==
+            "venus::Tensor([0, 1, 2, ..., 1997, 1998, 1999], shape=(2, 1000))");
+  }
+
+  SECTION("Up to 1000 elements, every element") {
+    auto x = Tensor<int, Device::CPU, 1>(1000);
+    x.iota(0);
+    const auto text = std::format("{}", x);
+    REQUIRE(text.find("...") == std::string::npos);
+    REQUIRE(text.ends_with("997, 998, 999], shape=(1000))"));
   }
 }
