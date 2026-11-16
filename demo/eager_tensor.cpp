@@ -1,10 +1,4 @@
-
-#include <cassert>
-#include <print>
-#include <venus/tensor/eager.hpp>
-#include <venus/tensor/tensor.hpp>
-
-using namespace venus;
+import venus;
 
 auto main() -> int {
   auto x = Tensor<float, Device::CPU, 1>(7);
@@ -16,11 +10,11 @@ auto main() -> int {
   auto z = x.dot(y);
   std::println("{}", z); // venus::Tensor(140.00)
 
-  assert(z == y.dot(x));
-  assert(z == venus::eager::dot(x, y));
+  std::println("{}", z == y.dot(x));         // true
+  std::println("{}", z == eager::dot(x, y)); // true
 
-  assert(venus::eager::equal(x + y, venus::eager::add(x, y)));
-  assert(venus::eager::equal(x - y, venus::eager::sub(x, y)));
-  assert(venus::eager::equal(x * y, venus::eager::mul(x, y)));
-  assert(venus::eager::equal(x / y, venus::eager::div(x, y)));
+  std::println("{}", eager::equal(x + y, eager::add(x, y))); // true
+  std::println("{}", eager::equal(x - y, eager::sub(x, y))); // true
+  std::println("{}", eager::equal(x * y, eager::mul(x, y))); // true
+  std::println("{}", eager::equal(x / y, eager::div(x, y))); // true
 }

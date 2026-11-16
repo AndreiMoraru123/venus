@@ -5,7 +5,11 @@
 #include <numeric>
 
 #include <ranges>
+#ifdef VENUS_IMPORT
+import venus;
+#else
 #include <venus/tensor/shape.hpp>
+#endif
 
 using namespace venus;
 

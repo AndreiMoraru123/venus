@@ -2,7 +2,7 @@
   <img src="assets/venus_logo.svg" alt="Venus Logo" width="250">
 </p>
 
-|                                                                                                   Linux (GCC)                                                                                                    |                                                                                                       Linux (Clang)                                                                                                        | macOS (Apple Clang) |                                                                                                        Windows (Clang-CL)                                                                                                         |                                                                                                     Windows (MSVC)                                                                                                     |
+|                                                                                                   Linux (GCC, modules)                                                                                                |                                                                                                       Linux (Clang, modules)                                                                                                    | macOS (Apple Clang) |                                                                                                        Windows (Clang-CL)                                                                                                         |                                                                                                     Windows (MSVC, modules)                                                                                                 |
 |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:| :---: |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
 | [![GCC](https://img.shields.io/github/actions/workflow/status/AndreiMoraru123/venus/gcc-linux.yml?logo=gnu&logoColor=white&label=GCC)](https://github.com/AndreiMoraru123/venus/actions/workflows/gcc-linux.yml) | [![Clang](https://img.shields.io/github/actions/workflow/status/AndreiMoraru123/venus/clang-linux.yml?logo=linux&logoColor=white&label=Clang)](https://github.com/AndreiMoraru123/venus/actions/workflows/clang-linux.yml) | [![macOS](https://img.shields.io/github/actions/workflow/status/AndreiMoraru123/venus/clang-apple.yml?logo=apple&logoColor=white&label=Apple%20Clang)](https://github.com/AndreiMoraru123/venus/actions/workflows/clang-apple.yml) | [![Clang-CL](https://img.shields.io/github/actions/workflow/status/AndreiMoraru123/venus/clang-cl-win.yml?logo=llvm&logoColor=white&label=Clang-CL)](https://github.com/AndreiMoraru123/venus/actions/workflows/clang-cl-win.yml) | [![MSVC](https://img.shields.io/github/actions/workflow/status/AndreiMoraru123/venus/msvc-win.yml?logo=cplusplus&logoColor=white&label=MSVC)](https://github.com/AndreiMoraru123/venus/actions/workflows/msvc-win.yml) |
 
@@ -13,12 +13,7 @@ Venus leverages C++20 ranges, providing both powerful optimizations and beautifu
 ```cpp
 // demo/tensor_range.cpp
 
-
-#include <cassert>
-#include <ranges>
-#include <venus/tensor/tensor.hpp>
-
-using namespace venus;
+import venus; // or #include <venus.hpp> and using namespace venus
 
 // clang-format off
 auto main() -> int {
@@ -33,7 +28,7 @@ auto main() -> int {
       std::views::take(2);                                   // 4, 16
 
   auto result = std::ranges::fold_left(pipeline, 0, std::plus{}); // 20
-  assert(result == 20); // lazy eval
+  std::println("{}", result); // 20
 }
 ```
 
@@ -56,13 +51,10 @@ print(check_order(ints)  # tensor([0, 2, 3, 4])
 in Venus:
 
 ```cpp
-#include <print>
-#include <venus/tensor/tensor.hpp>
-
-using namespace venus;
+import venus; // or #include <venus.hpp> and using namespace venus
 
 auto check_order(const auto &ints) {
-  return venus::eager::where(venus::eager::sort(ints) != ints);
+  return eager::where(eager::sort(ints) != ints);
 }
 
 auto main() -> int {
@@ -81,15 +73,12 @@ cmake --build build --target venus-interactive
 ```
 
 ```cpp
-clang-repl> using namespace venus;
-clang-repl> using namespace venus::eager;
-clang-repl> auto check_order(const auto& ints) { return where(sort(ints) != ints); }
-clang-repl> auto ints = Tensor<int, Device::CPU, 1>{5, 2, 4, 3, 1};
-clang-repl> auto res = check_order(ints);
-clang-repl> print(res) // built-in macro
-venus::Tensor([0, 2, 3, 4], shape=(4))
-(int) 0
-clang-repl>
+import venus;
+using namespace venus::eager;
+auto check_order(const auto& ints) { return where(sort(ints) != ints); }
+auto ints = Tensor<int, Device::CPU, 1>{5, 2, 4, 3, 1};
+auto res = check_order(ints);
+std::println("{}", res); // venus::Tensor([0, 2, 3, 4], shape=(4))
 ```
 
 ### Special Thanks and Author's Note

@@ -1,9 +1,11 @@
 #pragma once
 
+#ifndef VENUS_MODULE
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
 #include <memory>
+#endif
 #include <venus/memory/device.hpp>
 
 #ifdef VENUS_INTERPRETER
@@ -40,6 +42,7 @@ struct Allocator<Device::CPU> {
 
 // Memory pool allocator for compiled venus
 
+#ifndef VENUS_MODULE
 #include <deque>
 #include <mutex>
 #include <unordered_map>
@@ -47,9 +50,10 @@ struct Allocator<Device::CPU> {
 #ifdef _WIN32
 #include <malloc.h>
 #endif
+#endif
 
-constexpr std::size_t BLOCK_SIZE = 1024;
-constexpr std::size_t ALIGN_SIZE = 64;
+inline constexpr std::size_t BLOCK_SIZE = 1024;
+inline constexpr std::size_t ALIGN_SIZE = 64;
 
 namespace venus {
 template <typename TDevice> struct Allocator;

@@ -9,29 +9,31 @@ on:
 
 jobs:
   build-gcc:
-    name: Build and Test
+    name: Build and Test (module ${{ matrix.module }})
     runs-on: ubuntu-latest
     container:
       image: gcc:16
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [OFF, ON]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: apt-get update && apt-get install -y ninja-build
 
       - name: Setup CMake
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: "latest"
 
-      - name: Create build directory
-        run: mkdir -p build
-
       - name: Configure with CMake
-        working-directory: build
-        run: cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBUILD_DEMO=OFF
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DVENUS_BUILD_MODULE=${{ matrix.module }}
 
       - name: Build
-        working-directory: build
-        run: cmake --build . -j$(nproc)
+        run: cmake --build build
 
       - name: Run tests
         working-directory: build

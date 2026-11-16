@@ -35,7 +35,7 @@ jobs:
 
       - name: Configure with CMake
         working-directory: build
-        run: cmake .. -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_DEMO=OFF -DBUILD_SINGLE_HEADER=ON
+        run: cmake .. -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_DEMO=OFF -DBUILD_SINGLE_HEADER=ON -DVENUS_BUILD_MODULE=OFF
 
       - name: Build
         working-directory: build

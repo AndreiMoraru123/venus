@@ -2,9 +2,13 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <cmath>
-#include <venus/policies/policy_container.hpp>
 #include <venus/policies/policy_macro_begin.hpp>
+#ifdef VENUS_IMPORT
+import venus;
+#else
+#include <venus/policies/policy_container.hpp>
 #include <venus/policies/policy_ops.hpp>
+#endif
 
 using namespace venus;
 

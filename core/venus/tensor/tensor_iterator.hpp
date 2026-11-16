@@ -1,7 +1,9 @@
 #pragma once
 
+#ifndef VENUS_MODULE
 #include <compare>
 #include <iterator>
+#endif
 
 namespace venus {
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#ifndef VENUS_MODULE
 #include <algorithm>
 #include <cassert>
 #include <concepts>
@@ -11,6 +12,7 @@
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
+#endif
 #include <venus/memory/contiguous_memory.hpp>
 #include <venus/memory/device.hpp>
 #include <venus/memory/lower_access.hpp>

@@ -1,8 +1,4 @@
-#include <print>
-#include <venus/memory/device.hpp>
-#include <venus/tensor/tensor.hpp>
-
-using namespace venus;
+import venus;
 
 template <typename T, std::size_t Rank>
   requires(Rank == 2)
@@ -39,7 +35,7 @@ auto main() -> int {
       Tensor<float, Device::CPU, 2>{{-1, 0, 1}, {-2, 0, 2}, {-1, 0, 1}};
 
   auto res = conv2d(img, kernel);
-  assert(res.shape() == Shape(3, 3));
+  std::println("{}", res.shape()); // (3, 3)
 
   std::println("{}", res);
 }

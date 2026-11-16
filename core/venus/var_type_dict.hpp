@@ -1,8 +1,10 @@
+#ifndef VENUS_MODULE
 #include <array>
 #include <cstddef>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
+#endif
 #include <venus/null_param.hpp>
 #include <venus/sequential.hpp>
 

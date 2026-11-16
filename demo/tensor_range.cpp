@@ -1,9 +1,4 @@
-
-#include <cassert>
-#include <ranges>
-#include <venus/tensor/tensor.hpp>
-
-using namespace venus;
+import venus; // or #include <venus.hpp> and using namespace venus
 
 // clang-format off
 auto main() -> int {
@@ -18,5 +13,5 @@ auto main() -> int {
       std::views::take(2);                                   // 4, 16
 
   auto result = std::ranges::fold_left(pipeline, 0, std::plus{}); // 20
-  assert(result == 20); // lazy eval
+  std::println("{}", result); // 20
 }

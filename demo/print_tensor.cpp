@@ -1,9 +1,4 @@
-
-#include <print>
-#include <venus/memory/device.hpp>
-#include <venus/tensor/tensor.hpp>
-
-using namespace venus;
+import venus;
 
 auto main() -> int {
   auto scalar = Tensor<int, Device::CPU, 0>(10);

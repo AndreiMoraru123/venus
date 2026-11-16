@@ -1,5 +1,6 @@
 #pragma once
 
+#ifndef VENUS_MODULE
 #include <algorithm>
 #include <array>
 #include <concepts>
@@ -13,11 +14,12 @@
 #include <string_view>
 #include <type_traits>
 #include <utility>
+#endif
 #include <venus/memory/device.hpp>
 #include <venus/str.hpp>
 #include <venus/tensor/shape.hpp>
 
-constexpr std::size_t NUMBER_OF_LETTERS = 'z' - 'a' + 1;
+inline constexpr std::size_t NUMBER_OF_LETTERS = 'z' - 'a' + 1;
 using AlphabetArray = std::array<std::int64_t, NUMBER_OF_LETTERS>;
 using PositionLabels = std::array<std::size_t, NUMBER_OF_LETTERS>;
 

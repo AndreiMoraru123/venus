@@ -3,10 +3,14 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include <functional>
-#include <venus/memory/device.hpp>
 
 #include <tuple>
+#ifdef VENUS_IMPORT
+import venus;
+#else
+#include <venus/memory/device.hpp>
 #include <venus/tensor/tensor.hpp>
+#endif
 
 using namespace venus;
 

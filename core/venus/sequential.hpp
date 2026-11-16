@@ -1,7 +1,9 @@
 #pragma once
 
+#ifndef VENUS_MODULE
 #include <cstddef>
 #include <type_traits>
+#endif
 #include <venus/null_param.hpp>
 
 namespace venus::Sequential {
@@ -110,7 +112,7 @@ struct Order_<TCon<TParams...>, TReq> {
 };
 
 template <typename TCon, typename TReq>
-static constexpr std::size_t Order = Order_<TCon, TReq>::value;
+inline constexpr std::size_t Order = Order_<TCon, TReq>::value;
 // =============================================================
 
 // Set =========================================================
@@ -167,7 +169,7 @@ struct Size_<TCont<T...>> {
 };
 
 template <typename T>
-static constexpr std::size_t Size = Size_<std::remove_cvref_t<T>>::value;
+inline constexpr std::size_t Size = Size_<std::remove_cvref_t<T>>::value;
 // =============================================================
 
 // Head ========================================================

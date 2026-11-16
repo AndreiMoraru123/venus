@@ -1,7 +1,4 @@
-#include <print>
-#include <venus/tensor/tensor.hpp>
-
-using namespace venus;
+import venus;
 
 // clang-format off
 auto main() -> int {

@@ -1,21 +1,16 @@
-
-#include "venus/tensor/shape.hpp"
-#include <cassert>
-#include <venus/tensor/tensor.hpp>
-
-using namespace venus;
+import venus;
 
 auto main() -> int {
   auto tensor = Tensor<float, Device::CPU, 0>(10.0f);
-  assert(tensor.value() == 10.0f);
+  std::println("{}", tensor.value()); // 10
 
   tensor.assign(12.0f);
 
   auto good = (tensor == 12.0f);
-  assert(good == true);
+  std::println("{}", good); // venus::Tensor(1)
 
   auto bad = (tensor != 12.0f);
-  assert(bad == false);
+  std::println("{}", bad); // venus::Tensor(0)
 
   static_assert(tensor.shape() == Shape<0>{});
 }

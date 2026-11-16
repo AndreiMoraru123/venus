@@ -4,7 +4,7 @@ foreach(demo_source ${DEMO_SOURCES})
     get_filename_component(demo_name ${demo_source} NAME_WE)
     set(target_name "demo_${demo_name}")
     add_executable(${target_name} ${demo_source})
-    target_link_libraries(${target_name} PRIVATE venus)
+    target_link_libraries(${target_name} PRIVATE venus_module)
     target_include_directories(${target_name} PRIVATE
         ${CMAKE_SOURCE_DIR}
         ${mdspan_SOURCE_DIR}/include

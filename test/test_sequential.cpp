@@ -1,7 +1,11 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <type_traits>
+#ifdef VENUS_IMPORT
+import venus;
+#else
 #include <venus/sequential.hpp>
+#endif
 
 using namespace venus;
 

@@ -1,9 +1,4 @@
-#include <print>
-#include <string>
-
-#include <venus/tensor/tensor.hpp>
-
-using namespace venus;
+import venus;
 
 auto main() -> int {
   auto tensor = Tensor<std::string, Device::CPU, 1>(3);

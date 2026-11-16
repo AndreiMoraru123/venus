@@ -1,9 +1,4 @@
-#include <cassert>
-#include <print>
-#include <venus/tensor/eager.hpp>
-#include <venus/tensor/tensor.hpp>
-
-using namespace venus;
+import venus;
 
 auto main() -> int {
   auto x = Tensor<float, Device::CPU, 2>(2, 3);

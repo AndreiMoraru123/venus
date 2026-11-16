@@ -1,9 +1,4 @@
-
-#include <cassert>
-#include <print>
-#include <venus/tensor/tensor.hpp>
-
-using namespace venus;
+import venus;
 
 auto main() -> int {
   auto a = Tensor<int, Device::CPU, 2>{
