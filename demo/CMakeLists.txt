@@ -1,6 +1,10 @@
 file(GLOB_RECURSE DEMO_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 
 foreach(demo_source ${DEMO_SOURCES})
+    file(STRINGS ${demo_source} imports_venus REGEX "^import venus;")
+    if(imports_venus AND NOT VENUS_BUILD_MODULE)
+        continue()
+    endif()
     get_filename_component(demo_name ${demo_source} NAME_WE)
     set(target_name "demo_${demo_name}")
     add_executable(${target_name} ${demo_source})

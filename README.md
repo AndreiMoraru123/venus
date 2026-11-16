@@ -15,8 +15,7 @@ Venus leverages C++20 ranges, providing both powerful optimizations and beautifu
 
 
 #include <cassert>
-#include <ranges>
-#include <venus/tensor/tensor.hpp>
+import venus;
 
 using namespace venus;
 
@@ -56,8 +55,7 @@ print(check_order(ints)  # tensor([0, 2, 3, 4])
 in Venus:
 
 ```cpp
-#include <print>
-#include <venus/tensor/tensor.hpp>
+import venus;
 
 using namespace venus;
 
@@ -91,30 +89,6 @@ venus::Tensor([0, 2, 3, 4], shape=(4))
 (int) 0
 clang-repl>
 ```
-
-#### `import venus;`
-
-With Ninja, venus also builds as a C++ module:
-
-```sh
-cmake -B build -G Ninja -DVENUS_BUILD_MODULE=ON
-```
-
-```cmake
-target_link_libraries(app PRIVATE venus_module)
-```
-
-```cpp
-#include <venus/policies/policy_macro_begin.hpp> // only to define policies
-import venus; // also exports std
-```
-
-- Put every `#include` before the first `import`.
-- The consumer's target needs `CXX_SCAN_FOR_MODULES`, which is on by default
-  when its `cmake_minimum_required` is 3.28 or newer.
-- With Homebrew LLVM, pass
-  `-DCMAKE_CXX_STDLIB_MODULES_JSON=$(brew --prefix llvm)/lib/c++/libc++.modules.json`.
-- Apple Clang and clang-cl cannot build it.
 
 ### Special Thanks and Author's Note
 

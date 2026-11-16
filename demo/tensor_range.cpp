@@ -1,7 +1,6 @@
 
 #include <cassert>
-#include <ranges>
-#include <venus/tensor/tensor.hpp>
+import venus;
 
 using namespace venus;
 
