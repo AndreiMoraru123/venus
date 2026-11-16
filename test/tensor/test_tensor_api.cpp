@@ -471,8 +471,13 @@ TEST_CASE("Tensor Printing", "[tensor][print]") {
   }
 
   SECTION("No more than 2 * edgeItems elements print in full") {
-    auto x = Tensor<int, Device::CPU, 1>{1, 2};
-    REQUIRE(std::format("{:t0}", x) == "venus::Tensor([1, 2], shape=(2))");
+    auto x = Tensor<int, Device::CPU, 1>(6);
+    x.iota(0);
+    // t0 asks for a summary, but 6 elements are no more than 2 * e3
+    REQUIRE(std::format("{:t0e3}", x) ==
+            "venus::Tensor([0, 1, 2, 3, 4, 5], shape=(6))");
+    REQUIRE(std::format("{:t0e2}", x) ==
+            "venus::Tensor([0, 1, ..., 4, 5], shape=(6))");
   }
 
   SECTION("An unknown format spec throws") {
