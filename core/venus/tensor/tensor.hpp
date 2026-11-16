@@ -11,6 +11,7 @@
 #include <type_traits>
 #include <utility>
 #endif
+#include <venus/concepts.hpp>
 #include <venus/memory/contiguous_memory.hpp>
 #include <venus/memory/device.hpp>
 #include <venus/memory/lower_access.hpp>

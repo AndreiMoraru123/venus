@@ -7,20 +7,10 @@
 #include <ostream>
 #include <print>
 #endif
+#include <venus/concepts.hpp>
 #include <venus/tensor/tensor.hpp>
 
 namespace venus {
-
-template <typename T>
-concept StringLike = requires(T str) {
-  { str.c_str() } -> std::convertible_to<const char *>;
-} or std::convertible_to<T, const char *>;
-
-template <typename T>
-concept CharLike = std::same_as<T, char> || std::same_as<T, signed char> ||
-                   std::same_as<T, unsigned char> || std::same_as<T, wchar_t> ||
-                   std::same_as<T, char8_t> || std::same_as<T, char16_t> ||
-                   std::same_as<T, char32_t>;
 
 // Read by every print; with(tensor, options) replaces it for one print
 struct PrintOptions {
@@ -47,11 +37,12 @@ auto formatElement(TOut out, const TElem &elem, const PrintOptions &options)
   }
 }
 
-template <typename TElem, typename TDevice, std::size_t Rank, typename TOut>
-auto formatTo(TOut out, const Tensor<TElem, TDevice, Rank> &tensor,
-              const PrintOptions &options) -> TOut {
+template <VenusTensor TTensor, typename TOut>
+auto formatTo(TOut out, const TTensor &tensor, const PrintOptions &options)
+    -> TOut {
+  using TElem = typename TTensor::ElementType;
   out = std::format_to(out, "venus::Tensor(");
-  if constexpr (Rank == 0) {
+  if constexpr (ScalarTensor<TTensor>) {
     out = formatElement(out, tensor.value(), options);
     return std::format_to(out, ")");
   } else {
@@ -77,15 +68,15 @@ auto formatTo(TOut out, const Tensor<TElem, TDevice, Rank> &tensor,
   }
 }
 
-template <typename TTensor> struct WithPrintOptions {
+template <VenusTensor TTensor> struct WithPrintOptions {
   const TTensor &tensor;
   PrintOptions options;
 };
 
 // Holds a reference to tensor, so print it in the same statement
-template <typename TElem, typename TDevice, std::size_t Rank>
-auto with(const Tensor<TElem, TDevice, Rank> &tensor, PrintOptions options)
-    -> WithPrintOptions<Tensor<TElem, TDevice, Rank>> {
+template <VenusTensor TTensor>
+auto with(const TTensor &tensor, PrintOptions options)
+    -> WithPrintOptions<TTensor> {
   return {tensor, options};
 }
 
@@ -101,7 +92,7 @@ struct std::formatter<venus::Tensor<TElem, TDevice, Rank>> {
   }
 };
 
-template <typename TTensor>
+template <venus::VenusTensor TTensor>
 struct std::formatter<venus::WithPrintOptions<TTensor>> {
   constexpr auto parse(std::format_parse_context &ctx) { return ctx.begin(); }
 
@@ -120,7 +111,7 @@ auto operator<<(std::ostream &os, const Tensor<TElem, TDevice, Rank> &tensor)
   return os;
 }
 
-template <typename TTensor>
+template <VenusTensor TTensor>
 auto operator<<(std::ostream &os, const WithPrintOptions<TTensor> &printed)
     -> std::ostream & {
   std::print(os, "{}", printed);
