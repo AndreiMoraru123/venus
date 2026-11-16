@@ -2,10 +2,12 @@
 
 // Auto-generated main header
 
+#ifndef VENUS_MODULE
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
 #include <memory>
+#endif
 namespace venus::Device {
 struct CPU;
 }
@@ -45,6 +47,7 @@ struct Allocator<Device::CPU> {
 
 // Memory pool allocator for compiled venus
 
+#ifndef VENUS_MODULE
 #include <deque>
 #include <mutex>
 #include <unordered_map>
@@ -52,9 +55,10 @@ struct Allocator<Device::CPU> {
 #ifdef _WIN32
 #include <malloc.h>
 #endif
+#endif
 
-constexpr std::size_t BLOCK_SIZE = 1024;
-constexpr std::size_t ALIGN_SIZE = 64;
+inline constexpr std::size_t BLOCK_SIZE = 1024;
+inline constexpr std::size_t ALIGN_SIZE = 64;
 
 namespace venus {
 template <typename TDevice> struct Allocator;
@@ -149,11 +153,13 @@ private:
 }; // namespace venus
 
 #endif
+#ifndef VENUS_MODULE
 #include <cassert>
 #include <cstddef>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
+#endif
 
 
 namespace venus {
@@ -210,8 +216,10 @@ private:
 namespace venus {
 template <typename TData> struct LowLevelAccess;
 } // namespace venus
+#ifndef VENUS_MODULE
 #include <cstddef>
 #include <initializer_list>
+#endif
 
 template <typename T, std::size_t Depth> struct nested_initializer_list {
   using type = std::initializer_list<
@@ -229,7 +237,9 @@ namespace venus {
 struct NullParameter {};
 } // namespace venus
 
+#ifndef VENUS_MODULE
 #include <type_traits>
+#endif
 
 namespace venus {
 
@@ -266,7 +276,7 @@ struct AllPolicies_<Container<Ts...>> {
 };
 
 template <typename Container>
-static constexpr bool AllPolicies = AllPolicies_<Container>::value;
+inline constexpr bool AllPolicies = AllPolicies_<Container>::value;
 } // namespace venus
 namespace venus {
 template <typename... TPolicies> struct PolicyContainer;
@@ -307,11 +317,15 @@ template <typename TLayerName, typename... TPolicies> struct SubPolicyContainer;
 #undef ValuePolicyObj
 #undef TypePolicyTemplate
 #undef TypePolicyObj
+#ifndef VENUS_MODULE
 #include <type_traits>
+#endif
 
 
+#ifndef VENUS_MODULE
 #include <cstddef>
 #include <type_traits>
+#endif
 
 
 namespace venus::Sequential {
@@ -420,7 +434,7 @@ struct Order_<TCon<TParams...>, TReq> {
 };
 
 template <typename TCon, typename TReq>
-static constexpr std::size_t Order = Order_<TCon, TReq>::value;
+inline constexpr std::size_t Order = Order_<TCon, TReq>::value;
 // =============================================================
 
 // Set =========================================================
@@ -477,7 +491,7 @@ struct Size_<TCont<T...>> {
 };
 
 template <typename T>
-static constexpr std::size_t Size = Size_<std::remove_cvref_t<T>>::value;
+inline constexpr std::size_t Size = Size_<std::remove_cvref_t<T>>::value;
 // =============================================================
 
 // Head ========================================================
@@ -507,15 +521,15 @@ template <typename T> struct Identity_ {
   using type = T;
 };
 
-template <bool curr, typename TNext> static constexpr bool AndValue = false;
+template <bool curr, typename TNext> inline constexpr bool AndValue = false;
 
 template <typename TNext>
-static constexpr bool AndValue<true, TNext> = TNext::value;
+inline constexpr bool AndValue<true, TNext> = TNext::value;
 
-template <bool curr, typename TNext> static constexpr bool OrValue = true;
+template <bool curr, typename TNext> inline constexpr bool OrValue = true;
 
 template <typename TNext>
-static constexpr bool OrValue<false, TNext> = TNext::value;
+inline constexpr bool OrValue<false, TNext> = TNext::value;
 } // namespace venus
 
 namespace venus {
@@ -713,16 +727,18 @@ struct HasNonTrivialPolicy_<PolicyContainer<TCurrPolicy, TPolicies...>,
 };
 
 template <typename TPolicyContainer, typename TMajorClass, typename TMinorClass>
-static constexpr bool HasNonTrivialPolicy =
+inline constexpr bool HasNonTrivialPolicy =
     HasNonTrivialPolicy_<TPolicyContainer, TMajorClass, TMinorClass>::value;
 
 // =============================================================
 } // namespace venus
 
+#ifndef VENUS_MODULE
 #include <algorithm>
 #include <cstddef>
 #include <iostream>
 #include <string_view>
+#endif
 
 namespace venus {
 template <std::size_t N> struct ConstexprString {
@@ -741,6 +757,7 @@ template <std::size_t N>
 ConstexprString(const char (&)[N]) -> ConstexprString<N>;
 } // namespace venus
 
+#ifndef VENUS_MODULE
 #include <algorithm>
 #include <array>
 #include <concepts>
@@ -754,8 +771,10 @@ ConstexprString(const char (&)[N]) -> ConstexprString<N>;
 #include <string_view>
 #include <type_traits>
 #include <utility>
+#endif
 
 
+#ifndef VENUS_MODULE
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -767,6 +786,7 @@ ConstexprString(const char (&)[N]) -> ConstexprString<N>;
 #include <string_view>
 #include <type_traits>
 #include <utility>
+#endif
 
 namespace venus {
 
@@ -1052,7 +1072,7 @@ struct tuple_element<N, venus::Shape<Rank>> {
 
 } // namespace std
 
-constexpr std::size_t NUMBER_OF_LETTERS = 'z' - 'a' + 1;
+inline constexpr std::size_t NUMBER_OF_LETTERS = 'z' - 'a' + 1;
 using AlphabetArray = std::array<std::int64_t, NUMBER_OF_LETTERS>;
 using PositionLabels = std::array<std::size_t, NUMBER_OF_LETTERS>;
 
@@ -1808,6 +1828,7 @@ auto einsum(const Tensors<Ts, Devs, Ranks> &...tensors) {
 #undef REGISTER_BINARY_OP
 
 
+#ifndef VENUS_MODULE
 #include <algorithm>
 #include <cassert>
 #include <concepts>
@@ -1819,14 +1840,17 @@ auto einsum(const Tensors<Ts, Devs, Ranks> &...tensors) {
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
+#endif
 
 
 
 
 
 
+#ifndef VENUS_MODULE
 #include <compare>
 #include <iterator>
+#endif
 
 namespace venus {
 
@@ -2706,11 +2730,13 @@ auto operator!=(const Scalar &scalar,
 #undef REGISTER_SCALAR_BOOL_OP
 
 
+#ifndef VENUS_MODULE
 #include <array>
 #include <cstddef>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
+#endif
 
 
 
