@@ -10,6 +10,7 @@ import venus;
 #else
 #include <venus/memory/device.hpp>
 #include <venus/tensor/tensor.hpp>
+#include <venus/tensor/tensor_format.hpp>
 #endif
 
 using namespace venus;

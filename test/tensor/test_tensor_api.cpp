@@ -12,6 +12,7 @@ import venus;
 #include <venus/memory/contiguous_memory.hpp>
 #include <venus/memory/device.hpp>
 #include <venus/tensor/tensor.hpp>
+#include <venus/tensor/tensor_format.hpp>
 #endif
 
 using namespace venus;
@@ -413,6 +414,21 @@ TEST_CASE("Tensor Creation", "[tensor][ctor]") {
 }
 
 TEST_CASE("Tensor Printing", "[tensor][print]") {
+  SECTION("Each element type") {
+    CHECK(std::format("{}", Tensor<int, Device::CPU, 0>(10)) ==
+          "venus::Tensor(10)");
+    CHECK(std::format("{}", Tensor<int, Device::CPU, 2>{{1, 2}, {3, 4}}) ==
+          "venus::Tensor([1, 2, 3, 4], shape=(2, 2))");
+    CHECK(std::format("{}", Tensor<float, Device::CPU, 1>{1.0f, 2.5f}) ==
+          "venus::Tensor([1.00, 2.50], shape=(2))");
+    CHECK(std::format("{}", Tensor<char, Device::CPU, 1>{'a', 'b'}) ==
+          "venus::Tensor(['a', 'b'], shape=(2))");
+    CHECK(std::format("{}", Tensor<std::string, Device::CPU, 1>{"hi", "hi"}) ==
+          R"(venus::Tensor(["hi", "hi"], shape=(2)))");
+    CHECK(std::format("{}", Tensor<bool, Device::CPU, 1>{true, false}) ==
+          "venus::Tensor([1, 0], shape=(2))");
+  }
+
   SECTION("Past 1000 elements, only the ends") {
     auto x = Tensor<int, Device::CPU, 2>(2, 1000);
     x.iota(0);
@@ -426,5 +442,33 @@ TEST_CASE("Tensor Printing", "[tensor][print]") {
     const auto text = std::format("{}", x);
     REQUIRE(text.find("...") == std::string::npos);
     REQUIRE(text.ends_with("997, 998, 999], shape=(1000))"));
+  }
+
+  SECTION("printOptions applies to every print after it") {
+    auto x = Tensor<float, Device::CPU, 1>(6);
+    x.iota(0);
+    printOptions = {.threshold = 4, .edgeItems = 1, .precision = 0};
+    const auto text = std::format("{}", x);
+    printOptions = {};
+    REQUIRE(text == "venus::Tensor([0, ..., 5], shape=(6))");
+    REQUIRE(std::format("{}", x) ==
+            "venus::Tensor([0.00, 1.00, 2.00, 3.00, 4.00, 5.00], shape=(6))");
+  }
+
+  SECTION("with applies options to one print") {
+    auto x = Tensor<float, Device::CPU, 1>(6);
+    x.iota(0);
+    REQUIRE(std::format("{}", with(x, {.threshold = 4, .edgeItems = 2})) ==
+            "venus::Tensor([0.00, 1.00, ..., 4.00, 5.00], shape=(6))");
+    REQUIRE(std::format("{}", with(Tensor<double, Device::CPU, 0>(2.5),
+                                   {.precision = 4})) ==
+            "venus::Tensor(2.5000)");
+    REQUIRE(std::format("{}", x).find("...") == std::string::npos);
+  }
+
+  SECTION("No more than 2 * edgeItems elements print in full") {
+    auto x = Tensor<int, Device::CPU, 1>{1, 2};
+    REQUIRE(std::format("{}", with(x, {.threshold = 0})) ==
+            "venus::Tensor([1, 2], shape=(2))");
   }
 }
