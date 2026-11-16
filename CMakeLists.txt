@@ -1,4 +1,17 @@
 cmake_minimum_required(VERSION 4.5)
+
+# Homebrew's clang can't find its own libc++.modules.json, which sits in lib/c++,
+# and CMake looks for it during project()
+if(CMAKE_HOST_APPLE AND CMAKE_CXX_COMPILER AND NOT CMAKE_CXX_STDLIB_MODULES_JSON)
+    find_program(cxx_compiler_path ${CMAKE_CXX_COMPILER} NO_CACHE)
+    cmake_path(GET cxx_compiler_path PARENT_PATH cxx_compiler_dir)
+    set(libcxx_modules_json ${cxx_compiler_dir}/../lib/c++/libc++.modules.json)
+    if(EXISTS ${libcxx_modules_json})
+        cmake_path(NORMAL_PATH libcxx_modules_json)
+        set(CMAKE_CXX_STDLIB_MODULES_JSON ${libcxx_modules_json} CACHE FILEPATH "")
+    endif()
+endif()
+
 project(venus LANGUAGES CXX)
 
 # Until CMake has a C++26 flag for MSVC, 23 maps to -std:c++latest
