@@ -16,17 +16,12 @@
 #include <venus/memory/lower_access.hpp>
 #include <venus/nested_initializer_list.hpp>
 #include <venus/runtime.hpp>
+#include <venus/tensor/cpu.hpp>
 #include <venus/tensor/eager.hpp>
+#include <venus/tensor/ops.hpp>
 #include <venus/tensor/shape.hpp>
 #include <venus/tensor/storage.hpp>
 #include <venus/tensor/tensor_iterator.hpp>
-
-#define REGISTER_SCALAR_BOOL_OP(op)                                            \
-  template <typename OtherType>                                                \
-  auto operator op(const OtherType &element) const noexcept                    \
-      -> Tensor<bool, RuntimeType, 0> {                                        \
-    return Tensor<bool, RuntimeType, 0>(value() op element);                   \
-  }
 
 #define REGISTER_PRE_OPERATOR(op)                                              \
   auto operator op()->ElementProxy & {                                         \
@@ -191,67 +186,16 @@ public:
     return Tensor<TElem, TRuntime, 0>(*(*this).data());
   }
 
-  // Addition
-  template <typename OtherType> auto operator+(OtherType &&other) const {
-    return venus::eager::add(*this, std::forward<OtherType>(other));
-  }
-
-  // Subtraction
-  template <typename OtherType> auto operator-(OtherType &&other) const {
-    return venus::eager::sub(*this, std::forward<OtherType>(other));
-  }
-
-  // Multiplication
-  template <typename OtherType> auto operator*(OtherType &&other) const {
-    return venus::eager::mul(*this, std::forward<OtherType>(other));
-  }
-
-  // Division
-  template <typename OtherType> auto operator/(OtherType &&other) const {
-    return venus::eager::div(*this, std::forward<OtherType>(other));
-  }
-
-  // Greater than
-  template <typename OtherType> auto operator>(OtherType &&other) const {
-    return venus::eager::gt(*this, std::forward<OtherType>(other));
-  }
-
-  // Greater or equal
-  template <typename OtherType> auto operator>=(OtherType &&other) const {
-    return venus::eager::gte(*this, std::forward<OtherType>(other));
-  }
-
-  // Less than
-  template <typename OtherType> auto operator<(OtherType &&other) const {
-    return venus::eager::lt(*this, std::forward<OtherType>(other));
-  }
-
-  // Less or equal
-  template <typename OtherType> auto operator<=(OtherType &&other) const {
-    return venus::eager::lte(*this, std::forward<OtherType>(other));
-  }
-
-  // Equal
-  template <typename OtherType> auto operator==(OtherType &&other) const {
-    return venus::eager::eq(*this, std::forward<OtherType>(other));
-  }
-
-  // Not equal
-  template <typename OtherType> auto operator!=(OtherType &&other) const {
-    return venus::eager::neq(*this, std::forward<OtherType>(other));
-  }
-
   // Inner product
-  template <typename OtherElementType>
-  auto inner(const Tensor<OtherElementType, RuntimeType, Rank> &other) const {
-    return venus::eager::inner(*this, other);
+  template <typename Other> auto inner(const Other &other) const {
+    return venus::inner(*this, other);
   }
 
   // Dot product
-  template <typename OtherElementType>
+  template <typename Other>
     requires(Rank == 1)
-  auto dot(const Tensor<OtherElementType, RuntimeType, Rank> &other) const {
-    return venus::eager::dot(*this, other);
+  auto dot(const Other &other) const {
+    return venus::dot(*this, other);
   }
 
   // In-Place Transform
@@ -600,36 +544,16 @@ public:
     return data()[0];
   }
 
+  // Same-type comparison reads both values. Other comparisons dispatch
   auto operator==(const Tensor &tensor) const noexcept -> bool
     requires Readable<TRuntime>
   {
     return value() == tensor.value();
   }
 
-  // Addition
-  template <typename OtherType> auto operator+(OtherType &&other) const {
-    return venus::eager::add(*this, std::forward<OtherType>(other));
-  }
-
-  // Subtraction
-  template <typename OtherType> auto operator-(OtherType &&other) const {
-    return venus::eager::sub(*this, std::forward<OtherType>(other));
-  }
-
-  // Multiplication
-  template <typename OtherType> auto operator*(OtherType &&other) const {
-    return venus::eager::mul(*this, std::forward<OtherType>(other));
-  }
-
-  // Division
-  template <typename OtherType> auto operator/(OtherType &&other) const {
-    return venus::eager::div(*this, std::forward<OtherType>(other));
-  }
-
   // Inner product
-  template <typename OtherElementType>
-  auto inner(const Tensor<OtherElementType, RuntimeType, rank> &other) const {
-    return venus::eager::inner(*this, other);
+  template <typename Other> auto inner(const Other &other) const {
+    return venus::inner(*this, other);
   }
 
   operator bool() const noexcept
@@ -641,13 +565,6 @@ public:
       return value() != ElementType{};
     }
   }
-
-  REGISTER_SCALAR_BOOL_OP(==)
-  REGISTER_SCALAR_BOOL_OP(!=)
-  REGISTER_SCALAR_BOOL_OP(<)
-  REGISTER_SCALAR_BOOL_OP(<=)
-  REGISTER_SCALAR_BOOL_OP(>)
-  REGISTER_SCALAR_BOOL_OP(>=)
 
   auto evalRegister() const;
 
@@ -704,87 +621,6 @@ constexpr auto operator+(typename TensorIterator<T>::difference_type n,
 
 } // namespace venus
 
-// Scalar-first Addition
-template <venus::Scalar Scalar, venus::Scalar TElem, typename TRuntime,
-          std::size_t Rank>
-auto operator+(const Scalar &scalar,
-               const venus::Tensor<TElem, TRuntime, Rank> &tensor) {
-  return venus::eager::add(scalar, tensor);
-}
-
-// Scalar-first Substraction
-template <venus::Scalar Scalar, venus::Scalar TElem, typename TRuntime,
-          std::size_t Rank>
-auto operator-(const Scalar &scalar,
-               const venus::Tensor<TElem, TRuntime, Rank> &tensor) {
-  return venus::eager::sub(scalar, tensor);
-}
-
-// Scalar-first Multiplication
-template <venus::Scalar Scalar, venus::Scalar TElem, typename TRuntime,
-          std::size_t Rank>
-auto operator*(const Scalar &scalar,
-               const venus::Tensor<TElem, TRuntime, Rank> &tensor) {
-  return venus::eager::mul(scalar, tensor);
-}
-
-// Scalar-fist Division
-template <venus::Scalar Scalar, venus::Scalar TElem, typename TRuntime,
-          std::size_t Rank>
-auto operator/(const Scalar &scalar,
-               const venus::Tensor<TElem, TRuntime, Rank> &tensor) {
-  return venus::eager::div(scalar, tensor);
-}
-
-// Scalar-first Greater Than
-template <venus::Scalar Scalar, venus::Scalar TElem, typename TRuntime,
-          std::size_t Rank>
-auto operator>(const Scalar &scalar,
-               const venus::Tensor<TElem, TRuntime, Rank> &tensor) {
-  return venus::eager::gt(scalar, tensor);
-}
-
-// Scalar-first Greater Than or Equal
-template <venus::Scalar Scalar, venus::Scalar TElem, typename TRuntime,
-          std::size_t Rank>
-auto operator>=(const Scalar &scalar,
-                const venus::Tensor<TElem, TRuntime, Rank> &tensor) {
-  return venus::eager::gte(scalar, tensor);
-}
-
-// Scalar-first Less Than
-template <venus::Scalar Scalar, venus::Scalar TElem, typename TRuntime,
-          std::size_t Rank>
-auto operator<(const Scalar &scalar,
-               const venus::Tensor<TElem, TRuntime, Rank> &tensor) {
-  return venus::eager::lt(scalar, tensor);
-}
-
-// Scalar-first Less Than or Equal
-template <venus::Scalar Scalar, venus::Scalar TElem, typename TRuntime,
-          std::size_t Rank>
-auto operator<=(const Scalar &scalar,
-                const venus::Tensor<TElem, TRuntime, Rank> &tensor) {
-  return venus::eager::lte(scalar, tensor);
-}
-
-// Scalar-first Equal
-template <venus::Scalar Scalar, venus::Scalar TElem, typename TRuntime,
-          std::size_t Rank>
-auto operator==(const Scalar &scalar,
-                const venus::Tensor<TElem, TRuntime, Rank> &tensor) {
-  return venus::eager::eq(scalar, tensor);
-}
-
-// Scalar-first Not Equal
-template <venus::Scalar Scalar, venus::Scalar TElem, typename TRuntime,
-          std::size_t Rank>
-auto operator!=(const Scalar &scalar,
-                const venus::Tensor<TElem, TRuntime, Rank> &tensor) {
-  return venus::eager::neq(scalar, tensor);
-}
-
 #undef REGISTER_OPERATOR_EQUAL
 #undef REGISTER_POST_OPERATOR
 #undef REGISTER_PRE_OPERATOR
-#undef REGISTER_SCALAR_BOOL_OP
