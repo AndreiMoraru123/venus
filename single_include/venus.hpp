@@ -824,9 +824,8 @@ ConstexprString(const char (&)[N]) -> ConstexprString<N>;
 #include <cstddef>
 #include <format>
 #include <functional>
-#include <sstream>
+#include <ostream>
 #include <stdexcept>
-#include <string_view>
 #include <type_traits>
 #include <utility>
 #endif
@@ -1012,20 +1011,8 @@ public:
 
 template <std::size_t Rank>
 auto operator<<(std::ostream &os, const Shape<Rank> &shape) -> std::ostream & {
-  os << std::string_view{"("};
-  std::size_t count = 0;
-  for (auto dim : shape) {
-    if (count > 0)
-      os << std::string_view{", "};
-    count++;
-    os << dim;
-  }
-  return os << std::string_view{")"};
-}
-
-template <std::size_t Rank = 0>
-auto operator<<(std::ostream &os, const Shape<0> &shape) -> std::ostream & {
-  return os << std::string_view{"()"};
+  std::print(os, "{}", shape);
+  return os;
 }
 
 template <SizeTLike... TShapeParameter>
@@ -1096,9 +1083,13 @@ template <std::size_t Rank> struct std::formatter<venus::Shape<Rank>> {
   constexpr auto parse(std::format_parse_context &ctx) { return ctx.begin(); }
 
   auto format(const venus::Shape<Rank> &shape, std::format_context &ctx) const {
-    std::ostringstream oss;
-    oss << shape;
-    return std::format_to(ctx.out(), "{}", oss.str());
+    auto out = std::format_to(ctx.out(), "(");
+    if constexpr (Rank > 0) {
+      out = std::format_to(out, "{}", shape[0]);
+      for (std::size_t i = 1; i < Rank; ++i)
+        out = std::format_to(out, ", {}", shape[i]);
+    }
+    return std::format_to(out, ")");
   }
 };
 
