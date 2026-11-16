@@ -30,11 +30,14 @@ target_sources(venus INTERFACE
     FILES ${VENUS_HEADERS}
 )
 
-option(VENUS_BUILD_MODULE "Build the venus module and run tests and demos against it" OFF)
+option(VENUS_BUILD_MODULE "Build the venus module and run tests and demos against it" ON)
 
 if(VENUS_BUILD_MODULE)
-    if(NOT CMAKE_GENERATOR MATCHES "Ninja")
-        message(FATAL_ERROR "VENUS_BUILD_MODULE needs a Ninja generator")
+    # CMake's reason import std is unavailable here, empty when it works
+    if(CMAKE_CXX_COMPILER_IMPORT_STD_ERROR_MESSAGE)
+        message(FATAL_ERROR
+            "The venus module needs import std: ${CMAKE_CXX_COMPILER_IMPORT_STD_ERROR_MESSAGE}. "
+            "Configure with -DVENUS_BUILD_MODULE=OFF to build against the headers.")
     endif()
 
     add_library(venus_module STATIC)
