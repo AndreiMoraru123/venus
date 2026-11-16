@@ -215,8 +215,10 @@ project_broadcast_idx(const std::array<std::size_t, RankOut> &in_idx,
   std::array<std::size_t, RankIn> out_idx{};
   constexpr auto offset = RankOut - RankIn;
 
-  for (std::size_t i = 0; i < RankIn; i++) {
-    out_idx[i] = in_shape[i] == 1 ? 0 : in_idx[i + offset];
+  if constexpr (RankIn > 0) {
+    for (std::size_t i = 0; i < RankIn; i++) {
+      out_idx[i] = in_shape[i] == 1 ? 0 : in_idx[i + offset];
+    }
   }
 
   return out_idx;
@@ -231,10 +233,15 @@ constexpr auto broadcast(const Shape<Rank1> &s1, const Shape<Rank2> &s2)
     auto d1 = std::size_t{1};
     auto d2 = std::size_t{1};
 
-    if (i >= RankOut - Rank1)
-      d1 = s1[i - (RankOut - Rank1)];
-    if (i >= RankOut - Rank2)
-      d2 = s2[i - (RankOut - Rank2)];
+    // Shape<0> has no operator[]
+    if constexpr (Rank1 > 0) {
+      if (i >= RankOut - Rank1)
+        d1 = s1[i - (RankOut - Rank1)];
+    }
+    if constexpr (Rank2 > 0) {
+      if (i >= RankOut - Rank2)
+        d2 = s2[i - (RankOut - Rank2)];
+    }
 
     if (d1 != d2 && d1 != 1 && d2 != 1) {
       throw std::invalid_argument(

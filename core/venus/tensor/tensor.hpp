@@ -18,6 +18,7 @@
 #include <venus/runtime.hpp>
 #include <venus/tensor/eager.hpp>
 #include <venus/tensor/shape.hpp>
+#include <venus/tensor/storage.hpp>
 #include <venus/tensor/tensor_iterator.hpp>
 
 #define REGISTER_SCALAR_BOOL_OP(op)                                            \
@@ -64,26 +65,30 @@ template <typename TElem, typename TRuntime, std::size_t Rank> class Tensor {
 public:
   using ElementType = TElem;
   using RuntimeType = TRuntime;
+  using StorageType = storage_t<TElem, TRuntime, Rank>;
   static constexpr std::size_t rank = Rank;
 
   friend struct LowLevelAccess<Tensor>;
   friend struct LowLevelAccess<const Tensor>;
 
   explicit Tensor(Shape<Rank> shape)
+    requires std::constructible_from<StorageType, std::size_t>
       : m_shape(std::move(shape)), m_mem(shape.count()) {}
 
-  explicit Tensor(ContiguousMemory<ElementType, RuntimeType> p_mem,
-                  Shape<Rank> p_shape)
+  explicit Tensor(StorageType p_mem, Shape<Rank> p_shape)
       : m_shape(std::move(p_shape)), m_mem(std::move(p_mem)) {
-    if (m_mem.size() < m_shape.count()) {
-      throw std::invalid_argument(
-          std::format("Insufficient memory for tensor shape: need {} elements, "
-                      "but only {} provided",
-                      m_shape.count(), m_mem.size()));
+    if constexpr (requires { m_mem.size(); }) {
+      if (m_mem.size() < m_shape.count()) {
+        throw std::invalid_argument(std::format(
+            "Insufficient memory for tensor shape: need {} elements, "
+            "but only {} provided",
+            m_shape.count(), m_mem.size()));
+      }
     }
   }
 
   explicit Tensor(nested_initializer_list_t<ElementType, Rank> init_list)
+    requires Writable<TRuntime>
       : m_shape(Shape<Rank>::fromNestedInitializerList(init_list)),
         m_mem(m_shape.count()) {
 
@@ -104,7 +109,7 @@ public:
   }
 
   template <std::size_t D = Rank>
-    requires(D == 1)
+    requires(D == 1) && Writable<TRuntime>
   explicit Tensor(std::initializer_list<ElementType> init_list)
       : m_shape(init_list.size()), m_mem(init_list.size()) {
     std::ranges::copy(init_list, data());
@@ -116,7 +121,8 @@ public:
 
   template <typename... Dims>
     requires(sizeof...(Dims) == Rank) &&
-            (std::is_convertible_v<Dims, std::size_t> && ...)
+            (std::is_convertible_v<Dims, std::size_t> && ...) &&
+            std::constructible_from<StorageType, std::size_t>
   explicit Tensor(Dims &&...dimensions)
       : Tensor(Shape<Rank>(std::forward<Dims>(dimensions)...)) {}
 
@@ -125,11 +131,14 @@ public:
                 (std::is_convertible_v<Dims, std::size_t> && ...)
   explicit Tensor(Dims &&...) = delete;
 
-  auto operator=(const Tensor &other) -> Tensor & {
+  // A copy on a writable runtime copies the elements. Elsewhere it copies
+  // the storage, which shares what it refers to
+  auto operator=(const Tensor &other) -> Tensor &
+    requires Writable<TRuntime>
+  {
     if (this != &other) {
       if (not unique() || m_shape.count() != other.m_shape.count()) {
-        m_mem =
-            ContiguousMemory<ElementType, RuntimeType>(other.m_shape.count());
+        m_mem = StorageType(other.m_shape.count());
       }
       m_shape = other.m_shape;
       std::ranges::copy(other, this->begin());
@@ -145,9 +154,15 @@ public:
     return *this;
   }
 
-  Tensor(const Tensor &other) : m_shape(other.m_shape), m_mem(m_shape.count()) {
+  auto operator=(const Tensor &other) -> Tensor & = default;
+
+  Tensor(const Tensor &other)
+    requires Writable<TRuntime>
+      : m_shape(other.m_shape), m_mem(m_shape.count()) {
     std::ranges::copy(other, this->begin());
   }
+
+  Tensor(const Tensor &other) = default;
 
   Tensor(Tensor &&other) noexcept
       : m_shape(other.m_shape), m_mem(std::move(other.m_mem)) {}
@@ -156,11 +171,17 @@ public:
 
   [[nodiscard]] auto shape() const noexcept -> Shape<rank> { return m_shape; }
 
-  [[nodiscard]] auto unique() const -> bool { return not m_mem.isShared(); }
+  [[nodiscard]] auto unique() const -> bool
+    requires Writable<TRuntime>
+  {
+    return not m_mem.isShared();
+  }
 
   auto clone() const -> Tensor { return Tensor(*this); }
 
-  auto asScalar() const -> Tensor<TElem, TRuntime, 0> {
+  auto asScalar() const -> Tensor<TElem, TRuntime, 0>
+    requires Writable<TRuntime>
+  {
     if (size() != 1) {
       throw std::runtime_error(std::format(
           "asScalar can only be called on tensors with exactly 1 element."
@@ -236,29 +257,26 @@ public:
   // In-Place Transform
   template <typename Fn>
   void transform(this auto &&self, Fn &&fn)
-    requires(!std::is_const_v<std::remove_reference_t<decltype(self)>>)
+    requires(!std::is_const_v<std::remove_reference_t<decltype(self)>>) &&
+            Writable<TRuntime>
   {
-    static_assert(std::is_same_v<RuntimeType, Runtime::CPU>,
-                  "Transform is currently only supported on CPU");
     std::ranges::transform(self, self.begin(), std::forward<Fn>(fn));
   }
 
   // In-Place Sort
   void sort(this auto &&self)
-    requires(!std::is_const_v<std::remove_reference_t<decltype(self)>>)
+    requires(!std::is_const_v<std::remove_reference_t<decltype(self)>>) &&
+            Writable<TRuntime>
   {
-    static_assert(std::is_same_v<RuntimeType, Runtime::CPU>,
-                  "Sort is currently only supported on CPU");
     std::ranges::sort(self);
   }
 
   // In-Place Fill
   template <venus::Scalar Idx>
   void fill(this auto &&self, Idx i)
-    requires(!std::is_const_v<std::remove_reference_t<decltype(self)>>)
+    requires(!std::is_const_v<std::remove_reference_t<decltype(self)>>) &&
+            Writable<TRuntime>
   {
-    static_assert(std::is_same_v<RuntimeType, Runtime::CPU>,
-                  "Sort is currently only supported on CPU");
 #if _cpp_lib_ranges >= 202110L
     std::ranges::fill(self, i);
 #else
@@ -269,10 +287,9 @@ public:
   // In-Place Arange
   template <venus::Scalar Idx>
   void iota(this auto &&self, Idx i)
-    requires(!std::is_const_v<std::remove_reference_t<decltype(self)>>)
+    requires(!std::is_const_v<std::remove_reference_t<decltype(self)>>) &&
+            Writable<TRuntime>
   {
-    static_assert(std::is_same_v<RuntimeType, Runtime::CPU>,
-                  "Sort is currently only supported on CPU");
 #if _cpp_lib_ranges >= 202110L
     std::ranges::iota(self, i);
 #else
@@ -282,7 +299,8 @@ public:
 
   // In-Place Identity
   void eye(this auto &&self)
-    requires(!std::is_const_v<std::remove_reference_t<decltype(self)>>)
+    requires(!std::is_const_v<std::remove_reference_t<decltype(self)>>) &&
+            Writable<TRuntime>
   {
     for (auto [flat, val] :
          std::views::zip(std::views::iota(std::size_t{0}, self.size()), self)) {
@@ -374,20 +392,18 @@ public:
 #ifdef VENUS_INTERPRETER
   // Simple direct indexing for interpreter mode (no proxy)
   template <typename... Indices>
-    requires(sizeof...(Indices) == Rank)
+    requires(sizeof...(Indices) == Rank) && Readable<TRuntime>
   constexpr auto operator[](this auto &&self, Indices... indices)
       -> ElementType {
-    static_assert(std::is_same_v<RuntimeType, Runtime::CPU>,
-                  "Indexing is currently only supported on CPU");
     const auto offset =
         self.m_shape.idxToOffset(static_cast<std::size_t>(indices)...);
     return self.data()[offset];
   }
 
   auto operator[](this auto &&self,
-                  const std::array<std::size_t, Rank> &indices) {
-    static_assert(std::is_same_v<RuntimeType, Runtime::CPU>,
-                  "Indexing is currently only supported on CPU");
+                  const std::array<std::size_t, Rank> &indices)
+    requires Readable<TRuntime>
+  {
     const auto offset = self.m_shape.idxToOffset(indices);
     return self.data()[offset];
   }
@@ -395,13 +411,12 @@ public:
 #else
   // Tensor indexing
   template <typename... Indices>
-    requires(sizeof...(Indices) == Rank)
+    requires(sizeof...(Indices) == Rank) && Readable<TRuntime>
   auto operator[](this auto &&self, Indices... indices) {
-    static_assert(std::is_same_v<RuntimeType, Runtime::CPU>,
-                  "Indexing is currently only supported on CPU");
     const auto offset =
         self.m_shape.idxToOffset(static_cast<std::size_t>(indices)...);
-    if constexpr (std::is_const_v<std::remove_reference_t<decltype(self)>>) {
+    if constexpr (std::is_const_v<std::remove_reference_t<decltype(self)>> ||
+                  !writable<TRuntime>) {
       return self.data()[offset];
     } else {
       return ElementProxy(self, self.data()[offset]);
@@ -409,11 +424,12 @@ public:
   }
 
   auto operator[](this auto &&self,
-                  const std::array<std::size_t, Rank> &indices) {
-    static_assert(std::is_same_v<RuntimeType, Runtime::CPU>,
-                  "Indexing is currently only supported on CPU");
+                  const std::array<std::size_t, Rank> &indices)
+    requires Readable<TRuntime>
+  {
     const auto offset = self.m_shape.idxToOffset(indices);
-    if constexpr (std::is_const_v<std::remove_reference_t<decltype(self)>>) {
+    if constexpr (std::is_const_v<std::remove_reference_t<decltype(self)>> ||
+                  !writable<TRuntime>) {
       return self.data()[offset];
     } else {
       return ElementProxy(self, self.data()[offset]);
@@ -430,19 +446,19 @@ public:
 
 private:
   Shape<Rank> m_shape;
-  ContiguousMemory<ElementType, RuntimeType> m_mem;
+  StorageType m_mem;
 
 public:
-  constexpr auto begin(this auto &&self) {
-    static_assert(std::is_same_v<RuntimeType, Runtime::CPU>,
-                  "Range iteration is currently only supported on CPU");
+  constexpr auto begin(this auto &&self)
+    requires Readable<TRuntime>
+  {
     using Self = std::remove_reference_t<decltype(self)>;
     return TensorIterator<Self>(&self, 0);
   }
 
-  constexpr auto end(this auto &&self) {
-    static_assert(std::is_same_v<RuntimeType, Runtime::CPU>,
-                  "Range iteration is currently only supported on CPU");
+  constexpr auto end(this auto &&self)
+    requires Readable<TRuntime>
+  {
     using Self = std::remove_reference_t<decltype(self)>;
     return TensorIterator<Self>(&self, self.m_shape.count());
   }
@@ -458,12 +474,16 @@ public:
     return m_shape.count();
   }
 
-  auto data(this auto &&self) {
+  auto data(this auto &&self)
+    requires Readable<TRuntime>
+  {
     return std::forward<decltype(self)>(self).m_mem.ptr();
   }
 
   template <SizeTLike... Dimensions>
-  auto reshape(this auto &&self, Dimensions... dims) {
+  auto reshape(this auto &&self, Dimensions... dims)
+    requires Readable<TRuntime>
+  {
     const auto new_shape = Shape(dims...);
     if (new_shape.count() != self.size()) {
       throw std::invalid_argument(std::format(
@@ -476,7 +496,9 @@ public:
   }
 
   template <std::size_t NewRank>
-  auto reshape(this auto &&self, Shape<NewRank> new_shape) {
+  auto reshape(this auto &&self, Shape<NewRank> new_shape)
+    requires Readable<TRuntime>
+  {
     if (new_shape.count() != self.size()) {
       throw std::invalid_argument(std::format(
           "Cannot reshape tensor of size {} to new shape of size {}",
@@ -486,7 +508,9 @@ public:
     return Tensor<ElementType, RuntimeType, NewRank>(self.m_mem, new_shape);
   }
 
-  auto view(this auto &&self) {
+  auto view(this auto &&self)
+    requires Readable<TRuntime>
+  {
     return Tensor<ElementType, RuntimeType, Rank>(self.m_mem, self.m_shape);
   }
 };
@@ -498,24 +522,30 @@ template <typename TElem, typename TRuntime> class Tensor<TElem, TRuntime, 0> {
 public:
   using ElementType = TElem;
   using RuntimeType = TRuntime;
+  using StorageType = storage_t<TElem, TRuntime, 0>;
   static constexpr std::size_t rank = 0;
 
   friend struct LowLevelAccess<Tensor>;
   friend struct LowLevelAccess<const Tensor>;
 
-  explicit Tensor(ElementType value = ElementType()) : m_mem(1) {
+  explicit Tensor(ElementType value = ElementType())
+    requires Writable<TRuntime>
+      : m_mem(1) {
     assign(value);
   }
 
-  explicit Tensor(Shape<0> /*unused*/) : Tensor() {};
+  explicit Tensor(Shape<0> /*unused*/)
+    requires Writable<TRuntime>
+      : Tensor() {};
 
-  explicit Tensor(ContiguousMemory<ElementType, RuntimeType> p_mem)
-      : m_mem(std::move(p_mem)) {}
+  explicit Tensor(StorageType p_mem) : m_mem(std::move(p_mem)) {}
 
-  auto operator=(const Tensor &other) -> Tensor & {
+  auto operator=(const Tensor &other) -> Tensor &
+    requires Writable<TRuntime>
+  {
     if (this != &other) {
       if (not unique()) {
-        m_mem = ContiguousMemory<ElementType, RuntimeType>(1);
+        m_mem = StorageType(1);
       }
       assign(other.value());
     }
@@ -529,7 +559,15 @@ public:
     return *this;
   }
 
-  Tensor(const Tensor &other) : m_mem(1) { assign(other.value()); }
+  auto operator=(const Tensor &other) -> Tensor & = default;
+
+  Tensor(const Tensor &other)
+    requires Writable<TRuntime>
+      : m_mem(1) {
+    assign(other.value());
+  }
+
+  Tensor(const Tensor &other) = default;
 
   Tensor(Tensor &&other) noexcept : m_mem(std::move(other.m_mem)) {}
 
@@ -539,20 +577,32 @@ public:
     return Shape<rank>{};
   }
 
-  [[nodiscard]] auto unique() const -> bool { return not m_mem.isShared(); }
+  [[nodiscard]] auto unique() const -> bool
+    requires Writable<TRuntime>
+  {
+    return not m_mem.isShared();
+  }
 
   void assign(ElementType value) const = delete;
 
-  void assign(ElementType value) {
+  void assign(ElementType value)
+    requires Writable<TRuntime>
+  {
     if (not unique()) {
       throw std::runtime_error("Cannot write to shared scalar tensor.");
     }
     data()[0] = value;
   }
 
-  auto value() const noexcept { return data()[0]; }
+  auto value() const noexcept
+    requires Readable<TRuntime>
+  {
+    return data()[0];
+  }
 
-  auto operator==(const Tensor &tensor) const noexcept -> bool {
+  auto operator==(const Tensor &tensor) const noexcept -> bool
+    requires Readable<TRuntime>
+  {
     return value() == tensor.value();
   }
 
@@ -582,7 +632,9 @@ public:
     return venus::eager::inner(*this, other);
   }
 
-  operator bool() const noexcept {
+  operator bool() const noexcept
+    requires Readable<TRuntime>
+  {
     if constexpr (std::is_same_v<ElementType, bool>) {
       return value();
     } else {
@@ -606,16 +658,20 @@ public:
 
   [[nodiscard]] constexpr auto size() const { return 1; }
 
-  auto data(this auto &&self) {
+  auto data(this auto &&self)
+    requires Readable<TRuntime>
+  {
     return std::forward<decltype(self)>(self).m_mem.ptr();
   }
 
-  auto view(this auto &&self) {
+  auto view(this auto &&self)
+    requires Readable<TRuntime>
+  {
     return Tensor<ElementType, RuntimeType, 0>(self.m_mem);
   }
 
 private:
-  ContiguousMemory<ElementType, RuntimeType> m_mem;
+  StorageType m_mem;
 };
 
 template <typename TElem, typename TRuntime, std::size_t Rank>
