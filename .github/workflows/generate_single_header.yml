@@ -41,22 +41,16 @@ jobs:
         working-directory: build
         run: cmake --build . -j$(nproc)
 
-      - name: Collect all headers into one file
-        run: |
-          chmod +x ${{github.workspace}}/scripts/generate_venus_header.sh
-          ${{github.workspace}}/scripts/generate_venus_header.sh > ${{github.workspace}}/core/venus.hpp
-
       - name: Run
         working-directory: ${{github.workspace}}/build
         run: |
-          ./scripts/make_single_header ${{github.workspace}}/core/venus.hpp ${{github.workspace}}/single_include/venus.hpp
+          ./scripts/make_single_header include/venus.hpp ${{github.workspace}}/single_include/venus.hpp ${{github.workspace}}/core
 
       - name: Upload
+        if: github.event_name == 'push'
         uses: stefanzweifel/git-auto-commit-action@v6
         with:
           commit_message: Update single header with latest code
-          file_pattern: |
-            single_include/*
-            core/venus.hpp
+          file_pattern: single_include/*
           commit_user_name: GitHub Actions Bot
           commit_user_email: action@github.com

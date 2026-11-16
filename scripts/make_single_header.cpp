@@ -5,6 +5,7 @@
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#include <algorithm>
 #include <deque>
 #include <filesystem>
 #include <fstream>
@@ -26,10 +27,8 @@ bool contains(const Rng &range, const Value &val) {
 
 struct include_processor {
 
-  static std::string run(const fs::path &start_file) {
-    auto start_path = start_file;
-    start_path.remove_filename();
-    return include_processor{std::move(start_path)}.process_one(start_file);
+  static std::string run(const fs::path &start_file, fs::path include_dir) {
+    return include_processor{std::move(include_dir)}.process_one(start_file);
   }
 
 private:
@@ -100,15 +99,17 @@ private:
 } // namespace
 
 int main(int argc, char **argv) try {
-  if (argc != 3) {
-    std::cerr << "Usage: make_single_header IN_FILE.hpp OUT_FILE.hpp\n";
+  if (argc != 4) {
+    std::cerr << "Usage: make_single_header IN_FILE.hpp OUT_FILE.hpp INCLUDE_DIR\n";
     return 1;
   }
 
   const auto infile_path = fs::canonical(fs::path(argv[1]));
   const auto outfile_path = fs::path(argv[2]);
 
-  const auto out_str = include_processor::run(infile_path);
+  const auto include_dir = fs::canonical(fs::path(argv[3]));
+
+  const auto out_str = include_processor::run(infile_path, include_dir);
 
   std::ofstream outfile(outfile_path);
   outfile << "#pragma once\n\n";
