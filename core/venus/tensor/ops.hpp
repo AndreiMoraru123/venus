@@ -223,10 +223,10 @@ template <std::size_t OpIdx, ConstexprString Eqn> struct EinsumOperandOp {
 // Dispatch =====================================================
 
 // A runtime implements an op by specialising Action for it. This primary
-// template means it does not, and dispatch composes the op instead. Because
-// dispatch instantiates the primary, specialising Action<Op, Runtime> after a
-// call with that pair fails to compile, so the order of declarations cannot
-// silently change which path runs
+// template means it does not, and dispatch composes the op instead. dispatch
+// instantiates the primary, so an explicit specialisation declared after a
+// call with the same op and runtime fails to compile. A partial
+// specialisation declared that late is ill-formed with no diagnostic
 template <typename Op, typename TRuntime> struct Action {
   using Unimplemented = void;
 };

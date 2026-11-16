@@ -126,8 +126,8 @@ public:
                 (std::is_convertible_v<Dims, std::size_t> && ...)
   explicit Tensor(Dims &&...) = delete;
 
-  // A copy on a writable runtime copies the elements. Elsewhere it copies
-  // the storage, which shares what it refers to
+  // On a writable runtime a copy copies the elements. On any other runtime it
+  // copies the storage
   auto operator=(const Tensor &other) -> Tensor &
     requires Writable<TRuntime>
   {

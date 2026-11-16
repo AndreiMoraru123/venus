@@ -8,7 +8,6 @@
 #include <cstddef>
 #include <type_traits>
 #endif
-#include <venus/concepts.hpp>
 #include <venus/tensor/shape.hpp>
 
 namespace venus::kernel {
