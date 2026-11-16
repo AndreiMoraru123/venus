@@ -26,7 +26,7 @@ auto main() -> int {
   big_float_tensor.iota(0);
   std::println("{}", big_float_tensor);  // venus::Tensor([0.00, 1.00, 2.00, ..., 1997.00, 1998.00, 1999.00], shape=(2000))
 
-  std::println("{}", with(big_float_tensor, {.edgeItems = 1, .precision = 0}));  // venus::Tensor([0, ..., 1999], shape=(2000))
+  std::println("{:e1.0}", big_float_tensor);  // venus::Tensor([0, ..., 1999], shape=(2000))
 
   printOptions.precision = 4;
   std::println("{}", float_scalar);      // venus::Tensor(10.0000)

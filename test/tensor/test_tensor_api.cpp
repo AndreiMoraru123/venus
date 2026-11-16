@@ -455,20 +455,31 @@ TEST_CASE("Tensor Printing", "[tensor][print]") {
             "venus::Tensor([0.00, 1.00, 2.00, 3.00, 4.00, 5.00], shape=(6))");
   }
 
-  SECTION("with applies options to one print") {
+  SECTION("A format spec overrides printOptions for one print") {
     auto x = Tensor<float, Device::CPU, 1>(6);
     x.iota(0);
-    REQUIRE(std::format("{}", with(x, {.threshold = 4, .edgeItems = 2})) ==
+    REQUIRE(std::format("{:t4e2}", x) ==
             "venus::Tensor([0.00, 1.00, ..., 4.00, 5.00], shape=(6))");
-    REQUIRE(std::format("{}", with(Tensor<double, Device::CPU, 0>(2.5),
-                                   {.precision = 4})) ==
+    REQUIRE(std::format("{:.4}", Tensor<double, Device::CPU, 0>(2.5)) ==
             "venus::Tensor(2.5000)");
     REQUIRE(std::format("{}", x).find("...") == std::string::npos);
+
+    printOptions.precision = 0;
+    const auto text = std::format("{:e1t4}", x);
+    printOptions = {};
+    REQUIRE(text == "venus::Tensor([0, ..., 5], shape=(6))");
   }
 
   SECTION("No more than 2 * edgeItems elements print in full") {
     auto x = Tensor<int, Device::CPU, 1>{1, 2};
-    REQUIRE(std::format("{}", with(x, {.threshold = 0})) ==
-            "venus::Tensor([1, 2], shape=(2))");
+    REQUIRE(std::format("{:t0}", x) == "venus::Tensor([1, 2], shape=(2))");
+  }
+
+  SECTION("An unknown format spec throws") {
+    auto x = Tensor<int, Device::CPU, 1>{1, 2};
+    REQUIRE_THROWS_AS(std::vformat("{:x}", std::make_format_args(x)),
+                      std::format_error);
+    REQUIRE_THROWS_AS(std::vformat("{:e}", std::make_format_args(x)),
+                      std::format_error);
   }
 }
