@@ -1,9 +1,5 @@
-
-#include <algorithm>
 #include <cassert>
-#include <print>
-#include <venus/memory/device.hpp>
-#include <venus/tensor/tensor.hpp>
+import venus;
 
 using namespace venus;
 

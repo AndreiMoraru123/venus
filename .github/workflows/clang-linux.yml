@@ -43,7 +43,6 @@ jobs:
             -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
             -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++" \
             -DBUILD_TESTING=ON \
-            -DBUILD_DEMO=${{ matrix.module }} \
             -DVENUS_BUILD_MODULE=${{ matrix.module }}
 
       - name: Build

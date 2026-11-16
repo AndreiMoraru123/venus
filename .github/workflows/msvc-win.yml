@@ -31,7 +31,7 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
 
       - name: Configure
-        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=cl -DBUILD_DEMO=${{ matrix.module }} -DVENUS_BUILD_MODULE=${{ matrix.module }}
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=cl -DVENUS_BUILD_MODULE=${{ matrix.module }}
 
       - name: Build
         run: cmake --build build

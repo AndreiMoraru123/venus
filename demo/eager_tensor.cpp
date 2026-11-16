@@ -1,8 +1,5 @@
-
 #include <cassert>
-#include <print>
-#include <venus/tensor/eager.hpp>
-#include <venus/tensor/tensor.hpp>
+import venus;
 
 using namespace venus;
 

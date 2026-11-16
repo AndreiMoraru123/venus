@@ -1,7 +1,5 @@
-
 #include <cassert>
-#include <venus/tensor/shape.hpp>
-#include <venus/tensor/tensor.hpp>
+import venus;
 
 using namespace venus;
 

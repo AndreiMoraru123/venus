@@ -1,7 +1,4 @@
-#include <print>
-#include <string>
-
-#include <venus/tensor/tensor.hpp>
+import venus;
 
 using namespace venus;
 

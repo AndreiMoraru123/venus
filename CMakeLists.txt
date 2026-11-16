@@ -60,16 +60,6 @@ if(VENUS_BUILD_MODULE)
     endforeach()
 endif()
 
-# Tests and demos include venus headers, which become import venus with the module
-function(venus_link_tests_and_demos target)
-    if(VENUS_BUILD_MODULE)
-        target_link_libraries(${target} PRIVATE venus_module)
-        target_include_directories(${target} BEFORE PRIVATE ${VENUS_IMPORT_HEADERS_DIR})
-    else()
-        target_link_libraries(${target} PRIVATE venus)
-    endif()
-endfunction()
-
 if(BUILD_TESTING)
     FetchContent_Declare(
         Catch2
@@ -83,7 +73,9 @@ endif()
 option(BUILD_DEMO "Build demo executable" ON)
 option(BUILD_SINGLE_HEADER "Build single-header generator tool" OFF)
 
-if(BUILD_DEMO AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/demo")
+if(BUILD_DEMO AND NOT VENUS_BUILD_MODULE)
+    message(STATUS "Skipping the demos, which import venus")
+elseif(BUILD_DEMO AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/demo")
     add_subdirectory(demo)
 endif()
 
