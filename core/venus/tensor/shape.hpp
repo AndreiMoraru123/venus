@@ -1,5 +1,6 @@
 #pragma once
 
+#ifndef VENUS_MODULE
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -11,6 +12,7 @@
 #include <string_view>
 #include <type_traits>
 #include <utility>
+#endif
 
 namespace venus {
 

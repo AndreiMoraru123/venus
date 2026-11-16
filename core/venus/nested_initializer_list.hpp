@@ -1,7 +1,9 @@
 #pragma once
 
+#ifndef VENUS_MODULE
 #include <cstddef>
 #include <initializer_list>
+#endif
 
 template <typename T, std::size_t Depth> struct nested_initializer_list {
   using type = std::initializer_list<

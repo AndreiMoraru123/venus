@@ -30,6 +30,27 @@ target_sources(venus INTERFACE
     FILES ${VENUS_HEADERS}
 )
 
+option(VENUS_BUILD_MODULE "Build the venus module and run tests and demos against it" OFF)
+
+if(VENUS_BUILD_MODULE)
+    if(CMAKE_VERSION VERSION_LESS 4.5)
+        message(FATAL_ERROR "VENUS_BUILD_MODULE needs CMake 4.5 or newer for import std")
+    endif()
+    if(NOT CMAKE_GENERATOR MATCHES "Ninja")
+        message(FATAL_ERROR "VENUS_BUILD_MODULE needs a Ninja generator")
+    endif()
+
+    add_library(venus_module STATIC)
+    target_sources(venus_module
+        PUBLIC
+        FILE_SET CXX_MODULES
+        BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/module
+        FILES ${CMAKE_CURRENT_SOURCE_DIR}/module/venus.cppm
+    )
+    target_link_libraries(venus_module PUBLIC venus)
+    set_target_properties(venus_module PROPERTIES CXX_SCAN_FOR_MODULES ON)
+endif()
+
 if(BUILD_TESTING)
     FetchContent_Declare(
         Catch2

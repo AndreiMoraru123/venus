@@ -1,9 +1,11 @@
 #pragma once
 
+#ifndef VENUS_MODULE
 #include <algorithm>
 #include <cstddef>
 #include <iostream>
 #include <string_view>
+#endif
 
 namespace venus {
 template <std::size_t N> struct ConstexprString {

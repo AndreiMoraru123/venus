@@ -1,5 +1,7 @@
 #pragma once
+#ifndef VENUS_MODULE
 #include <type_traits>
+#endif
 #include <venus/policies/policy_concepts.hpp>
 #include <venus/policies/policy_container.hpp>
 #include <venus/sequential.hpp>
@@ -200,7 +202,7 @@ struct HasNonTrivialPolicy_<PolicyContainer<TCurrPolicy, TPolicies...>,
 };
 
 template <typename TPolicyContainer, typename TMajorClass, typename TMinorClass>
-static constexpr bool HasNonTrivialPolicy =
+inline constexpr bool HasNonTrivialPolicy =
     HasNonTrivialPolicy_<TPolicyContainer, TMajorClass, TMinorClass>::value;
 
 // =============================================================

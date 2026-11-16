@@ -36,3 +36,30 @@ jobs:
       - name: Run tests
         working-directory: build
         run: ctest --output-on-failure
+
+  module-gcc:
+    name: Module
+    runs-on: ubuntu-latest
+    container:
+      image: gcc:16
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: apt-get update && apt-get install -y ninja-build
+
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: "latest"
+
+      - name: Configure with CMake
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBUILD_DEMO=ON -DVENUS_BUILD_MODULE=ON
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Run tests
+        working-directory: build
+        run: ctest --output-on-failure

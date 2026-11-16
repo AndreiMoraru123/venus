@@ -37,3 +37,32 @@ jobs:
       - name: Run tests
         working-directory: build
         run: ctest -C Release --output-on-failure
+
+  module-msvc:
+    name: Module
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: "latest"
+
+      - name: Setup Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v6
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Configure
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=cl -DBUILD_DEMO=ON -DVENUS_BUILD_MODULE=ON
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Run tests
+        working-directory: build
+        run: ctest --output-on-failure

@@ -1,6 +1,9 @@
 #include <catch2/catch_test_macros.hpp>
-
+#ifdef VENUS_IMPORT
+import venus;
+#else
 #include <venus/memory/contiguous_memory.hpp>
+#endif
 
 using namespace venus;
 

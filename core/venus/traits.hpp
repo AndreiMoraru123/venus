@@ -6,13 +6,13 @@ template <typename T> struct Identity_ {
   using type = T;
 };
 
-template <bool curr, typename TNext> static constexpr bool AndValue = false;
+template <bool curr, typename TNext> inline constexpr bool AndValue = false;
 
 template <typename TNext>
-static constexpr bool AndValue<true, TNext> = TNext::value;
+inline constexpr bool AndValue<true, TNext> = TNext::value;
 
-template <bool curr, typename TNext> static constexpr bool OrValue = true;
+template <bool curr, typename TNext> inline constexpr bool OrValue = true;
 
 template <typename TNext>
-static constexpr bool OrValue<false, TNext> = TNext::value;
+inline constexpr bool OrValue<false, TNext> = TNext::value;
 } // namespace venus

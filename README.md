@@ -92,6 +92,30 @@ venus::Tensor([0, 2, 3, 4], shape=(4))
 clang-repl>
 ```
 
+#### `import venus;`
+
+With CMake 4.5 or newer and Ninja, venus also builds as a C++ module:
+
+```sh
+cmake -B build -G Ninja -DVENUS_BUILD_MODULE=ON
+```
+
+```cmake
+target_link_libraries(app PRIVATE venus_module)
+```
+
+```cpp
+#include <venus/policies/policy_macro_begin.hpp> // only to define policies
+import venus; // also exports std
+```
+
+- Put every `#include` before the first `import`.
+- The consumer's target needs `CXX_SCAN_FOR_MODULES`, which is on by default
+  when its `cmake_minimum_required` is 3.28 or newer.
+- With Homebrew LLVM, pass
+  `-DCMAKE_CXX_STDLIB_MODULES_JSON=$(brew --prefix llvm)/lib/c++/libc++.modules.json`.
+- Apple Clang and clang-cl cannot build it.
+
 ### Special Thanks and Author's Note
 
 Venus draws heavy inspiration from [MetaNN](https://github.com/liwei-cpp/MetaNN), both the repository and the accompanying book _C++ Template Metaprogramming in Practice_ by Li Wei.

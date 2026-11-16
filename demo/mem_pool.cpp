@@ -2,8 +2,12 @@
 #include <algorithm>
 #include <cassert>
 #include <print>
+#ifdef VENUS_IMPORT
+import venus;
+#else
 #include <venus/memory/device.hpp>
 #include <venus/tensor/tensor.hpp>
+#endif
 
 using namespace venus;
 

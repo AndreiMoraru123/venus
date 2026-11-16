@@ -12,4 +12,9 @@ foreach(demo_source ${DEMO_SOURCES})
     set_target_properties(${target_name} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/demos"
     )
+    if(VENUS_BUILD_MODULE)
+        target_link_libraries(${target_name} PRIVATE venus_module)
+        target_compile_definitions(${target_name} PRIVATE VENUS_IMPORT)
+        set_target_properties(${target_name} PROPERTIES CXX_SCAN_FOR_MODULES ON)
+    endif()
 endforeach()

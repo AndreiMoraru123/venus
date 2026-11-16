@@ -1,5 +1,6 @@
 #pragma once
 
+#ifndef VENUS_MODULE
 #include <algorithm>
 #include <array>
 #include <concepts>
@@ -13,6 +14,7 @@
 #include <string_view>
 #include <type_traits>
 #include <utility>
+#endif
 #include <venus/memory/device.hpp>
 #include <venus/str.hpp>
 #include <venus/tensor/shape.hpp>

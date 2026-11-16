@@ -1,6 +1,8 @@
 #pragma once
 
+#ifndef VENUS_MODULE
 #include <type_traits>
+#endif
 
 namespace venus {
 
@@ -37,5 +39,5 @@ struct AllPolicies_<Container<Ts...>> {
 };
 
 template <typename Container>
-static constexpr bool AllPolicies = AllPolicies_<Container>::value;
+inline constexpr bool AllPolicies = AllPolicies_<Container>::value;
 } // namespace venus

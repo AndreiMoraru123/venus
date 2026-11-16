@@ -1,10 +1,12 @@
 #pragma once
 
+#ifndef VENUS_MODULE
 #include <cassert>
 #include <cstddef>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
+#endif
 #include <venus/memory/allocators.hpp>
 
 namespace venus {

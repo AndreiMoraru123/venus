@@ -1,7 +1,11 @@
 
-#include "venus/tensor/shape.hpp"
 #include <cassert>
+#ifdef VENUS_IMPORT
+import venus;
+#else
+#include <venus/tensor/shape.hpp>
 #include <venus/tensor/tensor.hpp>
+#endif
 
 using namespace venus;
 

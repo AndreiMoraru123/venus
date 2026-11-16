@@ -1,8 +1,12 @@
 
 #include <cassert>
 #include <print>
+#ifdef VENUS_IMPORT
+import venus;
+#else
 #include <venus/tensor/eager.hpp>
 #include <venus/tensor/tensor.hpp>
+#endif
 
 using namespace venus;
 

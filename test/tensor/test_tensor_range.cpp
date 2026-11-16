@@ -1,11 +1,15 @@
 #include <cassert>
 #include <catch2/catch_test_macros.hpp>
-#include <venus/memory/device.hpp>
 
 #include <cmath>
 #include <ranges>
 #include <vector>
+#ifdef VENUS_IMPORT
+import venus;
+#else
+#include <venus/memory/device.hpp>
 #include <venus/tensor/tensor.hpp>
+#endif
 
 using namespace venus;
 
