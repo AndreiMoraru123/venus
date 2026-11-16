@@ -1,0 +1,45 @@
+name: LLVM Clang macOS
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-llvm-clang-macos:
+    name: Build and Test (module ${{ matrix.module }})
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [OFF, ON]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install LLVM and Ninja
+        run: |
+          brew install llvm ninja
+          $(brew --prefix llvm)/bin/clang++ --version
+
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: "latest"
+
+      - name: Configure with CMake
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER=$(brew --prefix llvm)/bin/clang++ \
+            -DBUILD_TESTING=ON \
+            -DVENUS_BUILD_MODULE=${{ matrix.module }}
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Run tests
+        working-directory: build
+        run: ctest --output-on-failure
