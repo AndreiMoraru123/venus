@@ -2,7 +2,7 @@
   <img src="assets/venus_logo.svg" alt="Venus Logo" width="250">
 </p>
 
-| | Linux (GCC) | Linux (Clang) | macOS (Apple Clang) | macOS (LLVM Clang) | Windows (Clang-CL) | Windows (MSVC) |
+| | Linux | Linux | macOS | macOS | Windows | Windows |
 |:---|:---:|:---:|:---:|:---:|:---:|:---:|
 | Build | [![GCC](https://img.shields.io/github/actions/workflow/status/AndreiMoraru123/venus/gcc-linux.yml?logo=gnu&logoColor=white&label=GCC)](https://github.com/AndreiMoraru123/venus/actions/workflows/gcc-linux.yml) | [![Clang](https://img.shields.io/github/actions/workflow/status/AndreiMoraru123/venus/clang-linux.yml?logo=linux&logoColor=white&label=Clang)](https://github.com/AndreiMoraru123/venus/actions/workflows/clang-linux.yml) | [![macOS](https://img.shields.io/github/actions/workflow/status/AndreiMoraru123/venus/clang-apple.yml?logo=apple&logoColor=white&label=Apple%20Clang)](https://github.com/AndreiMoraru123/venus/actions/workflows/clang-apple.yml) | [![LLVM Clang](https://img.shields.io/github/actions/workflow/status/AndreiMoraru123/venus/llvm-clang-macos.yml?logo=homebrew&logoColor=white&label=LLVM%20Clang)](https://github.com/AndreiMoraru123/venus/actions/workflows/llvm-clang-macos.yml) | [![Clang-CL](https://img.shields.io/github/actions/workflow/status/AndreiMoraru123/venus/clang-cl-win.yml?logo=llvm&logoColor=white&label=Clang-CL)](https://github.com/AndreiMoraru123/venus/actions/workflows/clang-cl-win.yml) | [![MSVC](https://img.shields.io/github/actions/workflow/status/AndreiMoraru123/venus/msvc-win.yml?logo=cplusplus&logoColor=white&label=MSVC)](https://github.com/AndreiMoraru123/venus/actions/workflows/msvc-win.yml) |
 | Supports modules | ✅ | ✅ | ❌ | ✅ | ❌ | ✅ |
