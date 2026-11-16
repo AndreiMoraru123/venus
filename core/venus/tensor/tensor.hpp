@@ -67,7 +67,7 @@ public:
   friend struct LowLevelAccess<const Tensor>;
 
   explicit Tensor(Shape<Rank> shape)
-    requires std::constructible_from<StorageType, std::size_t>
+    requires Writable<TRuntime>
       : m_shape(std::move(shape)), m_mem(shape.count()) {}
 
   explicit Tensor(StorageType p_mem, Shape<Rank> p_shape)
@@ -117,7 +117,7 @@ public:
   template <typename... Dims>
     requires(sizeof...(Dims) == Rank) &&
             (std::is_convertible_v<Dims, std::size_t> && ...) &&
-            std::constructible_from<StorageType, std::size_t>
+            Writable<TRuntime>
   explicit Tensor(Dims &&...dimensions)
       : Tensor(Shape<Rank>(std::forward<Dims>(dimensions)...)) {}
 

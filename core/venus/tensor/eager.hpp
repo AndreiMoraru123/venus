@@ -35,8 +35,7 @@ auto where(const P &predicate, const A &a, const B &b) {
 }
 
 template <typename A, typename B>
-  requires Tensors<A, B> && (A::rank == 2) && (B::rank == 2) &&
-           EagerOperands<A, B>
+  requires Matrices<A, B> && EagerOperands<A, B>
 auto mm(const A &a, const B &b) {
   return venus::mm(a, b);
 }
@@ -48,8 +47,7 @@ auto inner(const A &a, const B &b) {
 }
 
 template <typename A, typename B>
-  requires Tensors<A, B> && (A::rank == 1) && (B::rank == 1) &&
-           EagerOperands<A, B>
+  requires Vectors<A, B> && EagerOperands<A, B>
 auto dot(const A &a, const B &b) {
   return venus::dot(a, b);
 }
@@ -73,7 +71,7 @@ auto iota(const T &t, V start) {
 }
 
 template <typename T>
-  requires Tensors<T> && (T::rank >= 2) && EagerOperands<T>
+  requires AtLeastMatrix<T> && EagerOperands<T>
 auto eye_like(const T &t) {
   return venus::eye_like(t);
 }

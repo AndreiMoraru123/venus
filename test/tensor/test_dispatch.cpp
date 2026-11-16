@@ -51,8 +51,8 @@ template <> struct venus::Lift<Runtime::CPU, Recorder> {
   template <typename T, typename Other>
   static auto run(const T &tensor, const Other &other) {
     other.storage().log->emplace_back("const");
-    return Tensor<typename T::ElementType, Recorder, T::rank>(
-        other.storage(), tensor.shape());
+    return Tensor<typename T::ElementType, Recorder, T::rank>(other.storage(),
+                                                              tensor.shape());
   }
 };
 
@@ -60,8 +60,7 @@ template <> struct venus::Lift<Runtime::CPU, Recorder> {
 template <typename Op>
   requires(!CompositeOp<Op>)
 struct venus::Action<Op, Recorder> {
-  template <typename... Operands>
-  static auto run(const Operands &...operands) {
+  template <typename... Operands> static auto run(const Operands &...operands) {
     const auto m = Op::rule(meta(operands)...);
     auto *log = log_of(operands...);
     log->emplace_back(Op::name);
@@ -110,8 +109,8 @@ TEST_CASE("Dispatch on a recording runtime", "[tensor][dispatch]") {
 
   SECTION("A CPU operand is lifted to a constant") {
     const auto weights = Tensor<float, Runtime::CPU, 2>(3, 4);
-    STATIC_REQUIRE(std::same_as<join_t<decltype(a), decltype(weights)>,
-                                Recorder>);
+    STATIC_REQUIRE(
+        std::same_as<join_t<decltype(a), decltype(weights)>, Recorder>);
 
     auto c = mm(a, weights);
     REQUIRE(c.shape() == Shape(2, 4));
@@ -133,8 +132,8 @@ TEST_CASE("Dispatch on a recording runtime", "[tensor][dispatch]") {
     const auto b = input<float>(log, Shape(3, 4));
     auto e = einsum<"ij,jk->ik">(a, b);
     REQUIRE(e.shape() == Shape(2, 4));
-    REQUIRE(log == Names{"einsum_operand", "einsum_operand", "mul",
-                         "sum_dim", "squeeze"});
+    REQUIRE(log == Names{"einsum_operand", "einsum_operand", "mul", "sum_dim",
+                         "squeeze"});
   }
 
   SECTION("Values and eager ops are not available") {
@@ -156,4 +155,12 @@ TEST_CASE("Unqualified calls with both namespaces in scope",
   auto changed = where(sort(ints) != ints);
   REQUIRE(equal(changed, Tensor<std::size_t, Runtime::CPU, 1>{0, 2, 3, 4}));
   REQUIRE(equal(add(ints, 1), ints + 1));
+  REQUIRE(dot(ints, ints) == 55);
+
+  auto square = Tensor<int, Runtime::CPU, 2>(2, 2);
+  square.iota(1);
+  REQUIRE(equal(mm(square, eye_like(square)), square));
+  REQUIRE(equal(where(square > 2, square, 0), square * (square > 2)));
+  REQUIRE(sum_dims<0, 1>(square).asScalar() == 10);
+  REQUIRE(einsum<"ij,ij->">(square, square) == 30);
 }
