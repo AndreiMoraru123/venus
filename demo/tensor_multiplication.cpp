@@ -1,7 +1,5 @@
 import venus;
 
-using namespace venus;
-
 // clang-format off
 auto main() -> int {
   auto x = Tensor<int, Device::CPU, 2>(3, 3); // heap alloc 3x3 Tensor

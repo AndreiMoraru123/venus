@@ -1,7 +1,5 @@
 import venus;
 
-using namespace venus;
-
 // clang-format off
 auto main() -> int {
   auto tensor = Tensor<int, Device::CPU, 3>(3, 2, 2);

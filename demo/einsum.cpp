@@ -1,7 +1,5 @@
 import venus;
 
-using namespace venus;
-
 auto main() -> int {
   auto x = Tensor<float, Device::CPU, 2>(2, 3);
   auto y = Tensor<float, Device::CPU, 2>(3, 4);

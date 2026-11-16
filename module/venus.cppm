@@ -14,3 +14,4 @@ export import std;
 export extern "C++" {
 #include <venus.hpp>
 }
+export using namespace venus;

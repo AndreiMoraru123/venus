@@ -1,9 +1,7 @@
 import venus;
 
-using namespace venus;
-
 auto check_order(const auto &ints) {
-  return venus::eager::where(venus::eager::sort(ints) != ints);
+  return eager::where(eager::sort(ints) != ints);
 }
 
 auto main() -> int {

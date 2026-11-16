@@ -1,7 +1,5 @@
 import venus;
 
-using namespace venus;
-
 auto main() -> int {
   auto scalar = Tensor<int, Device::CPU, 0>(10);
   auto float_scalar = Tensor<float, Device::CPU, 0>(10.0f);

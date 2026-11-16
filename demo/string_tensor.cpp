@@ -1,7 +1,5 @@
 import venus;
 
-using namespace venus;
-
 auto main() -> int {
   auto tensor = Tensor<std::string, Device::CPU, 1>(3);
   std::ranges::fill(tensor, "hello");
