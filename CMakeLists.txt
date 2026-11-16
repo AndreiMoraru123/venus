@@ -84,6 +84,8 @@ if (BUILD_SINGLE_HEADER AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
 endif()
 
 find_program(RLWRAP_EXECUTABLE rlwrap)
+cmake_path(GET CMAKE_CXX_COMPILER PARENT_PATH CXX_COMPILER_DIR)
+find_program(CLANG_REPL_EXECUTABLE clang-repl HINTS ${CXX_COMPILER_DIR} NO_DEFAULT_PATH)
 find_program(CLANG_REPL_EXECUTABLE clang-repl)
 
 if(CLANG_REPL_EXECUTABLE)
@@ -93,14 +95,57 @@ if(CLANG_REPL_EXECUTABLE)
         set(REPL_COMMAND ${CLANG_REPL_EXECUTABLE})
     endif()
 
+    separate_arguments(REPL_FLAGS NATIVE_COMMAND "${CMAKE_CXX_FLAGS}")
+    list(APPEND REPL_FLAGS -std=c++26 -DVENUS_INTERPRETER)
+
+    # libc++'s std.cppm, found the way CMake finds it for import std
+    set(STDLIB_MODULES_JSON "${CMAKE_CXX_STDLIB_MODULES_JSON}")
+    if(VENUS_BUILD_MODULE AND NOT STDLIB_MODULES_JSON)
+        execute_process(
+            COMMAND ${CMAKE_CXX_COMPILER} ${REPL_FLAGS} -print-file-name=libc++.modules.json
+            OUTPUT_VARIABLE STDLIB_MODULES_JSON
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
+    endif()
+    if(VENUS_BUILD_MODULE AND IS_ABSOLUTE "${STDLIB_MODULES_JSON}" AND EXISTS "${STDLIB_MODULES_JSON}")
+        file(READ ${STDLIB_MODULES_JSON} modules_json)
+        string(JSON std_source GET ${modules_json} modules 0 source-path)
+        cmake_path(GET STDLIB_MODULES_JSON PARENT_PATH modules_json_dir)
+        cmake_path(ABSOLUTE_PATH std_source BASE_DIRECTORY ${modules_json_dir} NORMALIZE)
+    endif()
+
+    if(std_source)
+        # clang-repl cannot read CMake's module map, so it gets its own BMIs
+        set(REPL_DIR ${CMAKE_CURRENT_BINARY_DIR}/repl)
+        file(MAKE_DIRECTORY ${REPL_DIR})
+        add_custom_command(
+            OUTPUT ${REPL_DIR}/std.pcm
+            COMMAND ${CMAKE_CXX_COMPILER} ${REPL_FLAGS} -Wno-reserved-module-identifier
+                    --precompile ${std_source} -o ${REPL_DIR}/std.pcm
+            DEPENDS ${std_source}
+        )
+        add_custom_command(
+            OUTPUT ${REPL_DIR}/venus.pcm
+            COMMAND ${CMAKE_CXX_COMPILER} ${REPL_FLAGS} -I${CMAKE_CURRENT_SOURCE_DIR}/core
+                    -fmodule-file=std=${REPL_DIR}/std.pcm
+                    --precompile ${CMAKE_CURRENT_SOURCE_DIR}/module/venus.cppm
+                    -o ${REPL_DIR}/venus.pcm
+            DEPENDS ${REPL_DIR}/std.pcm ${CMAKE_CURRENT_SOURCE_DIR}/module/venus.cppm ${VENUS_HEADERS}
+        )
+        set(REPL_INPUTS
+            -fmodule-file=std=${REPL_DIR}/std.pcm
+            -fmodule-file=venus=${REPL_DIR}/venus.pcm)
+        set(REPL_DEPENDS ${REPL_DIR}/std.pcm ${REPL_DIR}/venus.pcm)
+    else()
+        set(REPL_INPUTS
+            -include ${CMAKE_CURRENT_SOURCE_DIR}/single_include/venus.hpp
+            -include ${CMAKE_CURRENT_SOURCE_DIR}/repl/pretty_print.hpp)
+    endif()
+
+    list(TRANSFORM REPL_FLAGS PREPEND "-Xcc=")
+    list(TRANSFORM REPL_INPUTS PREPEND "-Xcc=")
     add_custom_target(venus-interactive
-        COMMAND ${REPL_COMMAND}
-                -Xcc=-std=c++26
-                -Xcc=-DVENUS_INTERPRETER
-                -Xcc=-include
-                -Xcc=${CMAKE_CURRENT_SOURCE_DIR}/single_include/venus.hpp
-                -Xcc=-include
-                -Xcc=${CMAKE_CURRENT_SOURCE_DIR}/repl/pretty_print.hpp
+        COMMAND ${REPL_COMMAND} ${REPL_FLAGS} ${REPL_INPUTS}
+        DEPENDS ${REPL_DEPENDS}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         USES_TERMINAL
     )

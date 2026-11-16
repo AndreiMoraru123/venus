@@ -78,15 +78,13 @@ cmake --build build --target venus-interactive
 ```
 
 ```cpp
-clang-repl> using namespace venus;
-clang-repl> using namespace venus::eager;
-clang-repl> auto check_order(const auto& ints) { return where(sort(ints) != ints); }
-clang-repl> auto ints = Tensor<int, Device::CPU, 1>{5, 2, 4, 3, 1};
-clang-repl> auto res = check_order(ints);
-clang-repl> print(res) // built-in macro
-venus::Tensor([0, 2, 3, 4], shape=(4))
-(int) 0
-clang-repl>
+import venus;
+using namespace venus;
+using namespace venus::eager;
+auto check_order(const auto& ints) { return where(sort(ints) != ints); }
+auto ints = Tensor<int, Device::CPU, 1>{5, 2, 4, 3, 1};
+auto res = check_order(ints);
+std::println("{}", res); // venus::Tensor([0, 2, 3, 4], shape=(4))
 ```
 
 ### Special Thanks and Author's Note
