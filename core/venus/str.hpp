@@ -2,6 +2,7 @@
 
 #ifndef VENUS_MODULE
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <iostream>
 #include <string_view>

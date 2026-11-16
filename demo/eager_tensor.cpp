@@ -1,8 +1,8 @@
 import venus;
 
 auto main() -> int {
-  auto x = Tensor<float, Device::CPU, 1>(7);
-  auto y = Tensor<float, Device::CPU, 1>(7);
+  auto x = Tensor<float, Runtime::CPU, 1>(7);
+  auto y = Tensor<float, Runtime::CPU, 1>(7);
 
   x.iota(1);
   y.iota(1);

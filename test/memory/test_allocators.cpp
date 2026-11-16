@@ -12,9 +12,9 @@ using namespace venus;
 
 TEST_CASE("Memory Pool return strictly 64-byte aligned pointers",
           "[allocators][pool][simd]") {
-  auto ptr1 = Allocator<Device::CPU>::alloc<float>(10);
-  auto ptr2 = Allocator<Device::CPU>::alloc<int>(1000);
-  auto ptr3 = Allocator<Device::CPU>::alloc<int8_t>(2000);
+  auto ptr1 = Allocator<Runtime::CPU>::alloc<float>(10);
+  auto ptr2 = Allocator<Runtime::CPU>::alloc<int>(1000);
+  auto ptr3 = Allocator<Runtime::CPU>::alloc<int8_t>(2000);
 
   auto addr1 = reinterpret_cast<std::uintptr_t>(ptr1.get());
   auto addr2 = reinterpret_cast<std::uintptr_t>(ptr2.get());
@@ -32,14 +32,14 @@ TEST_CASE("Allocations are corrently rounded up to BlockSize buckets",
   {
     // Request 100 floats (400 bytes).
     // will be rounded to 1024-byte bucket
-    auto ptr1 = Allocator<Device::CPU>::alloc<float>(100);
+    auto ptr1 = Allocator<Runtime::CPU>::alloc<float>(100);
     saved_addr = reinterpret_cast<std::uintptr_t>(ptr1.get());
   } // memory goes back into the 1024-byte bucket in the deque
 
   {
     // Request 200 floats (800 bytes).
     // will be rounded to 1024-byte bucket
-    auto ptr2 = Allocator<Device::CPU>::alloc<float>(200);
+    auto ptr2 = Allocator<Runtime::CPU>::alloc<float>(200);
     auto new_addr = reinterpret_cast<std::uintptr_t>(ptr2.get());
 
     // It should reuse the exact same memory block
@@ -49,7 +49,7 @@ TEST_CASE("Allocations are corrently rounded up to BlockSize buckets",
   {
     // Request 300 floats (1200 bytes).
     // will be rounded to 2048-byte bucket
-    auto ptr3 = Allocator<Device::CPU>::alloc<float>(300);
+    auto ptr3 = Allocator<Runtime::CPU>::alloc<float>(300);
     auto overflow_addr = reinterpret_cast<std::uintptr_t>(ptr3.get());
 
     // It should NOT reuse the previous memory block
@@ -62,7 +62,7 @@ TEST_CASE("Recycled memory blocks are zero-initialized",
   std::uintptr_t first_addr = 0;
 
   {
-    auto tensor = Tensor<float, Device::CPU, 1>(100);
+    auto tensor = Tensor<float, Runtime::CPU, 1>(100);
     tensor.fill(99.0f);
 
     REQUIRE(tensor[0] == 99.0f);
@@ -72,7 +72,7 @@ TEST_CASE("Recycled memory blocks are zero-initialized",
   }
 
   {
-    auto tensor = Tensor<float, Device::CPU, 1>(100);
+    auto tensor = Tensor<float, Runtime::CPU, 1>(100);
     auto second_addr = reinterpret_cast<std::uintptr_t>(tensor.data());
 
     // It should reuse the exact same memory block

@@ -2,8 +2,8 @@ import venus;
 
 // clang-format off
 auto main() -> int {
-  auto x = Tensor<float, Device::CPU, 2>(3, 2);
-  auto y = Tensor<float, Device::CPU, 2>(3, 2);
+  auto x = Tensor<float, Runtime::CPU, 2>(3, 2);
+  auto y = Tensor<float, Runtime::CPU, 2>(3, 2);
 
   x.iota(1); // venus::Tensor([1.00, 2.00, 3.00, 4.00, 5.00, 6.00], shape=(3, 2))
   y.fill(1); // venus::Tensor([1.00, 1.00, 1.00, 1.00, 1.00, 1.00], shape=(3, 2))

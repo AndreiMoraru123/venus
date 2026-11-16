@@ -215,8 +215,10 @@ project_broadcast_idx(const std::array<std::size_t, RankOut> &in_idx,
   std::array<std::size_t, RankIn> out_idx{};
   constexpr auto offset = RankOut - RankIn;
 
-  for (std::size_t i = 0; i < RankIn; i++) {
-    out_idx[i] = in_shape[i] == 1 ? 0 : in_idx[i + offset];
+  if constexpr (RankIn > 0) {
+    for (std::size_t i = 0; i < RankIn; i++) {
+      out_idx[i] = in_shape[i] == 1 ? 0 : in_idx[i + offset];
+    }
   }
 
   return out_idx;
@@ -225,28 +227,37 @@ project_broadcast_idx(const std::array<std::size_t, RankOut> &in_idx,
 template <std::size_t RankOut, std::size_t Rank1, std::size_t Rank2>
 constexpr auto broadcast(const Shape<Rank1> &s1, const Shape<Rank2> &s2)
     -> Shape<RankOut> {
-  std::array<std::size_t, RankOut> out{};
+  if constexpr (RankOut == 0) {
+    return Shape<0>();
+  } else {
+    std::array<std::size_t, RankOut> out{};
 
-  for (std::size_t i = 0; i < RankOut; i++) {
-    auto d1 = std::size_t{1};
-    auto d2 = std::size_t{1};
+    for (std::size_t i = 0; i < RankOut; i++) {
+      auto d1 = std::size_t{1};
+      auto d2 = std::size_t{1};
 
-    if (i >= RankOut - Rank1)
-      d1 = s1[i - (RankOut - Rank1)];
-    if (i >= RankOut - Rank2)
-      d2 = s2[i - (RankOut - Rank2)];
+      // Shape<0> has no operator[]
+      if constexpr (Rank1 > 0) {
+        if (i >= RankOut - Rank1)
+          d1 = s1[i - (RankOut - Rank1)];
+      }
+      if constexpr (Rank2 > 0) {
+        if (i >= RankOut - Rank2)
+          d2 = s2[i - (RankOut - Rank2)];
+      }
 
-    if (d1 != d2 && d1 != 1 && d2 != 1) {
-      throw std::invalid_argument(
-          std::format("Tensor shapes are not broadcastable, t1 has shape {}, "
-                      "whereas t2 has shape {}.",
-                      s1, s2));
+      if (d1 != d2 && d1 != 1 && d2 != 1) {
+        throw std::invalid_argument(
+            std::format("Tensor shapes are not broadcastable, t1 has shape {}, "
+                        "whereas t2 has shape {}.",
+                        s1, s2));
+      }
+
+      out[i] = std::max(d1, d2);
     }
 
-    out[i] = std::max(d1, d2);
+    return Shape<RankOut>(out);
   }
-
-  return Shape<RankOut>(out);
 }
 
 template <std::size_t RankOut, std::size_t Rank1, std::size_t Rank2,

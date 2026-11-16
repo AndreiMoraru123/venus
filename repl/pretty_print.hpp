@@ -2,8 +2,8 @@
 #ifdef VENUS_INTERPRETER
 #include <iostream>
 
-template <typename T, typename TDevice, std::size_t Rank>
-void __clang_repl__Display__(const venus::Tensor<T, TDevice, Rank> &t) {
+template <typename T, typename TRuntime, std::size_t Rank>
+void __clang_repl__Display__(const venus::Tensor<T, TRuntime, Rank> &t) {
   std::cout << t << '\n';
 }
 

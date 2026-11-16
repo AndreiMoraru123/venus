@@ -72,8 +72,8 @@ auto formatTo(TOut out, const TTensor &tensor, const PrintOptions &options)
 } // namespace venus
 
 // {:t<threshold>e<edgeItems>.<precision>}, in any order, each optional
-template <typename TElem, typename TDevice, std::size_t Rank>
-struct std::formatter<venus::Tensor<TElem, TDevice, Rank>> {
+template <typename TElem, typename TRuntime, std::size_t Rank>
+struct std::formatter<venus::Tensor<TElem, TRuntime, Rank>> {
   constexpr auto parse(std::format_parse_context &ctx) {
     auto it = ctx.begin();
     const auto number = [&] {
@@ -103,7 +103,7 @@ struct std::formatter<venus::Tensor<TElem, TDevice, Rank>> {
     return it;
   }
 
-  auto format(const venus::Tensor<TElem, TDevice, Rank> &tensor,
+  auto format(const venus::Tensor<TElem, TRuntime, Rank> &tensor,
               std::format_context &ctx) const {
     venus::PrintOptions options = venus::printOptions;
     options.threshold = threshold.value_or(options.threshold);
@@ -120,8 +120,8 @@ private:
 
 namespace venus {
 
-template <typename TElem, typename TDevice, std::size_t Rank>
-auto operator<<(std::ostream &os, const Tensor<TElem, TDevice, Rank> &tensor)
+template <typename TElem, typename TRuntime, std::size_t Rank>
+auto operator<<(std::ostream &os, const Tensor<TElem, TRuntime, Rank> &tensor)
     -> std::ostream & {
   std::print(os, "{}", tensor);
   return os;

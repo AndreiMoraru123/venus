@@ -6,16 +6,16 @@
 #include <cstring>
 #include <memory>
 #endif
-#include <venus/memory/device.hpp>
+#include <venus/runtime.hpp>
 
 #ifdef VENUS_INTERPRETER
 // Simple allocator for repl interpreter
 
 namespace venus {
-template <typename TDevice> struct Allocator;
+template <typename TRuntime> struct Allocator;
 template <>
 
-struct Allocator<Device::CPU> {
+struct Allocator<Runtime::CPU> {
   template <typename TElem>
   static std::shared_ptr<TElem> alloc(std::size_t p_elemSize) {
     // TElem *raw_buf =
@@ -56,9 +56,9 @@ inline constexpr std::size_t BLOCK_SIZE = 1024;
 inline constexpr std::size_t ALIGN_SIZE = 64;
 
 namespace venus {
-template <typename TDevice> struct Allocator;
+template <typename TRuntime> struct Allocator;
 
-template <> struct Allocator<Device::CPU> {
+template <> struct Allocator<Runtime::CPU> {
 
 private:
   struct MemoryPool {

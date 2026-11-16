@@ -2,7 +2,7 @@ import venus;
 
 // clang-format off
 auto main() -> int {
-  auto tensor = Tensor<int, Device::CPU, 3>(3, 2, 2);
+  auto tensor = Tensor<int, Runtime::CPU, 3>(3, 2, 2);
   tensor.iota(1); // venus::Tensor([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], shape=(3, 2, 2))
 
   const int x = tensor[0, 1, 1];

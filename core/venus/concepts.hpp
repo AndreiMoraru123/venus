@@ -10,7 +10,7 @@ namespace venus {
 template <typename T>
 concept VenusTensor = requires {
   typename std::remove_cvref_t<T>::ElementType;
-  typename std::remove_cvref_t<T>::DeviceType;
+  typename std::remove_cvref_t<T>::RuntimeType;
   { std::remove_cvref_t<T>::rank } -> std::convertible_to<std::size_t>;
 };
 

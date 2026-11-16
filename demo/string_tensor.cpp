@@ -1,7 +1,7 @@
 import venus;
 
 auto main() -> int {
-  auto tensor = Tensor<std::string, Device::CPU, 1>(3);
+  auto tensor = Tensor<std::string, Runtime::CPU, 1>(3);
   std::ranges::fill(tensor, "hello");
 
   // clang-format off
