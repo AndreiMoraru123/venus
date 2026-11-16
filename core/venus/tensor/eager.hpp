@@ -12,6 +12,7 @@
 #include <ranges>
 #include <stdexcept>
 #include <string_view>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #endif
@@ -696,7 +697,12 @@ auto sumproduct_pair(const Tensor<Elem1, Dev1, Rank1> &t1,
 template <ConstexprString Eqn, std::size_t NumOut,
           typename... HomogenizedTensors>
 auto _einsum_contract(HomogenizedTensors... tensors) {
+// MSVC has no pack indexing yet
+#ifdef __cpp_pack_indexing
   const auto &t0 = tensors...[0];
+#else
+  const auto &t0 = std::get<0>(std::tie(tensors...));
+#endif
   constexpr auto initial_sum_dims = detail::compute_sum_dims_for_step<0, Eqn>();
 
   const auto initial_result =
@@ -713,7 +719,11 @@ auto _einsum_contract(HomogenizedTensors... tensors) {
     auto current = std::move(initial_result);
     auto step = [&]<std::size_t OpIdx>() {
       constexpr auto sum_dims = detail::compute_sum_dims_for_step<OpIdx, Eqn>();
+#ifdef __cpp_pack_indexing
       const auto &next_op = tensors...[OpIdx];
+#else
+      const auto &next_op = std::get<OpIdx>(std::tie(tensors...));
+#endif
       current = [&]<std::size_t... Js>(std::index_sequence<Js...>) {
         return sumproduct_pair<sum_dims[Js]...>(current, next_op);
         ;
