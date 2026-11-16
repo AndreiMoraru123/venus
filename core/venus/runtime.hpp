@@ -24,16 +24,17 @@ template <> inline constexpr bool readable<Runtime::CPU> = true;
 template <typename TRuntime> inline constexpr bool writable = false;
 template <> inline constexpr bool writable<Runtime::CPU> = true;
 
-// venus::eager accepts it: an op's result holds values when the call returns
-template <typename TRuntime> inline constexpr bool eager_runtime = false;
-template <> inline constexpr bool eager_runtime<Runtime::CPU> = true;
+// A computing runtime: an op's result holds values when the call returns, so
+// venus::eager accepts it
+template <typename TRuntime> inline constexpr bool computing_runtime = false;
+template <> inline constexpr bool computing_runtime<Runtime::CPU> = true;
 
 template <typename TRuntime>
 concept Readable = readable<TRuntime>;
 template <typename TRuntime>
 concept Writable = writable<TRuntime>;
 template <typename TRuntime>
-concept EagerRuntime = eager_runtime<TRuntime>;
+concept ComputingRuntime = computing_runtime<TRuntime>;
 
 template <typename TElem, typename TRuntime, std::size_t Rank> class Tensor;
 

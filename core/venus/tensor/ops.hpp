@@ -50,7 +50,7 @@ concept AtLeastMatrix = VenusTensor<T> && (T::rank >= 2);
 // venus:: op and add this one, so the eager op is the more constrained and
 // wins when both namespaces are in scope
 template <typename... Operands>
-concept EagerOperands = EagerRuntime<join_t<Operands...>>;
+concept EagerOperands = ComputingRuntime<join_t<Operands...>>;
 
 // What a rule sees of an operand. A scalar is rank 0
 template <typename TElem, std::size_t Rank> struct Meta {
