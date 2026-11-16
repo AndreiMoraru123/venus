@@ -16,7 +16,11 @@ Venus leverages C++20 ranges, providing both powerful optimizations and beautifu
 
 #include <cassert>
 #include <ranges>
+#ifdef VENUS_IMPORT
+import venus;
+#else
 #include <venus/tensor/tensor.hpp>
+#endif
 
 using namespace venus;
 
