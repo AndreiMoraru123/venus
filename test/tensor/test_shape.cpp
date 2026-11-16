@@ -2,7 +2,9 @@
 #include <algorithm>
 #include <cassert>
 #include <catch2/catch_test_macros.hpp>
+#include <format>
 #include <numeric>
+#include <sstream>
 
 #include <ranges>
 #ifdef VENUS_IMPORT
@@ -142,4 +144,14 @@ TEST_CASE("Shape semantics", "[shape]") {
     REQUIRE(broad_s[1] == 3);
     REQUIRE(broad_s[2] == 4);
   }
+}
+
+TEST_CASE("Shape printing", "[shape][print]") {
+  CHECK(std::format("{}", Shape(2, 3, 4)) == "(2, 3, 4)");
+  CHECK(std::format("{}", Shape(5)) == "(5)");
+  CHECK(std::format("{}", Shape<0>()) == "()");
+
+  std::ostringstream os;
+  os << Shape(2, 3);
+  CHECK(os.str() == "(2, 3)");
 }
