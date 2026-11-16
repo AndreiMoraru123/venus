@@ -9,39 +9,14 @@ on:
 
 jobs:
   build-gcc:
-    name: Build and Test
+    name: Build and Test (module ${{ matrix.module }})
     runs-on: ubuntu-latest
     container:
       image: gcc:16
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: "latest"
-
-      - name: Create build directory
-        run: mkdir -p build
-
-      - name: Configure with CMake
-        working-directory: build
-        run: cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBUILD_DEMO=OFF
-
-      - name: Build
-        working-directory: build
-        run: cmake --build . -j$(nproc)
-
-      - name: Run tests
-        working-directory: build
-        run: ctest --output-on-failure
-
-  module-gcc:
-    name: Module
-    runs-on: ubuntu-latest
-    container:
-      image: gcc:16
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [OFF, ON]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -55,7 +30,7 @@ jobs:
           cmake-version: "latest"
 
       - name: Configure with CMake
-        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBUILD_DEMO=ON -DVENUS_BUILD_MODULE=ON
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBUILD_DEMO=${{ matrix.module }} -DVENUS_BUILD_MODULE=${{ matrix.module }}
 
       - name: Build
         run: cmake --build build

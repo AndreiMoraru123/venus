@@ -9,53 +9,12 @@ on:
 
 jobs:
   build-clang:
-    name: Build and Test
+    name: Build and Test (module ${{ matrix.module }})
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install LLVM and Clang 23
-        run: |
-          sudo mkdir -p /etc/apt/keyrings
-          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/keyrings/apt.llvm.org.asc > /dev/null
-          codename=$(lsb_release -cs)
-          echo "deb [signed-by=/etc/apt/keyrings/apt.llvm.org.asc] http://apt.llvm.org/$codename/ llvm-toolchain-$codename-23 main" | sudo tee /etc/apt/sources.list.d/llvm.list
-          sudo apt-get update
-          sudo apt-get install -y clang-23 libc++-23-dev libc++abi-23-dev lld-23
-          clang-23 --version
-
-      - name: Setup CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: "latest"
-
-      - name: Create build directory
-        run: mkdir -p build
-
-      - name: Configure with CMake
-        working-directory: build
-        run: |
-          cmake .. \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_CXX_COMPILER=clang++-23 \
-            -DCMAKE_C_COMPILER=clang-23 \
-            -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
-            -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++" \
-            -DBUILD_TESTING=ON \
-            -DBUILD_DEMO=OFF
-
-      - name: Build
-        working-directory: build
-        run: cmake --build . -j$(nproc)
-
-      - name: Run tests
-        working-directory: build
-        run: ctest --output-on-failure
-
-  module-clang:
-    name: Module
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [OFF, ON]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -84,8 +43,8 @@ jobs:
             -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
             -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++" \
             -DBUILD_TESTING=ON \
-            -DBUILD_DEMO=ON \
-            -DVENUS_BUILD_MODULE=ON
+            -DBUILD_DEMO=${{ matrix.module }} \
+            -DVENUS_BUILD_MODULE=${{ matrix.module }}
 
       - name: Build
         run: cmake --build build
