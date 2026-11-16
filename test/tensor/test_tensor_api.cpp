@@ -10,7 +10,7 @@
 import venus;
 #else
 #include <venus/memory/contiguous_memory.hpp>
-#include <venus/memory/device.hpp>
+#include <venus/runtime.hpp>
 #include <venus/tensor/tensor.hpp>
 #include <venus/tensor/tensor_format.hpp>
 #endif
@@ -20,7 +20,7 @@ using namespace venus;
 TEST_CASE("Tensor API", "[tensor][api]") {
 
   SECTION("Scalar Tensor") {
-    auto scalar = Tensor<float, Device::CPU, 0>(10.0f);
+    auto scalar = Tensor<float, Runtime::CPU, 0>(10.0f);
     REQUIRE(scalar.value() == 10.0f);
     REQUIRE(bool(scalar) == true);
     REQUIRE(scalar.unique());
@@ -33,7 +33,7 @@ TEST_CASE("Tensor API", "[tensor][api]") {
   }
 
   SECTION("Scalar Boolean Tensor") {
-    auto scalar = Tensor<bool, Device::CPU, 0>(true);
+    auto scalar = Tensor<bool, Runtime::CPU, 0>(true);
     REQUIRE(scalar.value() == true);
     REQUIRE(scalar == true);
 
@@ -42,13 +42,13 @@ TEST_CASE("Tensor API", "[tensor][api]") {
   }
 
   SECTION("Shared Memory") {
-    auto shared_memo = ContiguousMemory<float, Device::CPU>(1);
+    auto shared_memo = ContiguousMemory<float, Runtime::CPU>(1);
 
     float *rawPtr = shared_memo.ptr();
     rawPtr[0] = 1.0f;
 
-    const auto scalar1 = Tensor<float, Device::CPU, 0>(shared_memo);
-    const auto scalar2 = Tensor<float, Device::CPU, 0>(shared_memo);
+    const auto scalar1 = Tensor<float, Runtime::CPU, 0>(shared_memo);
+    const auto scalar2 = Tensor<float, Runtime::CPU, 0>(shared_memo);
 
     REQUIRE(scalar1.value() == 1.0f);
     REQUIRE(scalar2.value() == 1.0f);
@@ -58,14 +58,14 @@ TEST_CASE("Tensor API", "[tensor][api]") {
   }
 
   SECTION("Shared Shifted Memory") {
-    auto shared_memo = ContiguousMemory<float, Device::CPU>(3);
+    auto shared_memo = ContiguousMemory<float, Runtime::CPU>(3);
 
     float *rawPtr = shared_memo.ptr();
     rawPtr[0] = 1.0f;
     rawPtr[2] = 3.0f;
 
-    const auto scalar1 = Tensor<float, Device::CPU, 0>(shared_memo);
-    const auto scalar2 = Tensor<float, Device::CPU, 0>(shared_memo.shift(2));
+    const auto scalar1 = Tensor<float, Runtime::CPU, 0>(shared_memo);
+    const auto scalar2 = Tensor<float, Runtime::CPU, 0>(shared_memo.shift(2));
 
     REQUIRE(scalar1.value() == 1.0f);
     REQUIRE(scalar2.value() == 3.0f);
@@ -75,7 +75,7 @@ TEST_CASE("Tensor API", "[tensor][api]") {
   }
 
   SECTION("Low Level Access") {
-    auto tensor = Tensor<float, Device::CPU, 0>(10.0f);
+    auto tensor = Tensor<float, Runtime::CPU, 0>(10.0f);
     REQUIRE(tensor.unique());
 
     auto lowLevelTensor = tensor.lowLevel();
@@ -87,11 +87,11 @@ TEST_CASE("Tensor API", "[tensor][api]") {
   }
 
   SECTION("Low Level Access Memory") {
-    auto memo = ContiguousMemory<float, Device::CPU>(1);
+    auto memo = ContiguousMemory<float, Runtime::CPU>(1);
     float *rawPtr = memo.ptr();
     rawPtr[0] = 10.0f;
 
-    const auto tensor = Tensor<float, Device::CPU, 0>(memo);
+    const auto tensor = Tensor<float, Runtime::CPU, 0>(memo);
     REQUIRE_FALSE(tensor.unique()); // internal copy of memo
 
     const auto lowLevelTensor = tensor.lowLevel();
@@ -103,8 +103,8 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     constexpr auto rank = 3;
     constexpr auto shape = Shape<rank>(3, 2, 2);
 
-    const auto memo = ContiguousMemory<float, Device::CPU>(10);
-    REQUIRE_THROWS_AS((Tensor<float, Device::CPU, rank>(memo, shape)),
+    const auto memo = ContiguousMemory<float, Runtime::CPU>(10);
+    REQUIRE_THROWS_AS((Tensor<float, Runtime::CPU, rank>(memo, shape)),
                       std::invalid_argument);
   }
 
@@ -116,9 +116,9 @@ TEST_CASE("Tensor API", "[tensor][api]") {
      * has no control/restrictions over the thing it points to), so the tensor
      elements can be modified, so long as the tensor itself is not const
      */
-    const auto memo = ContiguousMemory<float, Device::CPU>(12);
+    const auto memo = ContiguousMemory<float, Runtime::CPU>(12);
 
-    const auto tensor = Tensor<float, Device::CPU, rank>(memo, shape);
+    const auto tensor = Tensor<float, Runtime::CPU, rank>(memo, shape);
     REQUIRE_FALSE(tensor.unique());
     REQUIRE(tensor.shape() == shape);
   }
@@ -128,7 +128,7 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     constexpr auto shape = Shape<rank>(3, 2, 2);
 
     // memory layout is deduced automatically
-    const auto tensor = Tensor<float, Device::CPU, rank>(shape);
+    const auto tensor = Tensor<float, Runtime::CPU, rank>(shape);
     REQUIRE(tensor.unique());
     REQUIRE(tensor.shape() == shape);
   }
@@ -137,8 +137,8 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     constexpr auto rank = 3;
     constexpr auto shape = Shape<rank>(3, 2, 2);
 
-    auto memo = ContiguousMemory<float, Device::CPU>(12);
-    auto tensor = Tensor<float, Device::CPU, rank>(std::move(memo), shape);
+    auto memo = ContiguousMemory<float, Runtime::CPU>(12);
+    auto tensor = Tensor<float, Runtime::CPU, rank>(std::move(memo), shape);
     REQUIRE(tensor.unique());
 
     for (int i = 0; i < 3; ++i) {
@@ -174,10 +174,10 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     constexpr auto rank = 3;
     constexpr auto shape = Shape<rank>(3, 2, 2);
 
-    auto memo = ContiguousMemory<float, Device::CPU>(12);
+    auto memo = ContiguousMemory<float, Runtime::CPU>(12);
     std::fill_n(memo.ptr(), 12, 0.0f);
 
-    auto tensor = Tensor<float, Device::CPU, rank>(memo, shape);
+    auto tensor = Tensor<float, Runtime::CPU, rank>(memo, shape);
     REQUIRE_FALSE(tensor.unique());
 
     // writing is forbidden
@@ -203,11 +203,11 @@ TEST_CASE("Tensor API", "[tensor][api]") {
     constexpr auto rank = 3;
     constexpr auto shape = Shape<rank>(3, 2, 2);
 
-    auto memo = ContiguousMemory<float, Device::CPU>(12);
+    auto memo = ContiguousMemory<float, Runtime::CPU>(12);
     std::fill_n(memo.ptr(), 12, 0.0f);
 
-    auto tensor1 = Tensor<float, Device::CPU, rank>(memo, shape);
-    auto tensor2 = Tensor<float, Device::CPU, rank>(memo, shape);
+    auto tensor1 = Tensor<float, Runtime::CPU, rank>(memo, shape);
+    auto tensor2 = Tensor<float, Runtime::CPU, rank>(memo, shape);
 
     REQUIRE_FALSE(tensor1.unique());
     REQUIRE_FALSE(tensor2.unique());
@@ -217,8 +217,8 @@ TEST_CASE("Tensor API", "[tensor][api]") {
   }
 
   SECTION("Tensor To Scalar") {
-    auto x = Tensor<float, Device::CPU, 1>(1);
-    auto y = Tensor<float, Device::CPU, 1>(2);
+    auto x = Tensor<float, Runtime::CPU, 1>(1);
+    auto y = Tensor<float, Runtime::CPU, 1>(2);
 
     x.iota(1);
     y.iota(1);
@@ -233,7 +233,7 @@ TEST_CASE("Tensor API", "[tensor][api]") {
   }
 
   SECTION("Tensor From Initializer List") {
-    auto tensor = Tensor<int, Device::CPU, 1>({1, 2, 3, 4, 5});
+    auto tensor = Tensor<int, Runtime::CPU, 1>({1, 2, 3, 4, 5});
 
     REQUIRE(tensor.shape() == Shape<1>(5));
     REQUIRE(tensor[0] == 1);
@@ -244,7 +244,7 @@ TEST_CASE("Tensor API", "[tensor][api]") {
   }
 
   SECTION("2D Tensor From Nested Initializer List") {
-    auto tensor = Tensor<int, Device::CPU, 2>{{1, 2, 3}, {4, 5, 6}};
+    auto tensor = Tensor<int, Runtime::CPU, 2>{{1, 2, 3}, {4, 5, 6}};
 
     REQUIRE(tensor.shape() == Shape<2>(2, 3));
     REQUIRE(tensor[0, 0] == 1);
@@ -256,15 +256,15 @@ TEST_CASE("Tensor API", "[tensor][api]") {
   }
 
   SECTION("2D Tensor From Uneven Nested Initializer List") {
-    REQUIRE_THROWS_AS((Tensor<int, Device::CPU, 2>{{1, 2}, {4, 5, 6}}),
+    REQUIRE_THROWS_AS((Tensor<int, Runtime::CPU, 2>{{1, 2}, {4, 5, 6}}),
                       std::invalid_argument);
-    REQUIRE_THROWS_AS((Tensor<int, Device::CPU, 2>{{1, 2, 3}, {4, 5}}),
+    REQUIRE_THROWS_AS((Tensor<int, Runtime::CPU, 2>{{1, 2, 3}, {4, 5}}),
                       std::invalid_argument);
   }
 
   SECTION("3D Tensor From Nested Initializer List") {
-    auto tensor = Tensor<int, Device::CPU, 3>{{{1, 2, 3}, {4, 5, 6}},
-                                              {{7, 8, 9}, {10, 11, 12}}};
+    auto tensor = Tensor<int, Runtime::CPU, 3>{{{1, 2, 3}, {4, 5, 6}},
+                                               {{7, 8, 9}, {10, 11, 12}}};
 
     REQUIRE(tensor.shape() == Shape<3>(2, 2, 3));
     REQUIRE(tensor[0, 0, 0] == 1);
@@ -282,22 +282,22 @@ TEST_CASE("Tensor API", "[tensor][api]") {
   }
 
   SECTION("3D Tensor From Uneven Nested Initializer List") {
-    REQUIRE_THROWS_AS((Tensor<int, Device::CPU, 3>{{{1, 2}, {4, 5, 6}},
-                                                   {{7, 8, 9}, {10, 11, 12}}}),
+    REQUIRE_THROWS_AS((Tensor<int, Runtime::CPU, 3>{{{1, 2}, {4, 5, 6}},
+                                                    {{7, 8, 9}, {10, 11, 12}}}),
                       std::invalid_argument);
-    REQUIRE_THROWS_AS((Tensor<int, Device::CPU, 3>{{{1, 2, 3}, {4, 5}},
-                                                   {{7, 8, 9}, {10, 11, 12}}}),
+    REQUIRE_THROWS_AS((Tensor<int, Runtime::CPU, 3>{{{1, 2, 3}, {4, 5}},
+                                                    {{7, 8, 9}, {10, 11, 12}}}),
                       std::invalid_argument);
-    REQUIRE_THROWS_AS((Tensor<int, Device::CPU, 3>{{{1, 2, 3}, {4, 5, 6}},
-                                                   {{7, 8}, {10, 11, 12}}}),
+    REQUIRE_THROWS_AS((Tensor<int, Runtime::CPU, 3>{{{1, 2, 3}, {4, 5, 6}},
+                                                    {{7, 8}, {10, 11, 12}}}),
                       std::invalid_argument);
-    REQUIRE_THROWS_AS((Tensor<int, Device::CPU, 3>{{{1, 2, 3}, {4, 5, 6}},
-                                                   {{7, 8, 9}, {10, 11}}}),
+    REQUIRE_THROWS_AS((Tensor<int, Runtime::CPU, 3>{{{1, 2, 3}, {4, 5, 6}},
+                                                    {{7, 8, 9}, {10, 11}}}),
                       std::invalid_argument);
   }
 
   SECTION("Tensor Reshape") {
-    auto tensor_2d = Tensor<float, Device::CPU, 2>(2, 6);
+    auto tensor_2d = Tensor<float, Runtime::CPU, 2>(2, 6);
     tensor_2d.iota(1);
 
     auto tensor_1d = tensor_2d.reshape(12);
@@ -321,7 +321,7 @@ TEST_CASE("Tensor API", "[tensor][api]") {
 TEST_CASE("Tensor Creation", "[tensor][ctor]") {
 
   SECTION("Copy Ctor") {
-    auto x = Tensor<float, Device::CPU, 2>(2, 3);
+    auto x = Tensor<float, Runtime::CPU, 2>(2, 3);
     x.iota(1);
     void *x_ptr = static_cast<void *>(x.data());
 
@@ -332,7 +332,7 @@ TEST_CASE("Tensor Creation", "[tensor][ctor]") {
   }
 
   SECTION("Move Ctor") {
-    auto x = Tensor<float, Device::CPU, 2>(2, 3);
+    auto x = Tensor<float, Runtime::CPU, 2>(2, 3);
     x.iota(1);
     void *x_ptr = static_cast<void *>(x.data());
 
@@ -343,10 +343,10 @@ TEST_CASE("Tensor Creation", "[tensor][ctor]") {
   }
 
   SECTION("Copy Assign (Same Size, Reuses Memory)") {
-    auto x = Tensor<float, Device::CPU, 2>(2, 3);
+    auto x = Tensor<float, Runtime::CPU, 2>(2, 3);
     x.iota(1);
 
-    auto y = Tensor<float, Device::CPU, 2>(2, 3);
+    auto y = Tensor<float, Runtime::CPU, 2>(2, 3);
     void *y_ptr_before = static_cast<void *>(y.data());
 
     y = x;
@@ -357,10 +357,10 @@ TEST_CASE("Tensor Creation", "[tensor][ctor]") {
   }
 
   SECTION("Copy Assign (Different Size, Reallocates Memory)") {
-    auto x = Tensor<float, Device::CPU, 2>(10, 10);
+    auto x = Tensor<float, Runtime::CPU, 2>(10, 10);
     x.iota(1);
 
-    auto y = Tensor<float, Device::CPU, 2>(2, 3);
+    auto y = Tensor<float, Runtime::CPU, 2>(2, 3);
     void *y_ptr_before = static_cast<void *>(y.data());
 
     y = x;
@@ -372,10 +372,10 @@ TEST_CASE("Tensor Creation", "[tensor][ctor]") {
   }
 
   SECTION("Copy Assign (Shared Memory, Detaches and Reallocates)") {
-    auto x = Tensor<float, Device::CPU, 2>(10, 10);
+    auto x = Tensor<float, Runtime::CPU, 2>(10, 10);
     x.iota(1);
 
-    auto y = Tensor<float, Device::CPU, 2>(2, 3);
+    auto y = Tensor<float, Runtime::CPU, 2>(2, 3);
     void *y_ptr_before = static_cast<void *>(y.data());
 
     auto y_view = y.view();
@@ -399,11 +399,11 @@ TEST_CASE("Tensor Creation", "[tensor][ctor]") {
   }
 
   SECTION("Move Assign") {
-    auto x = Tensor<float, Device::CPU, 2>(2, 3);
+    auto x = Tensor<float, Runtime::CPU, 2>(2, 3);
     void *x_ptr = static_cast<void *>(x.data());
     x.iota(1);
 
-    auto y = Tensor<float, Device::CPU, 2>(5, 5);
+    auto y = Tensor<float, Runtime::CPU, 2>(5, 5);
 
     y = std::move(x);
     REQUIRE(y.unique());
@@ -415,29 +415,29 @@ TEST_CASE("Tensor Creation", "[tensor][ctor]") {
 
 TEST_CASE("Tensor Printing", "[tensor][print]") {
   SECTION("Each element type") {
-    CHECK(std::format("{}", Tensor<int, Device::CPU, 0>(10)) ==
+    CHECK(std::format("{}", Tensor<int, Runtime::CPU, 0>(10)) ==
           "venus::Tensor(10)");
-    CHECK(std::format("{}", Tensor<int, Device::CPU, 2>{{1, 2}, {3, 4}}) ==
+    CHECK(std::format("{}", Tensor<int, Runtime::CPU, 2>{{1, 2}, {3, 4}}) ==
           "venus::Tensor([1, 2, 3, 4], shape=(2, 2))");
-    CHECK(std::format("{}", Tensor<float, Device::CPU, 1>{1.0f, 2.5f}) ==
+    CHECK(std::format("{}", Tensor<float, Runtime::CPU, 1>{1.0f, 2.5f}) ==
           "venus::Tensor([1.00, 2.50], shape=(2))");
-    CHECK(std::format("{}", Tensor<char, Device::CPU, 1>{'a', 'b'}) ==
+    CHECK(std::format("{}", Tensor<char, Runtime::CPU, 1>{'a', 'b'}) ==
           "venus::Tensor(['a', 'b'], shape=(2))");
-    CHECK(std::format("{}", Tensor<std::string, Device::CPU, 1>{"hi", "hi"}) ==
+    CHECK(std::format("{}", Tensor<std::string, Runtime::CPU, 1>{"hi", "hi"}) ==
           R"(venus::Tensor(["hi", "hi"], shape=(2)))");
-    CHECK(std::format("{}", Tensor<bool, Device::CPU, 1>{true, false}) ==
+    CHECK(std::format("{}", Tensor<bool, Runtime::CPU, 1>{true, false}) ==
           "venus::Tensor([1, 0], shape=(2))");
   }
 
   SECTION("Past 1000 elements, only the ends") {
-    auto x = Tensor<int, Device::CPU, 2>(2, 1000);
+    auto x = Tensor<int, Runtime::CPU, 2>(2, 1000);
     x.iota(0);
     REQUIRE(std::format("{}", x) ==
             "venus::Tensor([0, 1, 2, ..., 1997, 1998, 1999], shape=(2, 1000))");
   }
 
   SECTION("Up to 1000 elements, every element") {
-    auto x = Tensor<int, Device::CPU, 1>(1000);
+    auto x = Tensor<int, Runtime::CPU, 1>(1000);
     x.iota(0);
     const auto text = std::format("{}", x);
     REQUIRE(text.find("...") == std::string::npos);
@@ -445,7 +445,7 @@ TEST_CASE("Tensor Printing", "[tensor][print]") {
   }
 
   SECTION("printOptions applies to every print after it") {
-    auto x = Tensor<float, Device::CPU, 1>(6);
+    auto x = Tensor<float, Runtime::CPU, 1>(6);
     x.iota(0);
     printOptions = {.threshold = 4, .edgeItems = 1, .precision = 0};
     const auto text = std::format("{}", x);
@@ -456,11 +456,11 @@ TEST_CASE("Tensor Printing", "[tensor][print]") {
   }
 
   SECTION("A format spec overrides printOptions for one print") {
-    auto x = Tensor<float, Device::CPU, 1>(6);
+    auto x = Tensor<float, Runtime::CPU, 1>(6);
     x.iota(0);
     REQUIRE(std::format("{:t4e2}", x) ==
             "venus::Tensor([0.00, 1.00, ..., 4.00, 5.00], shape=(6))");
-    REQUIRE(std::format("{:.4}", Tensor<double, Device::CPU, 0>(2.5)) ==
+    REQUIRE(std::format("{:.4}", Tensor<double, Runtime::CPU, 0>(2.5)) ==
             "venus::Tensor(2.5000)");
     REQUIRE(std::format("{}", x).find("...") == std::string::npos);
 
@@ -471,7 +471,7 @@ TEST_CASE("Tensor Printing", "[tensor][print]") {
   }
 
   SECTION("No more than 2 * edgeItems elements print in full") {
-    auto x = Tensor<int, Device::CPU, 1>(6);
+    auto x = Tensor<int, Runtime::CPU, 1>(6);
     x.iota(0);
     // t0 asks for a summary, but 6 elements are no more than 2 * e3
     REQUIRE(std::format("{:t0e3}", x) ==
@@ -481,7 +481,7 @@ TEST_CASE("Tensor Printing", "[tensor][print]") {
   }
 
   SECTION("An unknown format spec throws") {
-    auto x = Tensor<int, Device::CPU, 1>{1, 2};
+    auto x = Tensor<int, Runtime::CPU, 1>{1, 2};
     REQUIRE_THROWS_AS(std::vformat("{:x}", std::make_format_args(x)),
                       std::format_error);
     REQUIRE_THROWS_AS(std::vformat("{:e}", std::make_format_args(x)),

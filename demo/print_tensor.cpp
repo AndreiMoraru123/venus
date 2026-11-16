@@ -1,16 +1,16 @@
 import venus;
 
 auto main() -> int {
-  auto scalar = Tensor<int, Device::CPU, 0>(10);
-  auto float_scalar = Tensor<float, Device::CPU, 0>(10.0f);
-  auto double_scalar = Tensor<double, Device::CPU, 0>(10.0);
-  auto tensor = Tensor<int, Device::CPU, 3>(1, 2, 3);
-  auto float_tensor = Tensor<float, Device::CPU, 3>(1, 2, 3);
-  auto ch_tensor = Tensor<char, Device::CPU, 3>(1, 2, 3);
-  auto str_tensor = Tensor<std::string, Device::CPU, 3>(1, 2, 3);
-  auto range_tensor = Tensor<float, Device::CPU, 1>(10);
-  auto big_tensor = Tensor<int, Device::CPU, 2>(1000, 1000);
-  auto big_float_tensor = Tensor<float, Device::CPU, 1>(2000);
+  auto scalar = Tensor<int, Runtime::CPU, 0>(10);
+  auto float_scalar = Tensor<float, Runtime::CPU, 0>(10.0f);
+  auto double_scalar = Tensor<double, Runtime::CPU, 0>(10.0);
+  auto tensor = Tensor<int, Runtime::CPU, 3>(1, 2, 3);
+  auto float_tensor = Tensor<float, Runtime::CPU, 3>(1, 2, 3);
+  auto ch_tensor = Tensor<char, Runtime::CPU, 3>(1, 2, 3);
+  auto str_tensor = Tensor<std::string, Runtime::CPU, 3>(1, 2, 3);
+  auto range_tensor = Tensor<float, Runtime::CPU, 1>(10);
+  auto big_tensor = Tensor<int, Runtime::CPU, 2>(1000, 1000);
+  auto big_float_tensor = Tensor<float, Runtime::CPU, 1>(2000);
   range_tensor.iota(0.3f);
   big_tensor.iota(0);
   big_float_tensor.iota(0);

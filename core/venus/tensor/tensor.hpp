@@ -13,9 +13,9 @@
 #endif
 #include <venus/concepts.hpp>
 #include <venus/memory/contiguous_memory.hpp>
-#include <venus/memory/device.hpp>
 #include <venus/memory/lower_access.hpp>
 #include <venus/nested_initializer_list.hpp>
+#include <venus/runtime.hpp>
 #include <venus/tensor/eager.hpp>
 #include <venus/tensor/shape.hpp>
 #include <venus/tensor/tensor_iterator.hpp>
@@ -23,8 +23,8 @@
 #define REGISTER_SCALAR_BOOL_OP(op)                                            \
   template <typename OtherType>                                                \
   auto operator op(const OtherType &element) const noexcept                    \
-      -> Tensor<bool, DeviceType, 0> {                                         \
-    return Tensor<bool, DeviceType, 0>(value() op element);                    \
+      -> Tensor<bool, RuntimeType, 0> {                                        \
+    return Tensor<bool, RuntimeType, 0>(value() op element);                   \
   }
 
 #define REGISTER_PRE_OPERATOR(op)                                              \
@@ -57,13 +57,13 @@
 
 namespace venus {
 
-template <typename TElem, typename TDevice, std::size_t Rank> class Tensor {
+template <typename TElem, typename TRuntime, std::size_t Rank> class Tensor {
   static_assert(std::is_same_v<std::remove_cvref_t<TElem>, TElem>);
   static_assert(Rank > 0);
 
 public:
   using ElementType = TElem;
-  using DeviceType = TDevice;
+  using RuntimeType = TRuntime;
   static constexpr std::size_t rank = Rank;
 
   friend struct LowLevelAccess<Tensor>;
@@ -72,7 +72,7 @@ public:
   explicit Tensor(Shape<Rank> shape)
       : m_shape(std::move(shape)), m_mem(shape.count()) {}
 
-  explicit Tensor(ContiguousMemory<ElementType, DeviceType> p_mem,
+  explicit Tensor(ContiguousMemory<ElementType, RuntimeType> p_mem,
                   Shape<Rank> p_shape)
       : m_shape(std::move(p_shape)), m_mem(std::move(p_mem)) {
     if (m_mem.size() < m_shape.count()) {
@@ -129,7 +129,7 @@ public:
     if (this != &other) {
       if (not unique() || m_shape.count() != other.m_shape.count()) {
         m_mem =
-            ContiguousMemory<ElementType, DeviceType>(other.m_shape.count());
+            ContiguousMemory<ElementType, RuntimeType>(other.m_shape.count());
       }
       m_shape = other.m_shape;
       std::ranges::copy(other, this->begin());
@@ -160,14 +160,14 @@ public:
 
   auto clone() const -> Tensor { return Tensor(*this); }
 
-  auto asScalar() const -> Tensor<TElem, TDevice, 0> {
+  auto asScalar() const -> Tensor<TElem, TRuntime, 0> {
     if (size() != 1) {
       throw std::runtime_error(std::format(
           "asScalar can only be called on tensors with exactly 1 element."
           "Tensor size is {}, while the size of a scalar is 1.",
           size()));
     }
-    return Tensor<TElem, TDevice, 0>(*(*this).data());
+    return Tensor<TElem, TRuntime, 0>(*(*this).data());
   }
 
   // Addition
@@ -222,14 +222,14 @@ public:
 
   // Inner product
   template <typename OtherElementType>
-  auto inner(const Tensor<OtherElementType, DeviceType, Rank> &other) const {
+  auto inner(const Tensor<OtherElementType, RuntimeType, Rank> &other) const {
     return venus::eager::inner(*this, other);
   }
 
   // Dot product
   template <typename OtherElementType>
     requires(Rank == 1)
-  auto dot(const Tensor<OtherElementType, DeviceType, Rank> &other) const {
+  auto dot(const Tensor<OtherElementType, RuntimeType, Rank> &other) const {
     return venus::eager::dot(*this, other);
   }
 
@@ -238,7 +238,7 @@ public:
   void transform(this auto &&self, Fn &&fn)
     requires(!std::is_const_v<std::remove_reference_t<decltype(self)>>)
   {
-    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+    static_assert(std::is_same_v<RuntimeType, Runtime::CPU>,
                   "Transform is currently only supported on CPU");
     std::ranges::transform(self, self.begin(), std::forward<Fn>(fn));
   }
@@ -247,7 +247,7 @@ public:
   void sort(this auto &&self)
     requires(!std::is_const_v<std::remove_reference_t<decltype(self)>>)
   {
-    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+    static_assert(std::is_same_v<RuntimeType, Runtime::CPU>,
                   "Sort is currently only supported on CPU");
     std::ranges::sort(self);
   }
@@ -257,7 +257,7 @@ public:
   void fill(this auto &&self, Idx i)
     requires(!std::is_const_v<std::remove_reference_t<decltype(self)>>)
   {
-    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+    static_assert(std::is_same_v<RuntimeType, Runtime::CPU>,
                   "Sort is currently only supported on CPU");
 #if _cpp_lib_ranges >= 202110L
     std::ranges::fill(self, i);
@@ -271,7 +271,7 @@ public:
   void iota(this auto &&self, Idx i)
     requires(!std::is_const_v<std::remove_reference_t<decltype(self)>>)
   {
-    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+    static_assert(std::is_same_v<RuntimeType, Runtime::CPU>,
                   "Sort is currently only supported on CPU");
 #if _cpp_lib_ranges >= 202110L
     std::ranges::iota(self, i);
@@ -323,7 +323,8 @@ public:
         //     const std::size_t offset = &m_element -
         //     m_tensor.m_mem.ptr();
         // auto new_mem =
-        //     ContiguousMemory<ElementType, DeviceType>(m_tensor.m_mem.Size());
+        //     ContiguousMemory<ElementType,
+        //     RuntimeType>(m_tensor.m_mem.Size());
         // std::copy_n(m_tensor.m_mem.ptr(), m_tensor.m_mem.Size(),
         //             new_mem.ptr());
         // m_tensor.m_mem = std::move(new_mem);
@@ -376,7 +377,7 @@ public:
     requires(sizeof...(Indices) == Rank)
   constexpr auto operator[](this auto &&self, Indices... indices)
       -> ElementType {
-    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+    static_assert(std::is_same_v<RuntimeType, Runtime::CPU>,
                   "Indexing is currently only supported on CPU");
     const auto offset =
         self.m_shape.idxToOffset(static_cast<std::size_t>(indices)...);
@@ -385,7 +386,7 @@ public:
 
   auto operator[](this auto &&self,
                   const std::array<std::size_t, Rank> &indices) {
-    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+    static_assert(std::is_same_v<RuntimeType, Runtime::CPU>,
                   "Indexing is currently only supported on CPU");
     const auto offset = self.m_shape.idxToOffset(indices);
     return self.data()[offset];
@@ -396,7 +397,7 @@ public:
   template <typename... Indices>
     requires(sizeof...(Indices) == Rank)
   auto operator[](this auto &&self, Indices... indices) {
-    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+    static_assert(std::is_same_v<RuntimeType, Runtime::CPU>,
                   "Indexing is currently only supported on CPU");
     const auto offset =
         self.m_shape.idxToOffset(static_cast<std::size_t>(indices)...);
@@ -409,7 +410,7 @@ public:
 
   auto operator[](this auto &&self,
                   const std::array<std::size_t, Rank> &indices) {
-    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+    static_assert(std::is_same_v<RuntimeType, Runtime::CPU>,
                   "Indexing is currently only supported on CPU");
     const auto offset = self.m_shape.idxToOffset(indices);
     if constexpr (std::is_const_v<std::remove_reference_t<decltype(self)>>) {
@@ -429,18 +430,18 @@ public:
 
 private:
   Shape<Rank> m_shape;
-  ContiguousMemory<ElementType, DeviceType> m_mem;
+  ContiguousMemory<ElementType, RuntimeType> m_mem;
 
 public:
   constexpr auto begin(this auto &&self) {
-    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+    static_assert(std::is_same_v<RuntimeType, Runtime::CPU>,
                   "Range iteration is currently only supported on CPU");
     using Self = std::remove_reference_t<decltype(self)>;
     return TensorIterator<Self>(&self, 0);
   }
 
   constexpr auto end(this auto &&self) {
-    static_assert(std::is_same_v<DeviceType, Device::CPU>,
+    static_assert(std::is_same_v<RuntimeType, Runtime::CPU>,
                   "Range iteration is currently only supported on CPU");
     using Self = std::remove_reference_t<decltype(self)>;
     return TensorIterator<Self>(&self, self.m_shape.count());
@@ -470,8 +471,8 @@ public:
           self.size(), new_shape.count()));
     }
 
-    return Tensor<ElementType, DeviceType, new_shape.rank>(self.m_mem,
-                                                           new_shape);
+    return Tensor<ElementType, RuntimeType, new_shape.rank>(self.m_mem,
+                                                            new_shape);
   }
 
   template <std::size_t NewRank>
@@ -482,21 +483,21 @@ public:
           self.size(), new_shape.count()));
     }
 
-    return Tensor<ElementType, DeviceType, NewRank>(self.m_mem, new_shape);
+    return Tensor<ElementType, RuntimeType, NewRank>(self.m_mem, new_shape);
   }
 
   auto view(this auto &&self) {
-    return Tensor<ElementType, DeviceType, Rank>(self.m_mem, self.m_shape);
+    return Tensor<ElementType, RuntimeType, Rank>(self.m_mem, self.m_shape);
   }
 };
 
 // Scalar Tensor ===============================================
-template <typename TElem, typename TDevice> class Tensor<TElem, TDevice, 0> {
+template <typename TElem, typename TRuntime> class Tensor<TElem, TRuntime, 0> {
   static_assert(std::is_same_v<std::remove_cvref_t<TElem>, TElem>);
 
 public:
   using ElementType = TElem;
-  using DeviceType = TDevice;
+  using RuntimeType = TRuntime;
   static constexpr std::size_t rank = 0;
 
   friend struct LowLevelAccess<Tensor>;
@@ -508,13 +509,13 @@ public:
 
   explicit Tensor(Shape<0> /*unused*/) : Tensor() {};
 
-  explicit Tensor(ContiguousMemory<ElementType, DeviceType> p_mem)
+  explicit Tensor(ContiguousMemory<ElementType, RuntimeType> p_mem)
       : m_mem(std::move(p_mem)) {}
 
   auto operator=(const Tensor &other) -> Tensor & {
     if (this != &other) {
       if (not unique()) {
-        m_mem = ContiguousMemory<ElementType, DeviceType>(1);
+        m_mem = ContiguousMemory<ElementType, RuntimeType>(1);
       }
       assign(other.value());
     }
@@ -577,7 +578,7 @@ public:
 
   // Inner product
   template <typename OtherElementType>
-  auto inner(const Tensor<OtherElementType, DeviceType, rank> &other) const {
+  auto inner(const Tensor<OtherElementType, RuntimeType, rank> &other) const {
     return venus::eager::inner(*this, other);
   }
 
@@ -610,32 +611,32 @@ public:
   }
 
   auto view(this auto &&self) {
-    return Tensor<ElementType, DeviceType, 0>(self.m_mem);
+    return Tensor<ElementType, RuntimeType, 0>(self.m_mem);
   }
 
 private:
-  ContiguousMemory<ElementType, DeviceType> m_mem;
+  ContiguousMemory<ElementType, RuntimeType> m_mem;
 };
 
-template <typename TElem, typename TDevice, std::size_t Rank>
-struct LowLevelAccess<Tensor<TElem, TDevice, Rank>> {
-  LowLevelAccess(Tensor<TElem, TDevice, Rank> &tensor) : m_tensor(tensor) {}
+template <typename TElem, typename TRuntime, std::size_t Rank>
+struct LowLevelAccess<Tensor<TElem, TRuntime, Rank>> {
+  LowLevelAccess(Tensor<TElem, TRuntime, Rank> &tensor) : m_tensor(tensor) {}
   auto rawMemory() -> TElem * { return m_tensor.m_mem.ptr(); }
   auto sharedMemory() const { return m_tensor.m_mem; }
 
 private:
-  Tensor<TElem, TDevice, Rank> &m_tensor;
+  Tensor<TElem, TRuntime, Rank> &m_tensor;
 };
 
-template <typename TElem, typename TDevice, std::size_t Rank>
-struct LowLevelAccess<const Tensor<TElem, TDevice, Rank>> {
-  LowLevelAccess(const Tensor<TElem, TDevice, Rank> &tensor)
+template <typename TElem, typename TRuntime, std::size_t Rank>
+struct LowLevelAccess<const Tensor<TElem, TRuntime, Rank>> {
+  LowLevelAccess(const Tensor<TElem, TRuntime, Rank> &tensor)
       : m_tensor(tensor) {}
   auto rawMemory() const -> const TElem * { return m_tensor.m_mem.ptr(); }
   auto sharedMemory() const { return m_tensor.m_mem; }
 
 private:
-  const Tensor<TElem, TDevice, Rank> &m_tensor;
+  const Tensor<TElem, TRuntime, Rank> &m_tensor;
 };
 
 // difference_type + iterator (for random_access_range | addition commutative)
@@ -648,82 +649,82 @@ constexpr auto operator+(typename TensorIterator<T>::difference_type n,
 } // namespace venus
 
 // Scalar-first Addition
-template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
+template <venus::Scalar Scalar, venus::Scalar TElem, typename TRuntime,
           std::size_t Rank>
 auto operator+(const Scalar &scalar,
-               const venus::Tensor<TElem, TDevice, Rank> &tensor) {
+               const venus::Tensor<TElem, TRuntime, Rank> &tensor) {
   return venus::eager::add(scalar, tensor);
 }
 
 // Scalar-first Substraction
-template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
+template <venus::Scalar Scalar, venus::Scalar TElem, typename TRuntime,
           std::size_t Rank>
 auto operator-(const Scalar &scalar,
-               const venus::Tensor<TElem, TDevice, Rank> &tensor) {
+               const venus::Tensor<TElem, TRuntime, Rank> &tensor) {
   return venus::eager::sub(scalar, tensor);
 }
 
 // Scalar-first Multiplication
-template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
+template <venus::Scalar Scalar, venus::Scalar TElem, typename TRuntime,
           std::size_t Rank>
 auto operator*(const Scalar &scalar,
-               const venus::Tensor<TElem, TDevice, Rank> &tensor) {
+               const venus::Tensor<TElem, TRuntime, Rank> &tensor) {
   return venus::eager::mul(scalar, tensor);
 }
 
 // Scalar-fist Division
-template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
+template <venus::Scalar Scalar, venus::Scalar TElem, typename TRuntime,
           std::size_t Rank>
 auto operator/(const Scalar &scalar,
-               const venus::Tensor<TElem, TDevice, Rank> &tensor) {
+               const venus::Tensor<TElem, TRuntime, Rank> &tensor) {
   return venus::eager::div(scalar, tensor);
 }
 
 // Scalar-first Greater Than
-template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
+template <venus::Scalar Scalar, venus::Scalar TElem, typename TRuntime,
           std::size_t Rank>
 auto operator>(const Scalar &scalar,
-               const venus::Tensor<TElem, TDevice, Rank> &tensor) {
+               const venus::Tensor<TElem, TRuntime, Rank> &tensor) {
   return venus::eager::gt(scalar, tensor);
 }
 
 // Scalar-first Greater Than or Equal
-template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
+template <venus::Scalar Scalar, venus::Scalar TElem, typename TRuntime,
           std::size_t Rank>
 auto operator>=(const Scalar &scalar,
-                const venus::Tensor<TElem, TDevice, Rank> &tensor) {
+                const venus::Tensor<TElem, TRuntime, Rank> &tensor) {
   return venus::eager::gte(scalar, tensor);
 }
 
 // Scalar-first Less Than
-template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
+template <venus::Scalar Scalar, venus::Scalar TElem, typename TRuntime,
           std::size_t Rank>
 auto operator<(const Scalar &scalar,
-               const venus::Tensor<TElem, TDevice, Rank> &tensor) {
+               const venus::Tensor<TElem, TRuntime, Rank> &tensor) {
   return venus::eager::lt(scalar, tensor);
 }
 
 // Scalar-first Less Than or Equal
-template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
+template <venus::Scalar Scalar, venus::Scalar TElem, typename TRuntime,
           std::size_t Rank>
 auto operator<=(const Scalar &scalar,
-                const venus::Tensor<TElem, TDevice, Rank> &tensor) {
+                const venus::Tensor<TElem, TRuntime, Rank> &tensor) {
   return venus::eager::lte(scalar, tensor);
 }
 
 // Scalar-first Equal
-template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
+template <venus::Scalar Scalar, venus::Scalar TElem, typename TRuntime,
           std::size_t Rank>
 auto operator==(const Scalar &scalar,
-                const venus::Tensor<TElem, TDevice, Rank> &tensor) {
+                const venus::Tensor<TElem, TRuntime, Rank> &tensor) {
   return venus::eager::eq(scalar, tensor);
 }
 
 // Scalar-first Not Equal
-template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
+template <venus::Scalar Scalar, venus::Scalar TElem, typename TRuntime,
           std::size_t Rank>
 auto operator!=(const Scalar &scalar,
-                const venus::Tensor<TElem, TDevice, Rank> &tensor) {
+                const venus::Tensor<TElem, TRuntime, Rank> &tensor) {
   return venus::eager::neq(scalar, tensor);
 }
 

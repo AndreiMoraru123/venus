@@ -1,7 +1,7 @@
 import venus;
 
 auto main() -> int {
-  auto tensor = Tensor<float, Device::CPU, 0>(10.0f);
+  auto tensor = Tensor<float, Runtime::CPU, 0>(10.0f);
   std::println("{}", tensor.value()); // 10
 
   tensor.assign(12.0f);

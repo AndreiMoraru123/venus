@@ -17,7 +17,7 @@
 #include <utility>
 #endif
 #include <venus/concepts.hpp>
-#include <venus/memory/device.hpp>
+#include <venus/runtime.hpp>
 #include <venus/str.hpp>
 #include <venus/tensor/shape.hpp>
 
@@ -56,20 +56,20 @@ namespace venus::eager {
 namespace detail {
 
 template <typename Op, template <typename, typename, std::size_t> class Tensor,
-          typename Elem1, typename Dev1, std::size_t Rank1, typename Elem2,
-          typename Dev2, std::size_t Rank2>
-auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
-                           const Tensor<Elem2, Dev2, Rank2> &t2) {
+          typename Elem1, typename Rt1, std::size_t Rank1, typename Elem2,
+          typename Rt2, std::size_t Rank2>
+auto binary_elementwise_op(Op op, const Tensor<Elem1, Rt1, Rank1> &t1,
+                           const Tensor<Elem2, Rt2, Rank2> &t2) {
 
   using ResultElementType = std::common_type_t<Elem1, Elem2>;
 
   if constexpr (Rank1 == 0 && Rank2 == 0) {
-    return Tensor<ResultElementType, Dev1, 0>(op(t1.value(), t2.value()));
+    return Tensor<ResultElementType, Rt1, 0>(op(t1.value(), t2.value()));
   } else {
     constexpr std::size_t RankOut = std::max(Rank1, Rank2);
     auto out_shape = broadcast<RankOut>(t1.shape(), t2.shape());
 
-    auto result = Tensor<ResultElementType, Dev1, RankOut>(out_shape);
+    auto result = Tensor<ResultElementType, Rt1, RankOut>(out_shape);
     auto out_ptr = result.data();
 
     // Does not need broadcasting
@@ -99,23 +99,23 @@ auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
 }
 
 template <typename Op, template <typename, typename, std::size_t> class Tensor,
-          typename Elem1, typename Dev1, std::size_t Rank1, typename Elem2,
-          typename Dev2, std::size_t Rank2, typename Elem3, typename Dev3,
+          typename Elem1, typename Rt1, std::size_t Rank1, typename Elem2,
+          typename Rt2, std::size_t Rank2, typename Elem3, typename Rt3,
           std::size_t Rank3>
-auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
-                            const Tensor<Elem2, Dev2, Rank2> &t2,
-                            const Tensor<Elem3, Dev3, Rank3> &t3) {
+auto ternary_elementwise_op(Op op, const Tensor<Elem1, Rt1, Rank1> &t1,
+                            const Tensor<Elem2, Rt2, Rank2> &t2,
+                            const Tensor<Elem3, Rt3, Rank3> &t3) {
 
   using ResultElementType = std::common_type_t<Elem1, Elem2, Elem3>;
 
   if constexpr (Rank1 == 0 && Rank2 == 0 && Rank3 == 0) {
-    return Tensor<ResultElementType, Dev1, 0>(
+    return Tensor<ResultElementType, Rt1, 0>(
         op(t1.value(), t2.value(), t3.value()));
   } else {
     constexpr std::size_t RankOut = std::max({Rank1, Rank2, Rank3});
     auto out_shape = broadcast<RankOut>(t1.shape(), t2.shape(), t3.shape());
 
-    auto result = Tensor<ResultElementType, Dev1, RankOut>(out_shape);
+    auto result = Tensor<ResultElementType, Rt1, RankOut>(out_shape);
     auto out_ptr = result.data();
 
     // Does not need broadcasting
@@ -303,9 +303,9 @@ consteval auto compute_sum_dims_for_step() {
 
 template <std::size_t ToRank,
           template <typename, typename, std::size_t> class Tensor,
-          typename Elem, typename Dev, std::size_t FromRank>
-  requires VenusTensor<Tensor<Elem, Dev, FromRank>>
-auto squeeze_to_rank(const Tensor<Elem, Dev, FromRank> &tensor) {
+          typename Elem, typename Rt, std::size_t FromRank>
+  requires VenusTensor<Tensor<Elem, Rt, FromRank>>
+auto squeeze_to_rank(const Tensor<Elem, Rt, FromRank> &tensor) {
   if constexpr (ToRank == 0) {
     return tensor.asScalar();
   } else {
@@ -316,9 +316,9 @@ auto squeeze_to_rank(const Tensor<Elem, Dev, FromRank> &tensor) {
 
 template <std::size_t OpIdx, ConstexprString Eqn,
           template <typename, typename, std::size_t> class Tensor, Scalar Elem,
-          typename Dev, std::size_t Rank>
-  requires VenusTensor<Tensor<Elem, Dev, Rank>>
-auto homogenize_operand(const Tensor<Elem, Dev, Rank> &t) {
+          typename Rt, std::size_t Rank>
+  requires VenusTensor<Tensor<Elem, Rt, Rank>>
+auto homogenize_operand(const Tensor<Elem, Rt, Rank> &t) {
   constexpr auto eqn = Eqn.view();
   constexpr auto occ = detail::compute_occurences(eqn);
   constexpr auto sorted_pos = detail::compute_sorted_position(eqn, occ);
@@ -352,7 +352,7 @@ auto homogenize_operand(const Tensor<Elem, Dev, Rank> &t) {
         return orig_idx;
       };
 
-  auto homogenized = Tensor<Elem, Dev, total_dims>(homo_shape);
+  auto homogenized = Tensor<Elem, Rt, total_dims>(homo_shape);
   for (std::size_t flat = 0; flat < homogenized.size(); ++flat) {
     const auto out_idx = homo_shape.offsetToIdx(flat);
     const auto orig_idx = project_homo_idx(out_idx);
@@ -366,18 +366,18 @@ auto homogenize_operand(const Tensor<Elem, Dev, Rank> &t) {
 
 // Copy Transform
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
-          typename Dev, std::size_t Rank, typename Fn>
-  requires VenusTensor<Tensor<Elem, Dev, Rank>>
-auto transform(const Tensor<Elem, Dev, Rank> &tensor, Fn &&fn) {
-  static_assert(std::is_same_v<Dev, Device::CPU>,
+          typename Rt, std::size_t Rank, typename Fn>
+  requires VenusTensor<Tensor<Elem, Rt, Rank>>
+auto transform(const Tensor<Elem, Rt, Rank> &tensor, Fn &&fn) {
+  static_assert(std::is_same_v<Rt, Runtime::CPU>,
                 "Transform is currently only supported on CPU");
 
   using ResultElementType = std::invoke_result_t<Fn, Elem>;
 
   if constexpr (Rank == 0) {
-    return Tensor<ResultElementType, Dev, 0>(fn(tensor.value()));
+    return Tensor<ResultElementType, Rt, 0>(fn(tensor.value()));
   } else {
-    auto result = Tensor<ResultElementType, Dev, Rank>(tensor.shape());
+    auto result = Tensor<ResultElementType, Rt, Rank>(tensor.shape());
     std::ranges::transform(tensor, result.begin(), std::forward<Fn>(fn));
     return result;
   }
@@ -396,10 +396,10 @@ REGISTER_BINARY_OP(neq, not_equal_to, !=)
 
 // Copy Sort
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
-          typename Dev, std::size_t Rank>
-  requires VenusTensor<Tensor<Elem, Dev, Rank>>
-auto sort(const Tensor<Elem, Dev, Rank> &tensor) {
-  static_assert(std::is_same_v<Dev, Device::CPU>,
+          typename Rt, std::size_t Rank>
+  requires VenusTensor<Tensor<Elem, Rt, Rank>>
+auto sort(const Tensor<Elem, Rt, Rank> &tensor) {
+  static_assert(std::is_same_v<Rt, Runtime::CPU>,
                 "Sort is currently only supported on CPU");
   auto copy = tensor.clone();
   std::ranges::sort(copy);
@@ -408,12 +408,12 @@ auto sort(const Tensor<Elem, Dev, Rank> &tensor) {
 
 // All equal
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
-          typename Dev1, std::size_t Rank1, Scalar Elem2, typename Dev2,
+          typename Rt1, std::size_t Rank1, Scalar Elem2, typename Rt2,
           std::size_t Rank2>
-  requires VenusTensor<Tensor<Elem1, Dev1, Rank1>> &&
-           VenusTensor<Tensor<Elem2, Dev2, Rank2>>
-auto equal(const Tensor<Elem1, Dev1, Rank1> &t1,
-           const Tensor<Elem2, Dev2, Rank2> &t2) -> bool {
+  requires VenusTensor<Tensor<Elem1, Rt1, Rank1>> &&
+           VenusTensor<Tensor<Elem2, Rt2, Rank2>>
+auto equal(const Tensor<Elem1, Rt1, Rank1> &t1,
+           const Tensor<Elem2, Rt2, Rank2> &t2) -> bool {
   if constexpr (Rank1 != Rank2) {
     return false;
   } else {
@@ -426,33 +426,33 @@ auto equal(const Tensor<Elem1, Dev1, Rank1> &t1,
 
 // Inner product
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
-          typename Dev1, Scalar Elem2, typename Dev2, std::size_t Rank1,
+          typename Rt1, Scalar Elem2, typename Rt2, std::size_t Rank1,
           std::size_t Rank2>
-  requires VenusTensor<Tensor<Elem1, Dev1, Rank1>> &&
-           VenusTensor<Tensor<Elem2, Dev2, Rank2>>
-auto inner(const Tensor<Elem1, Dev1, Rank1> &t1,
-           const Tensor<Elem2, Dev2, Rank2> &t2) {
+  requires VenusTensor<Tensor<Elem1, Rt1, Rank1>> &&
+           VenusTensor<Tensor<Elem2, Rt2, Rank2>>
+auto inner(const Tensor<Elem1, Rt1, Rank1> &t1,
+           const Tensor<Elem2, Rt2, Rank2> &t2) {
   using ResultElementType = std::common_type_t<Elem1, Elem2>;
   auto product =
       std::inner_product(t1.begin(), t1.end(), t2.begin(), ResultElementType{});
-  return Tensor<ResultElementType, Dev1, 0>(product);
+  return Tensor<ResultElementType, Rt1, 0>(product);
 }
 
 // Dot product
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
-          typename Dev1, Scalar Elem2, typename Dev2>
-  requires VenusTensor<Tensor<Elem1, Dev1, 1>> &&
-           VenusTensor<Tensor<Elem2, Dev2, 1>>
-auto dot(const Tensor<Elem1, Dev1, 1> &t1, const Tensor<Elem2, Dev2, 1> &t2) {
+          typename Rt1, Scalar Elem2, typename Rt2>
+  requires VenusTensor<Tensor<Elem1, Rt1, 1>> &&
+           VenusTensor<Tensor<Elem2, Rt2, 1>>
+auto dot(const Tensor<Elem1, Rt1, 1> &t1, const Tensor<Elem2, Rt2, 1> &t2) {
   return inner(t1, t2);
 }
 
 // Out-Of-Place Arange
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
-          Scalar Idx, typename Dev, std::size_t Rank>
-  requires VenusTensor<Tensor<Elem, Dev, Rank>>
-auto iota(const Tensor<Elem, Dev, Rank> &tensor, Idx i) {
-  auto result = Tensor<Elem, Dev, Rank>(tensor.shape());
+          Scalar Idx, typename Rt, std::size_t Rank>
+  requires VenusTensor<Tensor<Elem, Rt, Rank>>
+auto iota(const Tensor<Elem, Rt, Rank> &tensor, Idx i) {
+  auto result = Tensor<Elem, Rt, Rank>(tensor.shape());
 #if _cpp_lib_ranges >= 202110L
   std::ranges::iota(result, i);
 #else
@@ -463,20 +463,20 @@ auto iota(const Tensor<Elem, Dev, Rank> &tensor, Idx i) {
 
 // Out-Of-Place Identity
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
-          typename Dev, std::size_t Rank>
-  requires VenusTensor<Tensor<Elem, Dev, Rank>> && (Rank >= 2)
-auto eye_like(const Tensor<Elem, Dev, Rank> &tensor) {
-  auto result = Tensor<Elem, Dev, Rank>(tensor.shape());
+          typename Rt, std::size_t Rank>
+  requires VenusTensor<Tensor<Elem, Rt, Rank>> && (Rank >= 2)
+auto eye_like(const Tensor<Elem, Rt, Rank> &tensor) {
+  auto result = Tensor<Elem, Rt, Rank>(tensor.shape());
   result.eye();
   return result;
 }
 
 // Out-Of-Place Fill
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
-          Scalar Idx, typename Dev, std::size_t Rank>
-  requires VenusTensor<Tensor<Elem, Dev, Rank>>
-auto fill(const Tensor<Elem, Dev, Rank> &tensor, Idx i) {
-  auto result = Tensor<Elem, Dev, Rank>(tensor.shape());
+          Scalar Idx, typename Rt, std::size_t Rank>
+  requires VenusTensor<Tensor<Elem, Rt, Rank>>
+auto fill(const Tensor<Elem, Rt, Rank> &tensor, Idx i) {
+  auto result = Tensor<Elem, Rt, Rank>(tensor.shape());
 #if _cpp_lib_ranges >= 202110L
   std::ranges::fill(result, i);
 #else
@@ -487,11 +487,11 @@ auto fill(const Tensor<Elem, Dev, Rank> &tensor, Idx i) {
 
 // Matrix Multiplication (2D)
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
-          Scalar Elem2, typename Dev>
-  requires VenusTensor<Tensor<Elem1, Dev, 2>> &&
-           VenusTensor<Tensor<Elem2, Dev, 2>>
-auto mm(const Tensor<Elem1, Dev, 2> &t1, const Tensor<Elem2, Dev, 2> &t2) {
-  static_assert(std::is_same_v<Dev, Device::CPU>,
+          Scalar Elem2, typename Rt>
+  requires VenusTensor<Tensor<Elem1, Rt, 2>> &&
+           VenusTensor<Tensor<Elem2, Rt, 2>>
+auto mm(const Tensor<Elem1, Rt, 2> &t1, const Tensor<Elem2, Rt, 2> &t2) {
+  static_assert(std::is_same_v<Rt, Runtime::CPU>,
                 "MatMul is currently only supported on CPU");
 
   using ResultElementType = std::common_type_t<Elem1, Elem2>;
@@ -506,7 +506,7 @@ auto mm(const Tensor<Elem1, Dev, 2> &t1, const Tensor<Elem2, Dev, 2> &t2) {
                     t1.shape(), t2.shape()));
   }
 
-  auto t3 = Tensor<ResultElementType, Dev, 2>(I, J);
+  auto t3 = Tensor<ResultElementType, Rt, 2>(I, J);
 
   // TODO: This is optimized for row major layout
   for (std::size_t i = 0; i < I; i++) {
@@ -524,13 +524,13 @@ auto mm(const Tensor<Elem1, Dev, 2> &t1, const Tensor<Elem2, Dev, 2> &t2) {
 }
 
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
-          typename Dev, std::size_t Rank>
-  requires BoolTensor<Tensor<Elem, Dev, Rank>>
-auto nonzero_flat(const Tensor<Elem, Dev, Rank> &condition) {
+          typename Rt, std::size_t Rank>
+  requires BoolTensor<Tensor<Elem, Rt, Rank>>
+auto nonzero_flat(const Tensor<Elem, Rt, Rank> &condition) {
   const auto nz_count = static_cast<std::size_t>(std::ranges::count_if(
       condition, [](auto v) { return static_cast<bool>(v); }));
 
-  auto result = Tensor<std::size_t, Dev, 1>(nz_count);
+  auto result = Tensor<std::size_t, Rt, 1>(nz_count);
   auto out_ptr = result.data();
 
   std::size_t pos = 0;
@@ -547,13 +547,13 @@ auto nonzero_flat(const Tensor<Elem, Dev, Rank> &condition) {
 }
 
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
-          typename Dev, std::size_t Rank>
-  requires BoolTensor<Tensor<Elem, Dev, Rank>>
-auto nonzero(const Tensor<Elem, Dev, Rank> &condition) {
+          typename Rt, std::size_t Rank>
+  requires BoolTensor<Tensor<Elem, Rt, Rank>>
+auto nonzero(const Tensor<Elem, Rt, Rank> &condition) {
   const auto nz_count = static_cast<std::size_t>(std::ranges::count_if(
       condition, [](auto v) { return static_cast<bool>(v); }));
 
-  auto result = Tensor<std::size_t, Dev, 2>(nz_count, Rank);
+  auto result = Tensor<std::size_t, Rt, 2>(nz_count, Rank);
   auto out_ptr = result.data();
 
   std::size_t row = 0;
@@ -571,9 +571,9 @@ auto nonzero(const Tensor<Elem, Dev, Rank> &condition) {
 }
 
 template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
-          typename Dev, std::size_t Rank>
-  requires BoolTensor<Tensor<Elem, Dev, Rank>>
-auto where(const Tensor<Elem, Dev, Rank> &predicate) {
+          typename Rt, std::size_t Rank>
+  requires BoolTensor<Tensor<Elem, Rt, Rank>>
+auto where(const Tensor<Elem, Rt, Rank> &predicate) {
   if constexpr (Rank == 1) {
     return nonzero_flat(predicate);
   } else {
@@ -640,9 +640,9 @@ auto where(T1 &&predicate, T2 &&true_tensor, T3 &&false_tensor) {
 
 template <std::size_t Dim,
           template <typename, typename, std::size_t> class Tensor, Scalar Elem,
-          typename Dev, std::size_t Rank>
-  requires VenusTensor<Tensor<Elem, Dev, Rank>>
-auto sum_dim(const Tensor<Elem, Dev, Rank> &t) -> Tensor<Elem, Dev, Rank> {
+          typename Rt, std::size_t Rank>
+  requires VenusTensor<Tensor<Elem, Rt, Rank>>
+auto sum_dim(const Tensor<Elem, Rt, Rank> &t) -> Tensor<Elem, Rt, Rank> {
   static_assert(Dim < Rank, "sum dimension cannot be higher than tensor rank");
 
   const auto &in_shape = t.shape();
@@ -652,7 +652,7 @@ auto sum_dim(const Tensor<Elem, Dev, Rank> &t) -> Tensor<Elem, Dev, Rank> {
   }
 
   auto out_shape = Shape<Rank>(out_ext);
-  auto result = Tensor<Elem, Dev, Rank>(out_shape);
+  auto result = Tensor<Elem, Rt, Rank>(out_shape);
 
   for (auto [flat, val] :
        std::views::zip(std::views::iota(std::size_t{0}, t.size()), t)) {
@@ -666,9 +666,9 @@ auto sum_dim(const Tensor<Elem, Dev, Rank> &t) -> Tensor<Elem, Dev, Rank> {
 
 template <std::size_t... Dims,
           template <typename, typename, std::size_t> class Tensor, Scalar Elem,
-          typename Dev, std::size_t Rank>
-  requires VenusTensor<Tensor<Elem, Dev, Rank>>
-auto sum_dims(const Tensor<Elem, Dev, Rank> &t) -> Tensor<Elem, Dev, Rank> {
+          typename Rt, std::size_t Rank>
+  requires VenusTensor<Tensor<Elem, Rt, Rank>>
+auto sum_dims(const Tensor<Elem, Rt, Rank> &t) -> Tensor<Elem, Rt, Rank> {
   if constexpr (sizeof...(Dims) == 0) {
     return t.clone();
   } else {
@@ -684,12 +684,12 @@ auto sum_dims(const Tensor<Elem, Dev, Rank> &t) -> Tensor<Elem, Dev, Rank> {
 // Sumproduct pair
 template <std::size_t... SumDims,
           template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
-          typename Dev1, Scalar Elem2, typename Dev2, std::size_t Rank1,
+          typename Rt1, Scalar Elem2, typename Rt2, std::size_t Rank1,
           std::size_t Rank2>
-  requires VenusTensor<Tensor<Elem1, Dev1, Rank1>> &&
-           VenusTensor<Tensor<Elem2, Dev2, Rank2>>
-auto sumproduct_pair(const Tensor<Elem1, Dev1, Rank1> &t1,
-                     const Tensor<Elem2, Dev2, Rank2> &t2) {
+  requires VenusTensor<Tensor<Elem1, Rt1, Rank1>> &&
+           VenusTensor<Tensor<Elem2, Rt2, Rank2>>
+auto sumproduct_pair(const Tensor<Elem1, Rt1, Rank1> &t1,
+                     const Tensor<Elem2, Rt2, Rank2> &t2) {
   auto product = t1 * t2;
   return sum_dims<SumDims...>(product);
 }
@@ -738,10 +738,10 @@ auto _einsum_contract(HomogenizedTensors... tensors) {
 
 template <ConstexprString Eqn,
           template <typename, typename, std::size_t> class... Tensors,
-          typename... Ts, typename... Devs, std::size_t... Ranks>
-  requires(VenusTensor<Tensors<Ts, Devs, Ranks>> && ...)
-auto einsum(const Tensors<Ts, Devs, Ranks> &...tensors) {
-  static_assert((std::is_same_v<Devs, Device::CPU> && ...),
+          typename... Ts, typename... Rts, std::size_t... Ranks>
+  requires(VenusTensor<Tensors<Ts, Rts, Ranks>> && ...)
+auto einsum(const Tensors<Ts, Rts, Ranks> &...tensors) {
+  static_assert((std::is_same_v<Rts, Runtime::CPU> && ...),
                 "Einsum is currently only supported on CPU");
   constexpr auto eqn = Eqn.view();
   constexpr auto occ = detail::compute_occurences(eqn);

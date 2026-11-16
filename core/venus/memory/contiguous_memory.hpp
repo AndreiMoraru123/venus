@@ -11,7 +11,7 @@
 
 namespace venus {
 
-template <typename TElem, typename TDevice> class ContiguousMemory {
+template <typename TElem, typename TRuntime> class ContiguousMemory {
   static_assert(std::is_same_v<std::remove_cvref_t<TElem>, TElem>);
   using ElementType = TElem;
 
@@ -23,7 +23,7 @@ private:
 public:
 #endif
   explicit ContiguousMemory(std::size_t p_size)
-      : m_mem(Allocator<TDevice>::template alloc<ElementType>(p_size)),
+      : m_mem(Allocator<TRuntime>::template alloc<ElementType>(p_size)),
         m_size(p_size) {
     if (p_size == 0) {
       throw std::invalid_argument("Cannot allocate zero-sized memory.");

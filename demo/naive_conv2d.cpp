@@ -2,16 +2,16 @@ import venus;
 
 template <typename T, std::size_t Rank>
   requires(Rank == 2)
-auto conv2d(const Tensor<T, Device::CPU, Rank> &input,
-            const Tensor<T, Device::CPU, Rank> &kernel, std::size_t stride = 1)
-    -> Tensor<T, Device::CPU, Rank> {
+auto conv2d(const Tensor<T, Runtime::CPU, Rank> &input,
+            const Tensor<T, Runtime::CPU, Rank> &kernel, std::size_t stride = 1)
+    -> Tensor<T, Runtime::CPU, Rank> {
   const auto [w, h] = input.shape();
   const auto [kW, kH] = kernel.shape();
 
   const auto outW = (w - kW) / stride + 1;
   const auto outH = (h - kH) / stride + 1;
 
-  auto out = Tensor<T, Device::CPU, Rank>(outW, outH);
+  auto out = Tensor<T, Runtime::CPU, Rank>(outW, outH);
 
   for (std::size_t i{}; i < outW; ++i) {
     for (std::size_t j{}; j < outH; ++j) {
@@ -28,11 +28,11 @@ auto conv2d(const Tensor<T, Device::CPU, Rank> &input,
 }
 
 auto main() -> int {
-  auto img = Tensor<float, Device::CPU, 2>(5, 5);
+  auto img = Tensor<float, Runtime::CPU, 2>(5, 5);
   img.fill(1.0F);
 
   auto kernel =
-      Tensor<float, Device::CPU, 2>{{-1, 0, 1}, {-2, 0, 2}, {-1, 0, 1}};
+      Tensor<float, Runtime::CPU, 2>{{-1, 0, 1}, {-2, 0, 2}, {-1, 0, 1}};
 
   auto res = conv2d(img, kernel);
   std::println("{}", res.shape()); // (3, 3)

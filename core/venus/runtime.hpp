@@ -1,5 +1,5 @@
 #pragma once
 
-namespace venus::Device {
+namespace venus::Runtime {
 struct CPU;
 }

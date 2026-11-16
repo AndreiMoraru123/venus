@@ -10,7 +10,7 @@ using namespace venus;
 TEST_CASE("ContiguousMemory basics", "[memory]") {
   SECTION("Construction") {
     constexpr std::size_t size = 8;
-    ContiguousMemory<float *, Device::CPU> memo(size);
+    ContiguousMemory<float *, Runtime::CPU> memo(size);
 
     REQUIRE(memo.size() == size);
     REQUIRE(memo.ptr() != nullptr);
@@ -18,15 +18,15 @@ TEST_CASE("ContiguousMemory basics", "[memory]") {
   }
 
   SECTION("Equality Ops") {
-    ContiguousMemory<float *, Device::CPU> memo1(10);
-    ContiguousMemory<float *, Device::CPU> memo2(10);
+    ContiguousMemory<float *, Runtime::CPU> memo1(10);
+    ContiguousMemory<float *, Runtime::CPU> memo2(10);
 
     REQUIRE(memo1 == memo1);
     REQUIRE(memo1 != memo2);
   }
 
   SECTION("Shift Op") {
-    ContiguousMemory<char, Device::CPU> memo(100);
+    ContiguousMemory<char, Runtime::CPU> memo(100);
     auto shifted = memo.shift(20);
 
     REQUIRE(shifted.size() == 80);
@@ -36,7 +36,7 @@ TEST_CASE("ContiguousMemory basics", "[memory]") {
   }
 
   SECTION("Shared state") {
-    ContiguousMemory<char, Device::CPU> memo(50);
+    ContiguousMemory<char, Runtime::CPU> memo(50);
 
     REQUIRE_FALSE(memo.isShared());
     {
@@ -49,7 +49,7 @@ TEST_CASE("ContiguousMemory basics", "[memory]") {
   }
 
   SECTION("Moved ownership") {
-    ContiguousMemory<char, Device::CPU> memo(50);
+    ContiguousMemory<char, Runtime::CPU> memo(50);
 
     REQUIRE_FALSE(memo.isShared());
     {

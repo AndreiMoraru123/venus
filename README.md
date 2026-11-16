@@ -18,7 +18,7 @@ import venus; // or #include <venus.hpp> and using namespace venus
 
 // clang-format off
 auto main() -> int {
-  auto tensor = Tensor<int, Device::CPU, 2>(3, 3); // heap alloc 3x3 Tensor
+  auto tensor = Tensor<int, Runtime::CPU, 2>(3, 3); // heap alloc 3x3 Tensor
 
   tensor.iota(1); // venus::Tensor([1, 2, 3, 4, 5, 6, 7, 8, 9], shape=(3, 3))
 
@@ -59,7 +59,7 @@ auto check_order(const auto &ints) {
 }
 
 auto main() -> int {
-  const auto ints = Tensor<int, Device::CPU, 1>{5, 2, 4, 3, 1};
+  const auto ints = Tensor<int, Runtime::CPU, 1>{5, 2, 4, 3, 1};
   std::println("{}", check_order(ints)); // venus::Tensor([0, 2, 3, 4], shape=(4))
 }
 ```
@@ -77,7 +77,7 @@ cmake --build build --target venus-interactive
 import venus;
 using namespace venus::eager;
 auto check_order(const auto& ints) { return where(sort(ints) != ints); }
-auto ints = Tensor<int, Device::CPU, 1>{5, 2, 4, 3, 1};
+auto ints = Tensor<int, Runtime::CPU, 1>{5, 2, 4, 3, 1};
 auto res = check_order(ints);
 std::println("{}", res); // venus::Tensor([0, 2, 3, 4], shape=(4))
 ```
