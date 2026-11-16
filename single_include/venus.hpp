@@ -3,6 +3,48 @@
 // Auto-generated main header
 
 #ifndef VENUS_MODULE
+#include <concepts>
+#include <cstddef>
+#include <type_traits>
+#endif
+
+namespace venus {
+template <typename T>
+concept VenusTensor = requires {
+  typename std::remove_cvref_t<T>::ElementType;
+  typename std::remove_cvref_t<T>::DeviceType;
+  { std::remove_cvref_t<T>::rank } -> std::convertible_to<std::size_t>;
+};
+
+template <typename T>
+concept Scalar = std::is_arithmetic_v<std::remove_cvref_t<T>>;
+
+template <typename T>
+concept ScalarTensor =
+    VenusTensor<std::remove_cvref_t<T>> && (std::remove_cvref_t<T>::rank == 0);
+
+template <typename T>
+concept MDTensor =
+    VenusTensor<std::remove_cvref_t<T>> && (std::remove_cvref_t<T>::rank > 0);
+
+template <typename T>
+concept BoolTensor =
+    VenusTensor<std::remove_cvref_t<T>> &&
+    std::is_convertible_v<typename std::remove_cvref_t<T>::ElementType, bool>;
+
+template <typename T>
+concept StringLike = requires(T str) {
+  { str.c_str() } -> std::convertible_to<const char *>;
+} or std::convertible_to<T, const char *>;
+
+template <typename T>
+concept CharLike = std::same_as<T, char> || std::same_as<T, signed char> ||
+                   std::same_as<T, unsigned char> || std::same_as<T, wchar_t> ||
+                   std::same_as<T, char8_t> || std::same_as<T, char16_t> ||
+                   std::same_as<T, char32_t>;
+} // namespace venus
+
+#ifndef VENUS_MODULE
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
@@ -774,6 +816,7 @@ ConstexprString(const char (&)[N]) -> ConstexprString<N>;
 #endif
 
 
+
 #ifndef VENUS_MODULE
 #include <algorithm>
 #include <array>
@@ -1075,31 +1118,6 @@ struct tuple_element<N, venus::Shape<Rank>> {
 inline constexpr std::size_t NUMBER_OF_LETTERS = 'z' - 'a' + 1;
 using AlphabetArray = std::array<std::int64_t, NUMBER_OF_LETTERS>;
 using PositionLabels = std::array<std::size_t, NUMBER_OF_LETTERS>;
-
-namespace venus {
-template <typename T>
-concept VenusTensor = requires {
-  typename std::remove_cvref_t<T>::ElementType;
-  typename std::remove_cvref_t<T>::DeviceType;
-  { std::remove_cvref_t<T>::rank } -> std::convertible_to<std::size_t>;
-};
-
-template <typename T>
-concept Scalar = std::is_arithmetic_v<std::remove_cvref_t<T>>;
-
-template <typename T>
-concept ScalarTensor =
-    VenusTensor<std::remove_cvref_t<T>> && (std::remove_cvref_t<T>::rank == 0);
-
-template <typename T>
-concept MDTensor =
-    VenusTensor<std::remove_cvref_t<T>> && (std::remove_cvref_t<T>::rank > 0);
-
-template <typename T>
-concept BoolTensor =
-    VenusTensor<std::remove_cvref_t<T>> &&
-    std::is_convertible_v<typename std::remove_cvref_t<T>::ElementType, bool>;
-} // namespace venus
 
 #define REGISTER_BINARY_OP(op_name, std_op, op_symbol)                         \
   template <typename T1, typename T2>                                          \
@@ -1835,12 +1853,11 @@ auto einsum(const Tensors<Ts, Devs, Ranks> &...tensors) {
 #include <cstddef>
 #include <format>
 #include <initializer_list>
-#include <iomanip>
-#include <ios>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
 #endif
+
 
 
 
@@ -2579,70 +2596,7 @@ constexpr auto operator+(typename TensorIterator<T>::difference_type n,
   return it + n;
 }
 
-// Print Tensor ================================================
-template <typename T>
-concept StringLike = requires(T str) {
-  { str.c_str() } -> std::convertible_to<const char *>;
-} or std::convertible_to<T, const char *>;
-
-template <typename T>
-concept CharLike = std::same_as<T, char> || std::same_as<T, signed char> ||
-                   std::same_as<T, unsigned char> || std::same_as<T, wchar_t> ||
-                   std::same_as<T, char8_t> || std::same_as<T, char16_t> ||
-                   std::same_as<T, char32_t>;
-
-template <typename TElem, typename TDevice, std::size_t Rank>
-auto operator<<(std::ostream &os, const Tensor<TElem, TDevice, Rank> &tensor)
-    -> std::ostream & {
-  os << "venus::Tensor([";
-
-  std::size_t count = 0;
-  for (auto elem : tensor) {
-    if (count > 0)
-      os << ", ";
-    count++;
-    if constexpr (StringLike<TElem>) {
-      os << "\"" << static_cast<TElem>(elem) << "\"";
-    } else if constexpr (CharLike<TElem>) {
-      os << "'" << static_cast<TElem>(elem) << "'";
-    } else if constexpr (std::floating_point<TElem>) {
-      os << std::fixed << std::setprecision(2) << static_cast<TElem>(elem);
-    } else {
-      os << static_cast<TElem>(elem);
-    }
-  }
-
-  return os << "], " << "shape=" << tensor.shape() << ")";
-}
-
-template <typename TElem, typename TDevice>
-auto operator<<(std::ostream &os, const Tensor<TElem, TDevice, 0> &tensor)
-    -> std::ostream & {
-  if constexpr (StringLike<TElem>) {
-    return os << "venus::Tensor(" << "\"" << tensor.value() << "\"" << ")";
-  } else if constexpr (CharLike<TElem>) {
-    return os << "venus::Tensor(" << "'" << tensor.value() << "'" << ")";
-  } else if constexpr (std::floating_point<TElem>) {
-    return os << std::fixed << std::setprecision(2) << "venus::Tensor("
-              << tensor.value() << ")";
-  } else {
-    return os << "venus::Tensor(" << tensor.value() << ")";
-  }
-}
-
 } // namespace venus
-
-template <typename TElem, typename TDevice, std::size_t Rank>
-struct std::formatter<venus::Tensor<TElem, TDevice, Rank>> {
-  constexpr auto parse(std::format_parse_context &ctx) { return ctx.begin(); }
-
-  auto format(const venus::Tensor<TElem, TDevice, Rank> &tensor,
-              std::format_context &ctx) const {
-    ostringstream oss;
-    oss << tensor;
-    return std::format_to(ctx.out(), "{}", oss.str());
-  }
-};
 
 // Scalar-first Addition
 template <venus::Scalar Scalar, venus::Scalar TElem, typename TDevice,
@@ -2728,6 +2682,135 @@ auto operator!=(const Scalar &scalar,
 #undef REGISTER_POST_OPERATOR
 #undef REGISTER_PRE_OPERATOR
 #undef REGISTER_SCALAR_BOOL_OP
+#ifndef VENUS_MODULE
+#include <concepts>
+#include <cstddef>
+#include <format>
+#include <optional>
+#include <ostream>
+#include <print>
+#endif
+
+
+
+namespace venus {
+
+// Read by every print; a format spec such as {:t4e1.0} overrides it for one
+struct PrintOptions {
+  std::size_t threshold = 1000; // past this many elements, print only the ends
+  std::size_t edgeItems = 3;    // elements printed at each end
+  int precision = 2;            // digits after the point for floating point
+};
+
+inline PrintOptions printOptions{};
+
+template <typename TElem, typename TOut>
+auto formatElement(TOut out, const TElem &elem, const PrintOptions &options)
+    -> TOut {
+  if constexpr (StringLike<TElem>) {
+    return std::format_to(out, "\"{}\"", elem);
+  } else if constexpr (CharLike<TElem>) {
+    return std::format_to(out, "'{:c}'", elem);
+  } else if constexpr (std::same_as<TElem, bool>) {
+    return std::format_to(out, "{:d}", elem);
+  } else if constexpr (std::floating_point<TElem>) {
+    return std::format_to(out, "{:.{}f}", elem, options.precision);
+  } else {
+    return std::format_to(out, "{}", elem);
+  }
+}
+
+template <VenusTensor TTensor, typename TOut>
+auto formatTo(TOut out, const TTensor &tensor, const PrintOptions &options)
+    -> TOut {
+  using TElem = typename TTensor::ElementType;
+  out = std::format_to(out, "venus::Tensor(");
+  if constexpr (ScalarTensor<TTensor>) {
+    out = formatElement(out, tensor.value(), options);
+    return std::format_to(out, ")");
+  } else {
+    const auto formatElems = [&out, &options](auto first, auto last) {
+      for (auto it = first; it != last; ++it) {
+        if (it != first)
+          out = std::format_to(out, ", ");
+        out = formatElement(out, static_cast<TElem>(*it), options);
+      }
+    };
+
+    const std::size_t count = tensor.shape().count();
+    out = std::format_to(out, "[");
+    if (count > options.threshold and count > 2 * options.edgeItems) {
+      const auto edge = static_cast<std::ptrdiff_t>(options.edgeItems);
+      formatElems(tensor.begin(), tensor.begin() + edge);
+      out = std::format_to(out, ", ..., ");
+      formatElems(tensor.end() - edge, tensor.end());
+    } else {
+      formatElems(tensor.begin(), tensor.end());
+    }
+    return std::format_to(out, "], shape={})", tensor.shape());
+  }
+}
+
+} // namespace venus
+
+// {:t<threshold>e<edgeItems>.<precision>}, in any order, each optional
+template <typename TElem, typename TDevice, std::size_t Rank>
+struct std::formatter<venus::Tensor<TElem, TDevice, Rank>> {
+  constexpr auto parse(std::format_parse_context &ctx) {
+    auto it = ctx.begin();
+    const auto number = [&] {
+      if (it == ctx.end() or *it < '0' or *it > '9')
+        throw std::format_error("venus::Tensor: t, e and . take a number");
+      std::size_t value = 0;
+      for (; it != ctx.end() and *it >= '0' and *it <= '9'; ++it)
+        value = value * 10 + static_cast<std::size_t>(*it - '0');
+      return value;
+    };
+    while (it != ctx.end() and *it != '}') {
+      switch (*it++) {
+      case 't':
+        threshold = number();
+        break;
+      case 'e':
+        edgeItems = number();
+        break;
+      case '.':
+        precision = static_cast<int>(number());
+        break;
+      default:
+        throw std::format_error(
+            "venus::Tensor: the format spec takes t, e and .");
+      }
+    }
+    return it;
+  }
+
+  auto format(const venus::Tensor<TElem, TDevice, Rank> &tensor,
+              std::format_context &ctx) const {
+    venus::PrintOptions options = venus::printOptions;
+    options.threshold = threshold.value_or(options.threshold);
+    options.edgeItems = edgeItems.value_or(options.edgeItems);
+    options.precision = precision.value_or(options.precision);
+    return venus::formatTo(ctx.out(), tensor, options);
+  }
+
+private:
+  std::optional<std::size_t> threshold;
+  std::optional<std::size_t> edgeItems;
+  std::optional<int> precision;
+};
+
+namespace venus {
+
+template <typename TElem, typename TDevice, std::size_t Rank>
+auto operator<<(std::ostream &os, const Tensor<TElem, TDevice, Rank> &tensor)
+    -> std::ostream & {
+  std::print(os, "{}", tensor);
+  return os;
+}
+
+} // namespace venus
+
 
 
 #ifndef VENUS_MODULE
