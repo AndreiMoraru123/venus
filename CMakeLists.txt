@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.25.1)
+cmake_minimum_required(VERSION 4.5)
 project(venus LANGUAGES CXX)
 
 # Until CMake has a C++26 flag for MSVC, 23 maps to -std:c++latest
@@ -33,9 +33,6 @@ target_sources(venus INTERFACE
 option(VENUS_BUILD_MODULE "Build the venus module and run tests and demos against it" OFF)
 
 if(VENUS_BUILD_MODULE)
-    if(CMAKE_VERSION VERSION_LESS 4.5)
-        message(FATAL_ERROR "VENUS_BUILD_MODULE needs CMake 4.5 or newer for import std")
-    endif()
     if(NOT CMAKE_GENERATOR MATCHES "Ninja")
         message(FATAL_ERROR "VENUS_BUILD_MODULE needs a Ninja generator")
     endif()
@@ -48,8 +45,27 @@ if(VENUS_BUILD_MODULE)
         FILES ${CMAKE_CURRENT_SOURCE_DIR}/module/venus.cppm
     )
     target_link_libraries(venus_module PUBLIC venus)
-    set_target_properties(venus_module PROPERTIES CXX_SCAN_FOR_MODULES ON)
+
+    # Each venus header, except the policy macros, as a file holding import venus
+    set(VENUS_IMPORT_HEADERS_DIR ${CMAKE_CURRENT_BINARY_DIR}/venus_import_headers)
+    foreach(header ${VENUS_HEADERS})
+        file(RELATIVE_PATH header ${CMAKE_CURRENT_SOURCE_DIR}/core ${header})
+        if(NOT header MATCHES "policy_macro_")
+            file(CONFIGURE OUTPUT ${VENUS_IMPORT_HEADERS_DIR}/${header}
+                CONTENT "#pragma once\nimport venus;\n")
+        endif()
+    endforeach()
 endif()
+
+# Tests and demos include venus headers, which become import venus with the module
+function(venus_link_tests_and_demos target)
+    if(VENUS_BUILD_MODULE)
+        target_link_libraries(${target} PRIVATE venus_module)
+        target_include_directories(${target} BEFORE PRIVATE ${VENUS_IMPORT_HEADERS_DIR})
+    else()
+        target_link_libraries(${target} PRIVATE venus)
+    endif()
+endfunction()
 
 if(BUILD_TESTING)
     FetchContent_Declare(

@@ -4,7 +4,7 @@ foreach(demo_source ${DEMO_SOURCES})
     get_filename_component(demo_name ${demo_source} NAME_WE)
     set(target_name "demo_${demo_name}")
     add_executable(${target_name} ${demo_source})
-    target_link_libraries(${target_name} PRIVATE venus)
+    venus_link_tests_and_demos(${target_name})
     target_include_directories(${target_name} PRIVATE
         ${CMAKE_SOURCE_DIR}
         ${mdspan_SOURCE_DIR}/include
@@ -12,9 +12,4 @@ foreach(demo_source ${DEMO_SOURCES})
     set_target_properties(${target_name} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/demos"
     )
-    if(VENUS_BUILD_MODULE)
-        target_link_libraries(${target_name} PRIVATE venus_module)
-        target_compile_definitions(${target_name} PRIVATE VENUS_IMPORT)
-        set_target_properties(${target_name} PROPERTIES CXX_SCAN_FOR_MODULES ON)
-    endif()
 endforeach()

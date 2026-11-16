@@ -2,13 +2,9 @@
 
 #include <cmath>
 #include <type_traits>
-#include <venus/policies/policy_macro_begin.hpp>
-#ifdef VENUS_IMPORT
-import venus;
-#else
 #include <venus/policies/policy_container.hpp>
+#include <venus/policies/policy_macro_begin.hpp>
 #include <venus/policies/policy_ops.hpp>
-#endif
 
 using namespace venus;
 

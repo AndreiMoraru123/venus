@@ -1,10 +1,6 @@
 
 #include <catch2/catch_test_macros.hpp>
-#ifdef VENUS_IMPORT
-import venus;
-#else
 #include <venus/var_type_dict.hpp>
-#endif
 
 using namespace venus;
 

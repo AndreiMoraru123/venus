@@ -16,11 +16,7 @@ Venus leverages C++20 ranges, providing both powerful optimizations and beautifu
 
 #include <cassert>
 #include <ranges>
-#ifdef VENUS_IMPORT
-import venus;
-#else
 #include <venus/tensor/tensor.hpp>
-#endif
 
 using namespace venus;
 
@@ -98,7 +94,7 @@ clang-repl>
 
 #### `import venus;`
 
-With CMake 4.5 or newer and Ninja, venus also builds as a C++ module:
+With Ninja, venus also builds as a C++ module:
 
 ```sh
 cmake -B build -G Ninja -DVENUS_BUILD_MODULE=ON
