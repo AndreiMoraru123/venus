@@ -5,7 +5,8 @@ module;
 #include <malloc.h>
 #endif
 export module venus;
-// Unexported, Clang misses ADL into std and prints Tensor's ')' as a pointer
+// Unexported, Clang 23 can't find std's operators and algorithms in venus
+// templates an importer instantiates
 export import std;
 #ifdef __clang__
 // extern "C++" attaches these to the global module, not to venus
