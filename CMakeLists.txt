@@ -89,7 +89,7 @@ if(CLANG_REPL_EXECUTABLE)
     list(APPEND REPL_FLAGS -std=c++26 -DVENUS_INTERPRETER)
 
     if(VENUS_BUILD_MODULE AND EXISTS "${CMAKE_CXX_STDLIB_MODULES_JSON}")
-        # clang-repl cannot read CMake's module map, so it gets its own BMIs
+        # clang-repl cannot read CMake's module map, so it compiles its own module files
         file(READ ${CMAKE_CXX_STDLIB_MODULES_JSON} modules_json)
         string(JSON std_source GET ${modules_json} modules 0 source-path)
         cmake_path(GET CMAKE_CXX_STDLIB_MODULES_JSON PARENT_PATH modules_json_dir)
