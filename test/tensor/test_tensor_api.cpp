@@ -394,7 +394,7 @@ TEST_CASE("Tensor Creation", "[tensor][ctor]") {
 
     // y_view should now be the sole owner of the original memory
     REQUIRE(y_view.unique());
-    REQUIRE(static_cast<void *>(y_view.data()) == y_ptr_before);
+    REQUIRE(static_cast<const void *>(y_view.data()) == y_ptr_before);
     REQUIRE(y_view.shape() == Shape(2, 3));
   }
 

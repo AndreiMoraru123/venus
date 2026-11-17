@@ -17,6 +17,7 @@ template <typename TElem, typename TDevice> class ContiguousMemory {
 
 #ifdef VENUS_INTERPRETER
   template <typename, typename, std::size_t> friend class Tensor;
+  template <typename, typename, std::size_t> friend class TensorView;
 
 private:
 #else
@@ -45,6 +46,8 @@ public:
     }
   }
   [[nodiscard]] auto isShared() const -> bool { return m_mem.use_count() > 1; }
+  // Every shift of the block counts as an owner
+  [[nodiscard]] auto useCount() const -> long { return m_mem.use_count(); }
   [[nodiscard]] auto size() const -> std::size_t { return m_size; }
 
   auto operator==(const ContiguousMemory &val) const -> bool {

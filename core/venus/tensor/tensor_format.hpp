@@ -42,7 +42,8 @@ template <VenusTensor TTensor, typename TOut>
 auto formatTo(TOut out, const TTensor &tensor, const PrintOptions &options)
     -> TOut {
   using TElem = typename TTensor::ElementType;
-  out = std::format_to(out, "venus::Tensor(");
+  out = std::format_to(out, AnyTensorView<TTensor> ? "venus::TensorView("
+                                                   : "venus::Tensor(");
   if constexpr (ScalarTensor<TTensor>) {
     out = formatElement(out, tensor.value(), options);
     return std::format_to(out, ")");
@@ -69,11 +70,8 @@ auto formatTo(TOut out, const TTensor &tensor, const PrintOptions &options)
   }
 }
 
-} // namespace venus
-
 // {:t<threshold>e<edgeItems>.<precision>}, in any order, each optional
-template <typename TElem, typename TDevice, std::size_t Rank>
-struct std::formatter<venus::Tensor<TElem, TDevice, Rank>> {
+struct TensorFormatter {
   constexpr auto parse(std::format_parse_context &ctx) {
     auto it = ctx.begin();
     const auto number = [&] {
@@ -103,8 +101,8 @@ struct std::formatter<venus::Tensor<TElem, TDevice, Rank>> {
     return it;
   }
 
-  auto format(const venus::Tensor<TElem, TDevice, Rank> &tensor,
-              std::format_context &ctx) const {
+  template <VenusTensor TTensor>
+  auto format(const TTensor &tensor, std::format_context &ctx) const {
     venus::PrintOptions options = venus::printOptions;
     options.threshold = threshold.value_or(options.threshold);
     options.edgeItems = edgeItems.value_or(options.edgeItems);
@@ -117,6 +115,19 @@ private:
   std::optional<std::size_t> edgeItems;
   std::optional<int> precision;
 };
+} // namespace venus
+
+template <typename TElem, typename TDevice, std::size_t Rank>
+struct std::formatter<venus::Tensor<TElem, TDevice, Rank>>
+    : venus::TensorFormatter {};
+
+template <typename TElem, typename TDevice, std::size_t Rank>
+struct std::formatter<venus::TensorView<TElem, TDevice, Rank>>
+    : venus::TensorFormatter {};
+
+template <typename TElem, typename TDevice, std::size_t Rank>
+struct std::formatter<venus::Selection<TElem, TDevice, Rank>>
+    : venus::TensorFormatter {};
 
 namespace venus {
 
@@ -124,6 +135,13 @@ template <typename TElem, typename TDevice, std::size_t Rank>
 auto operator<<(std::ostream &os, const Tensor<TElem, TDevice, Rank> &tensor)
     -> std::ostream & {
   std::print(os, "{}", tensor);
+  return os;
+}
+
+template <typename TElem, typename TDevice, std::size_t Rank>
+auto operator<<(std::ostream &os, const TensorView<TElem, TDevice, Rank> &view)
+    -> std::ostream & {
+  std::print(os, "{}", view);
   return os;
 }
 

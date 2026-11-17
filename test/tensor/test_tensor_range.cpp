@@ -2,7 +2,9 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <cmath>
+#include <iterator>
 #include <ranges>
+#include <utility>
 #include <vector>
 #ifdef VENUS_IMPORT
 import venus;
@@ -136,5 +138,83 @@ TEST_CASE("Tensor as Range", "[tensor][range]") {
 
     auto it = result.begin();
     REQUIRE(*it == 6);
+  }
+}
+TEST_CASE("Tensor view as Range", "[tensor][view][range]") {
+  // [[1, 2, 3], [4, 5, 6]] read in the transposed order 1, 4, 2, 5, 3, 6
+  auto tensor = Tensor<int, Device::CPU, 2>(2, 3);
+  tensor.iota(1);
+  const auto view = std::as_const(tensor).permute(1, 0);
+
+  SECTION("Basic Range Requirements") {
+    using View = decltype(view);
+    STATIC_REQUIRE(std::ranges::range<View>);
+    STATIC_REQUIRE(std::ranges::sized_range<View>);
+    STATIC_REQUIRE(std::ranges::viewable_range<View>);
+    STATIC_REQUIRE(std::ranges::random_access_range<View>);
+    STATIC_REQUIRE(std::ranges::view<std::remove_const_t<View>>);
+    STATIC_REQUIRE_FALSE(std::ranges::contiguous_range<View>);
+
+    using Sel = decltype(tensor[all, 0]);
+    STATIC_REQUIRE(std::ranges::random_access_range<Sel>);
+    STATIC_REQUIRE(std::ranges::sized_range<Sel>);
+  }
+
+  SECTION("Random Access Iterators Ops") {
+    auto it = view.begin();
+    REQUIRE(*(it + 2) == 2);
+    REQUIRE(it[3] == 5);
+
+    auto end_it = view.end();
+    REQUIRE(end_it - it == 6);
+
+    auto back_it = end_it - 1;
+    REQUIRE(*back_it == 6);
+
+    --back_it;
+    REQUIRE(*back_it == 3);
+  }
+
+  SECTION("Iterate over view") {
+    std::vector<int> collected;
+    for (auto element : view) {
+      collected.push_back(element);
+    }
+    REQUIRE(collected == std::vector{1, 4, 2, 5, 3, 6});
+  }
+
+  SECTION("View Size") {
+    REQUIRE(std::ranges::size(view) == 6);
+    REQUIRE(view.size() == 6);
+  }
+
+  SECTION("Range Algos - Accumulation") {
+    auto sum = std::ranges::fold_left(view, 0, std::plus<>{});
+    REQUIRE(sum == 21);
+  }
+
+  SECTION("Range Algos - Copy") {
+    std::vector<int> actual;
+    std::ranges::copy(view, std::back_inserter(actual));
+    REQUIRE(actual == std::vector{1, 4, 2, 5, 3, 6});
+  }
+
+  SECTION("Range Algos - Find and Count") {
+    auto it = std::ranges::find(view, 5);
+    REQUIRE(it != view.end());
+    REQUIRE(it - view.begin() == 3);
+
+    auto count = std::ranges::count_if(view, [](auto x) { return x > 3; });
+    REQUIRE(count == 3);
+  }
+
+  SECTION("Ranges Views") {
+    auto result = std::as_const(tensor).permute(1, 0) |
+                  std::views::transform([](int x) { return x * 2; }) |
+                  std::views::filter([](int x) { return x > 5; }) |
+                  std::views::take(1);
+
+    auto it = result.begin();
+    REQUIRE(*it == 8);
   }
 }
