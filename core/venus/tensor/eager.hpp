@@ -50,16 +50,35 @@ using PositionLabels = std::array<std::size_t, NUMBER_OF_LETTERS>;
     }                                                                          \
   }
 
+namespace venus {
+template <typename TElem, typename TDevice, std::size_t Rank> class Tensor;
+template <typename TElem, typename TDevice, std::size_t Rank> class TensorView;
+} // namespace venus
+
+// Ops build their results as venus::Tensor. A template template parameter
+// named Tensor would make an op on a view return a view. Each operand has its
+// own, since one may be a Tensor and another a TensorView or a Selection
 namespace venus::eager {
 
 // Details =====================================================
 namespace detail {
 
-template <typename Op, template <typename, typename, std::size_t> class Tensor,
-          typename Elem1, typename Dev1, std::size_t Rank1, typename Elem2,
-          typename Dev2, std::size_t Rank2>
-auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
-                           const Tensor<Elem2, Dev2, Rank2> &t2) {
+// A Tensor is contiguous. A view says at run time
+template <typename T> auto is_contiguous(const T &t) -> bool {
+  if constexpr (requires { t.isContiguous(); }) {
+    return t.isContiguous();
+  } else {
+    return true;
+  }
+}
+
+template <typename Op,
+          template <typename, typename, std::size_t> class TTensor1,
+          typename Elem1, typename Dev1, std::size_t Rank1,
+          template <typename, typename, std::size_t> class TTensor2,
+          typename Elem2, typename Dev2, std::size_t Rank2>
+auto binary_elementwise_op(Op op, const TTensor1<Elem1, Dev1, Rank1> &t1,
+                           const TTensor2<Elem2, Dev2, Rank2> &t2) {
 
   using ResultElementType = std::common_type_t<Elem1, Elem2>;
 
@@ -72,9 +91,9 @@ auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
     auto result = Tensor<ResultElementType, Dev1, RankOut>(out_shape);
     auto out_ptr = result.data();
 
-    // Does not need broadcasting
+    // Does not need broadcasting or strides
     if constexpr (Rank1 == Rank2) {
-      if (t1.shape() == t2.shape()) {
+      if (t1.shape() == t2.shape() && is_contiguous(t1) && is_contiguous(t2)) {
         const auto *t1_ptr = t1.data();
         const auto *t2_ptr = t2.data();
         for (std::size_t flat = 0; flat < result.size(); ++flat) {
@@ -98,13 +117,16 @@ auto binary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
   }
 }
 
-template <typename Op, template <typename, typename, std::size_t> class Tensor,
-          typename Elem1, typename Dev1, std::size_t Rank1, typename Elem2,
-          typename Dev2, std::size_t Rank2, typename Elem3, typename Dev3,
-          std::size_t Rank3>
-auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
-                            const Tensor<Elem2, Dev2, Rank2> &t2,
-                            const Tensor<Elem3, Dev3, Rank3> &t3) {
+template <typename Op,
+          template <typename, typename, std::size_t> class TTensor1,
+          typename Elem1, typename Dev1, std::size_t Rank1,
+          template <typename, typename, std::size_t> class TTensor2,
+          typename Elem2, typename Dev2, std::size_t Rank2,
+          template <typename, typename, std::size_t> class TTensor3,
+          typename Elem3, typename Dev3, std::size_t Rank3>
+auto ternary_elementwise_op(Op op, const TTensor1<Elem1, Dev1, Rank1> &t1,
+                            const TTensor2<Elem2, Dev2, Rank2> &t2,
+                            const TTensor3<Elem3, Dev3, Rank3> &t3) {
 
   using ResultElementType = std::common_type_t<Elem1, Elem2, Elem3>;
 
@@ -118,9 +140,10 @@ auto ternary_elementwise_op(Op op, const Tensor<Elem1, Dev1, Rank1> &t1,
     auto result = Tensor<ResultElementType, Dev1, RankOut>(out_shape);
     auto out_ptr = result.data();
 
-    // Does not need broadcasting
+    // Does not need broadcasting or strides
     if constexpr (Rank1 == Rank2 && Rank2 == Rank3) {
-      if (t1.shape() == t2.shape() && t2.shape() == t3.shape()) {
+      if (t1.shape() == t2.shape() && t2.shape() == t3.shape() &&
+          is_contiguous(t1) && is_contiguous(t2) && is_contiguous(t3)) {
         const auto *t1_ptr = t1.data();
         const auto *t2_ptr = t2.data();
         const auto *t3_ptr = t3.data();
@@ -301,24 +324,22 @@ consteval auto compute_sum_dims_for_step() {
   return dims;
 }
 
-template <std::size_t ToRank,
-          template <typename, typename, std::size_t> class Tensor,
-          typename Elem, typename Dev, std::size_t FromRank>
-  requires VenusTensor<Tensor<Elem, Dev, FromRank>>
-auto squeeze_to_rank(const Tensor<Elem, Dev, FromRank> &tensor) {
+// Takes the tensor by value so that reshape hands its memory to a Tensor
+template <std::size_t ToRank, typename Elem, typename Dev, std::size_t FromRank>
+auto squeeze_to_rank(Tensor<Elem, Dev, FromRank> tensor) {
   if constexpr (ToRank == 0) {
     return tensor.asScalar();
   } else {
-    return tensor.template reshape<ToRank>(
-        tensor.shape().template slice<ToRank>());
+    const auto shape = tensor.shape().template slice<ToRank>();
+    return std::move(tensor).template reshape<ToRank>(shape);
   }
 }
 
 template <std::size_t OpIdx, ConstexprString Eqn,
-          template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+          template <typename, typename, std::size_t> class TTensor, Scalar Elem,
           typename Dev, std::size_t Rank>
-  requires VenusTensor<Tensor<Elem, Dev, Rank>>
-auto homogenize_operand(const Tensor<Elem, Dev, Rank> &t) {
+  requires VenusTensor<TTensor<Elem, Dev, Rank>>
+auto homogenize_operand(const TTensor<Elem, Dev, Rank> &t) {
   constexpr auto eqn = Eqn.view();
   constexpr auto occ = detail::compute_occurences(eqn);
   constexpr auto sorted_pos = detail::compute_sorted_position(eqn, occ);
@@ -365,10 +386,10 @@ auto homogenize_operand(const Tensor<Elem, Dev, Rank> &t) {
 } // namespace detail
 
 // Copy Transform
-template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+template <template <typename, typename, std::size_t> class TTensor, Scalar Elem,
           typename Dev, std::size_t Rank, typename Fn>
-  requires VenusTensor<Tensor<Elem, Dev, Rank>>
-auto transform(const Tensor<Elem, Dev, Rank> &tensor, Fn &&fn) {
+  requires VenusTensor<TTensor<Elem, Dev, Rank>>
+auto transform(const TTensor<Elem, Dev, Rank> &tensor, Fn &&fn) {
   static_assert(std::is_same_v<Dev, Device::CPU>,
                 "Transform is currently only supported on CPU");
 
@@ -395,10 +416,10 @@ REGISTER_BINARY_OP(eq, equal_to, ==)
 REGISTER_BINARY_OP(neq, not_equal_to, !=)
 
 // Copy Sort
-template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+template <template <typename, typename, std::size_t> class TTensor, Scalar Elem,
           typename Dev, std::size_t Rank>
-  requires VenusTensor<Tensor<Elem, Dev, Rank>>
-auto sort(const Tensor<Elem, Dev, Rank> &tensor) {
+  requires VenusTensor<TTensor<Elem, Dev, Rank>>
+auto sort(const TTensor<Elem, Dev, Rank> &tensor) {
   static_assert(std::is_same_v<Dev, Device::CPU>,
                 "Sort is currently only supported on CPU");
   auto copy = tensor.clone();
@@ -407,13 +428,14 @@ auto sort(const Tensor<Elem, Dev, Rank> &tensor) {
 }
 
 // All equal
-template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
-          typename Dev1, std::size_t Rank1, Scalar Elem2, typename Dev2,
-          std::size_t Rank2>
-  requires VenusTensor<Tensor<Elem1, Dev1, Rank1>> &&
-           VenusTensor<Tensor<Elem2, Dev2, Rank2>>
-auto equal(const Tensor<Elem1, Dev1, Rank1> &t1,
-           const Tensor<Elem2, Dev2, Rank2> &t2) -> bool {
+template <template <typename, typename, std::size_t> class TTensor1,
+          Scalar Elem1, typename Dev1, std::size_t Rank1,
+          template <typename, typename, std::size_t> class TTensor2,
+          Scalar Elem2, typename Dev2, std::size_t Rank2>
+  requires VenusTensor<TTensor1<Elem1, Dev1, Rank1>> &&
+           VenusTensor<TTensor2<Elem2, Dev2, Rank2>>
+auto equal(const TTensor1<Elem1, Dev1, Rank1> &t1,
+           const TTensor2<Elem2, Dev2, Rank2> &t2) -> bool {
   if constexpr (Rank1 != Rank2) {
     return false;
   } else {
@@ -425,13 +447,14 @@ auto equal(const Tensor<Elem1, Dev1, Rank1> &t1,
 }
 
 // Inner product
-template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
-          typename Dev1, Scalar Elem2, typename Dev2, std::size_t Rank1,
-          std::size_t Rank2>
-  requires VenusTensor<Tensor<Elem1, Dev1, Rank1>> &&
-           VenusTensor<Tensor<Elem2, Dev2, Rank2>>
-auto inner(const Tensor<Elem1, Dev1, Rank1> &t1,
-           const Tensor<Elem2, Dev2, Rank2> &t2) {
+template <template <typename, typename, std::size_t> class TTensor1,
+          Scalar Elem1, typename Dev1, std::size_t Rank1,
+          template <typename, typename, std::size_t> class TTensor2,
+          Scalar Elem2, typename Dev2, std::size_t Rank2>
+  requires VenusTensor<TTensor1<Elem1, Dev1, Rank1>> &&
+           VenusTensor<TTensor2<Elem2, Dev2, Rank2>>
+auto inner(const TTensor1<Elem1, Dev1, Rank1> &t1,
+           const TTensor2<Elem2, Dev2, Rank2> &t2) {
   using ResultElementType = std::common_type_t<Elem1, Elem2>;
   auto product =
       std::inner_product(t1.begin(), t1.end(), t2.begin(), ResultElementType{});
@@ -439,19 +462,22 @@ auto inner(const Tensor<Elem1, Dev1, Rank1> &t1,
 }
 
 // Dot product
-template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
-          typename Dev1, Scalar Elem2, typename Dev2>
-  requires VenusTensor<Tensor<Elem1, Dev1, 1>> &&
-           VenusTensor<Tensor<Elem2, Dev2, 1>>
-auto dot(const Tensor<Elem1, Dev1, 1> &t1, const Tensor<Elem2, Dev2, 1> &t2) {
+template <template <typename, typename, std::size_t> class TTensor1,
+          Scalar Elem1, typename Dev1,
+          template <typename, typename, std::size_t> class TTensor2,
+          Scalar Elem2, typename Dev2>
+  requires VenusTensor<TTensor1<Elem1, Dev1, 1>> &&
+           VenusTensor<TTensor2<Elem2, Dev2, 1>>
+auto dot(const TTensor1<Elem1, Dev1, 1> &t1,
+         const TTensor2<Elem2, Dev2, 1> &t2) {
   return inner(t1, t2);
 }
 
 // Out-Of-Place Arange
-template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+template <template <typename, typename, std::size_t> class TTensor, Scalar Elem,
           Scalar Idx, typename Dev, std::size_t Rank>
-  requires VenusTensor<Tensor<Elem, Dev, Rank>>
-auto iota(const Tensor<Elem, Dev, Rank> &tensor, Idx i) {
+  requires VenusTensor<TTensor<Elem, Dev, Rank>>
+auto iota(const TTensor<Elem, Dev, Rank> &tensor, Idx i) {
   auto result = Tensor<Elem, Dev, Rank>(tensor.shape());
 #if _cpp_lib_ranges >= 202110L
   std::ranges::iota(result, i);
@@ -462,20 +488,20 @@ auto iota(const Tensor<Elem, Dev, Rank> &tensor, Idx i) {
 }
 
 // Out-Of-Place Identity
-template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+template <template <typename, typename, std::size_t> class TTensor, Scalar Elem,
           typename Dev, std::size_t Rank>
-  requires VenusTensor<Tensor<Elem, Dev, Rank>> && (Rank >= 2)
-auto eye_like(const Tensor<Elem, Dev, Rank> &tensor) {
+  requires VenusTensor<TTensor<Elem, Dev, Rank>> && (Rank >= 2)
+auto eye_like(const TTensor<Elem, Dev, Rank> &tensor) {
   auto result = Tensor<Elem, Dev, Rank>(tensor.shape());
   result.eye();
   return result;
 }
 
 // Out-Of-Place Fill
-template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+template <template <typename, typename, std::size_t> class TTensor, Scalar Elem,
           Scalar Idx, typename Dev, std::size_t Rank>
-  requires VenusTensor<Tensor<Elem, Dev, Rank>>
-auto fill(const Tensor<Elem, Dev, Rank> &tensor, Idx i) {
+  requires VenusTensor<TTensor<Elem, Dev, Rank>>
+auto fill(const TTensor<Elem, Dev, Rank> &tensor, Idx i) {
   auto result = Tensor<Elem, Dev, Rank>(tensor.shape());
 #if _cpp_lib_ranges >= 202110L
   std::ranges::fill(result, i);
@@ -485,12 +511,55 @@ auto fill(const Tensor<Elem, Dev, Rank> &tensor, Idx i) {
   return result;
 }
 
+namespace detail {
+// A matrix that mm reads from row-major memory. transposed means the memory
+// holds the matrix's transpose
+template <typename Elem, typename Dev> struct GemmOperand {
+  TensorView<Elem, Dev, 2> rows;
+  bool transposed;
+};
+
+// A contiguous matrix or the transpose of one is read in place. Any other
+// layout is copied first
+template <typename T> auto gemm_operand(const T &matrix) {
+  using Operand = GemmOperand<typename T::ElementType, typename T::DeviceType>;
+  const auto view = matrix.view();
+  if (view.isContiguous()) {
+    return Operand{view, false};
+  }
+  if (const auto transpose = view.permute(1, 0); transpose.isContiguous()) {
+    return Operand{transpose, true};
+  }
+  return Operand{view.clone().view(), false};
+}
+
+// out (I x J) = a (I x K) * b (K x J), from row-major memory or transposes
+template <typename TOut, typename A, typename B>
+void gemm(TOut *out, const A *a, bool a_transposed, const B *b,
+          bool b_transposed, std::size_t I, std::size_t K, std::size_t J) {
+  for (std::size_t i = 0; i < I; i++) {
+    for (std::size_t k = 0; k < K; k++) {
+      const auto a_ik = a_transposed ? a[(k * I) + i] : a[(i * K) + k];
+      if (a_ik == 0) {
+        continue;
+      }
+      for (std::size_t j = 0; j < J; j++) {
+        const auto b_kj = b_transposed ? b[(j * K) + k] : b[(k * J) + j];
+        out[(i * J) + j] += a_ik * b_kj;
+      }
+    }
+  }
+}
+} // namespace detail
+
 // Matrix Multiplication (2D)
-template <template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
+template <template <typename, typename, std::size_t> class TTensor1,
+          Scalar Elem1,
+          template <typename, typename, std::size_t> class TTensor2,
           Scalar Elem2, typename Dev>
-  requires VenusTensor<Tensor<Elem1, Dev, 2>> &&
-           VenusTensor<Tensor<Elem2, Dev, 2>>
-auto mm(const Tensor<Elem1, Dev, 2> &t1, const Tensor<Elem2, Dev, 2> &t2) {
+  requires VenusTensor<TTensor1<Elem1, Dev, 2>> &&
+           VenusTensor<TTensor2<Elem2, Dev, 2>>
+auto mm(const TTensor1<Elem1, Dev, 2> &t1, const TTensor2<Elem2, Dev, 2> &t2) {
   static_assert(std::is_same_v<Dev, Device::CPU>,
                 "MatMul is currently only supported on CPU");
 
@@ -506,27 +575,18 @@ auto mm(const Tensor<Elem1, Dev, 2> &t1, const Tensor<Elem2, Dev, 2> &t2) {
                     t1.shape(), t2.shape()));
   }
 
+  const auto a = detail::gemm_operand(t1);
+  const auto b = detail::gemm_operand(t2);
   auto t3 = Tensor<ResultElementType, Dev, 2>(I, J);
-
-  // TODO: This is optimized for row major layout
-  for (std::size_t i = 0; i < I; i++) {
-    for (std::size_t k = 0; k < K; k++) {
-      if (t1[i, k] == 0) {
-        continue;
-      }
-      for (std::size_t j = 0; j < J; j++) {
-        t3[i, j] += t1[i, k] * t2[k, j];
-      }
-    }
-  }
-
+  detail::gemm(t3.data(), a.rows.data(), a.transposed, b.rows.data(),
+               b.transposed, I, K, J);
   return t3;
 }
 
-template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+template <template <typename, typename, std::size_t> class TTensor, Scalar Elem,
           typename Dev, std::size_t Rank>
-  requires BoolTensor<Tensor<Elem, Dev, Rank>>
-auto nonzero_flat(const Tensor<Elem, Dev, Rank> &condition) {
+  requires BoolTensor<TTensor<Elem, Dev, Rank>>
+auto nonzero_flat(const TTensor<Elem, Dev, Rank> &condition) {
   const auto nz_count = static_cast<std::size_t>(std::ranges::count_if(
       condition, [](auto v) { return static_cast<bool>(v); }));
 
@@ -546,10 +606,10 @@ auto nonzero_flat(const Tensor<Elem, Dev, Rank> &condition) {
   return result;
 }
 
-template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+template <template <typename, typename, std::size_t> class TTensor, Scalar Elem,
           typename Dev, std::size_t Rank>
-  requires BoolTensor<Tensor<Elem, Dev, Rank>>
-auto nonzero(const Tensor<Elem, Dev, Rank> &condition) {
+  requires BoolTensor<TTensor<Elem, Dev, Rank>>
+auto nonzero(const TTensor<Elem, Dev, Rank> &condition) {
   const auto nz_count = static_cast<std::size_t>(std::ranges::count_if(
       condition, [](auto v) { return static_cast<bool>(v); }));
 
@@ -557,8 +617,9 @@ auto nonzero(const Tensor<Elem, Dev, Rank> &condition) {
   auto out_ptr = result.data();
 
   std::size_t row = 0;
-  for (std::size_t i = 0; i < condition.size(); ++i) {
-    if (static_cast<bool>(condition.data()[i])) {
+  auto it = condition.begin();
+  for (std::size_t i = 0; i < condition.size(); ++i, ++it) {
+    if (static_cast<bool>(*it)) {
       const auto idx = condition.shape().offsetToIdx(i);
       for (std::size_t d = 0; d < Rank; ++d) {
         out_ptr[(row * Rank) + d] = idx[d];
@@ -570,10 +631,10 @@ auto nonzero(const Tensor<Elem, Dev, Rank> &condition) {
   return result;
 }
 
-template <template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+template <template <typename, typename, std::size_t> class TTensor, Scalar Elem,
           typename Dev, std::size_t Rank>
-  requires BoolTensor<Tensor<Elem, Dev, Rank>>
-auto where(const Tensor<Elem, Dev, Rank> &predicate) {
+  requires BoolTensor<TTensor<Elem, Dev, Rank>>
+auto where(const TTensor<Elem, Dev, Rank> &predicate) {
   if constexpr (Rank == 1) {
     return nonzero_flat(predicate);
   } else {
@@ -639,10 +700,10 @@ auto where(T1 &&predicate, T2 &&true_tensor, T3 &&false_tensor) {
 }
 
 template <std::size_t Dim,
-          template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+          template <typename, typename, std::size_t> class TTensor, Scalar Elem,
           typename Dev, std::size_t Rank>
-  requires VenusTensor<Tensor<Elem, Dev, Rank>>
-auto sum_dim(const Tensor<Elem, Dev, Rank> &t) -> Tensor<Elem, Dev, Rank> {
+  requires VenusTensor<TTensor<Elem, Dev, Rank>>
+auto sum_dim(const TTensor<Elem, Dev, Rank> &t) -> Tensor<Elem, Dev, Rank> {
   static_assert(Dim < Rank, "sum dimension cannot be higher than tensor rank");
 
   const auto &in_shape = t.shape();
@@ -665,10 +726,10 @@ auto sum_dim(const Tensor<Elem, Dev, Rank> &t) -> Tensor<Elem, Dev, Rank> {
 }
 
 template <std::size_t... Dims,
-          template <typename, typename, std::size_t> class Tensor, Scalar Elem,
+          template <typename, typename, std::size_t> class TTensor, Scalar Elem,
           typename Dev, std::size_t Rank>
-  requires VenusTensor<Tensor<Elem, Dev, Rank>>
-auto sum_dims(const Tensor<Elem, Dev, Rank> &t) -> Tensor<Elem, Dev, Rank> {
+  requires VenusTensor<TTensor<Elem, Dev, Rank>>
+auto sum_dims(const TTensor<Elem, Dev, Rank> &t) -> Tensor<Elem, Dev, Rank> {
   if constexpr (sizeof...(Dims) == 0) {
     return t.clone();
   } else {
@@ -683,13 +744,14 @@ auto sum_dims(const Tensor<Elem, Dev, Rank> &t) -> Tensor<Elem, Dev, Rank> {
 
 // Sumproduct pair
 template <std::size_t... SumDims,
-          template <typename, typename, std::size_t> class Tensor, Scalar Elem1,
-          typename Dev1, Scalar Elem2, typename Dev2, std::size_t Rank1,
-          std::size_t Rank2>
-  requires VenusTensor<Tensor<Elem1, Dev1, Rank1>> &&
-           VenusTensor<Tensor<Elem2, Dev2, Rank2>>
-auto sumproduct_pair(const Tensor<Elem1, Dev1, Rank1> &t1,
-                     const Tensor<Elem2, Dev2, Rank2> &t2) {
+          template <typename, typename, std::size_t> class TTensor1,
+          Scalar Elem1, typename Dev1, std::size_t Rank1,
+          template <typename, typename, std::size_t> class TTensor2,
+          Scalar Elem2, typename Dev2, std::size_t Rank2>
+  requires VenusTensor<TTensor1<Elem1, Dev1, Rank1>> &&
+           VenusTensor<TTensor2<Elem2, Dev2, Rank2>>
+auto sumproduct_pair(const TTensor1<Elem1, Dev1, Rank1> &t1,
+                     const TTensor2<Elem2, Dev2, Rank2> &t2) {
   auto product = t1 * t2;
   return sum_dims<SumDims...>(product);
 }
@@ -714,8 +776,7 @@ auto _einsum_contract(HomogenizedTensors... tensors) {
         }
       }(std::make_index_sequence<initial_sum_dims.size()>{});
 
-  const auto final_contracted = [&]<std::size_t... Is>(
-                                    std::index_sequence<Is...>) {
+  auto final_contracted = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
     auto current = std::move(initial_result);
     auto step = [&]<std::size_t OpIdx>() {
       constexpr auto sum_dims = detail::compute_sum_dims_for_step<OpIdx, Eqn>();
@@ -733,7 +794,7 @@ auto _einsum_contract(HomogenizedTensors... tensors) {
     return current;
   }(std::make_index_sequence<sizeof...(HomogenizedTensors) - 1>{});
 
-  return detail::squeeze_to_rank<NumOut>(final_contracted);
+  return detail::squeeze_to_rank<NumOut>(std::move(final_contracted));
 }
 
 template <ConstexprString Eqn,

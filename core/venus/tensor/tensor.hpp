@@ -19,6 +19,7 @@
 #include <venus/tensor/eager.hpp>
 #include <venus/tensor/shape.hpp>
 #include <venus/tensor/tensor_iterator.hpp>
+#include <venus/tensor/tensor_view.hpp>
 
 #define REGISTER_SCALAR_BOOL_OP(op)                                            \
   template <typename OtherType>                                                \
@@ -240,6 +241,7 @@ public:
   {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Transform is currently only supported on CPU");
+    self.requireSoleOwner();
     std::ranges::transform(self, self.begin(), std::forward<Fn>(fn));
   }
 
@@ -249,6 +251,7 @@ public:
   {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Sort is currently only supported on CPU");
+    self.requireSoleOwner();
     std::ranges::sort(self);
   }
 
@@ -259,6 +262,7 @@ public:
   {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Sort is currently only supported on CPU");
+    self.requireSoleOwner();
 #if _cpp_lib_ranges >= 202110L
     std::ranges::fill(self, i);
 #else
@@ -273,6 +277,7 @@ public:
   {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Sort is currently only supported on CPU");
+    self.requireSoleOwner();
 #if _cpp_lib_ranges >= 202110L
     std::ranges::iota(self, i);
 #else
@@ -284,6 +289,7 @@ public:
   void eye(this auto &&self)
     requires(!std::is_const_v<std::remove_reference_t<decltype(self)>>)
   {
+    self.requireSoleOwner();
     for (auto [flat, val] :
          std::views::zip(std::views::iota(std::size_t{0}, self.size()), self)) {
       auto midx = self.m_shape.offsetToIdx(flat);
@@ -318,17 +324,7 @@ public:
     // writing
     auto operator=(const ElementType &value) -> ElementProxy & {
       if (not m_tensor.unique()) {
-        // TODO: Do I want to throw here or do I want copy on write (cow)
         throw std::runtime_error("Cannot write to shared tensor");
-        //     const std::size_t offset = &m_element -
-        //     m_tensor.m_mem.ptr();
-        // auto new_mem =
-        //     ContiguousMemory<ElementType, DeviceType>(m_tensor.m_mem.Size());
-        // std::copy_n(m_tensor.m_mem.ptr(), m_tensor.m_mem.Size(),
-        //             new_mem.ptr());
-        // m_tensor.m_mem = std::move(new_mem);
-        // m_tensor.m_mem.ptr()[offset] = value;
-        // return *this;
       }
       m_element = value;
       return *this;
@@ -373,7 +369,7 @@ public:
 #ifdef VENUS_INTERPRETER
   // Simple direct indexing for interpreter mode (no proxy)
   template <typename... Indices>
-    requires(sizeof...(Indices) == Rank)
+    requires(sizeof...(Indices) == Rank) && SizeTLike<Indices...>
   constexpr auto operator[](this auto &&self, Indices... indices)
       -> ElementType {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
@@ -394,7 +390,7 @@ public:
 #else
   // Tensor indexing
   template <typename... Indices>
-    requires(sizeof...(Indices) == Rank)
+    requires(sizeof...(Indices) == Rank) && SizeTLike<Indices...>
   auto operator[](this auto &&self, Indices... indices) {
     static_assert(std::is_same_v<DeviceType, Device::CPU>,
                   "Indexing is currently only supported on CPU");
@@ -420,6 +416,18 @@ public:
   }
 #endif
 
+  // Slicing. A const tensor gives a view and any other tensor a selection
+  template <Selector... Selectors>
+    requires(sizeof...(Selectors) == Rank) && Slicing<Selectors...>
+  auto operator[](this auto &&self, Selectors... selectors) {
+    auto view = std::as_const(self).view()[selectors...];
+    if constexpr (std::is_const_v<std::remove_reference_t<decltype(self)>>) {
+      return view;
+    } else {
+      return Selection<TElem, TDevice, decltype(view)::rank>(std::move(view));
+    }
+  }
+
   auto evalRegister() const;
 
   auto lowLevel(this auto &&self) {
@@ -430,6 +438,12 @@ public:
 private:
   Shape<Rank> m_shape;
   ContiguousMemory<ElementType, DeviceType> m_mem;
+
+  void requireSoleOwner() const {
+    if (not unique()) {
+      throw std::runtime_error("Cannot write to shared tensor");
+    }
+  }
 
 public:
   constexpr auto begin(this auto &&self) {
@@ -461,19 +475,15 @@ public:
     return std::forward<decltype(self)>(self).m_mem.ptr();
   }
 
-  template <SizeTLike... Dimensions>
-  auto reshape(this auto &&self, Dimensions... dims) {
-    const auto new_shape = Shape(dims...);
-    if (new_shape.count() != self.size()) {
-      throw std::invalid_argument(std::format(
-          "Cannot reshape tensor of size {} to new shape of size {}",
-          self.size(), new_shape.count()));
-    }
+  template <typename... Dimensions>
+    requires SizeTLike<Dimensions...>
 
-    return Tensor<ElementType, DeviceType, new_shape.rank>(self.m_mem,
-                                                           new_shape);
+  auto reshape(this auto &&self, Dimensions... dims) {
+    return std::forward<decltype(self)>(self).reshape(Shape(dims...));
   }
 
+  // A tensor that is about to expire hands its memory to the result, so two
+  // tensors never share memory. Any other tensor gives a view
   template <std::size_t NewRank>
   auto reshape(this auto &&self, Shape<NewRank> new_shape) {
     if (new_shape.count() != self.size()) {
@@ -482,11 +492,37 @@ public:
           self.size(), new_shape.count()));
     }
 
-    return Tensor<ElementType, DeviceType, NewRank>(self.m_mem, new_shape);
+    using Self = decltype(self);
+    if constexpr (std::is_rvalue_reference_v<Self> &&
+                  !std::is_const_v<std::remove_reference_t<Self>>) {
+      return Tensor<ElementType, DeviceType, NewRank>(std::move(self.m_mem),
+                                                      new_shape);
+    } else {
+      return self.view().reshape(new_shape);
+    }
   }
 
-  auto view(this auto &&self) {
-    return Tensor<ElementType, DeviceType, Rank>(self.m_mem, self.m_shape);
+  auto view() const -> TensorView<ElementType, DeviceType, Rank> {
+    return TensorView<ElementType, DeviceType, Rank>(
+        m_mem, m_shape, detail::row_major_strides(m_shape));
+  }
+
+  template <typename... Dims>
+    requires SizeTLike<Dims...>
+  auto permute(Dims... dims) const {
+    return view().permute(dims...);
+  }
+
+  template <typename... Dimensions> auto expand(Dimensions... dims) const {
+    return view().expand(dims...);
+  }
+
+  template <std::size_t Dim> auto squeeze() const {
+    return view().template squeeze<Dim>();
+  }
+
+  template <std::size_t Dim> auto unsqueeze() const {
+    return view().template unsqueeze<Dim>();
   }
 };
 
@@ -609,8 +645,8 @@ public:
     return std::forward<decltype(self)>(self).m_mem.ptr();
   }
 
-  auto view(this auto &&self) {
-    return Tensor<ElementType, DeviceType, 0>(self.m_mem);
+  auto view() const -> TensorView<ElementType, DeviceType, 0> {
+    return TensorView<ElementType, DeviceType, 0>(m_mem);
   }
 
 private:
