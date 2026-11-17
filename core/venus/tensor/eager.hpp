@@ -584,15 +584,15 @@ auto nonzero_flat(const TTensor<Elem, Dev, Rank> &condition) {
   auto result = Tensor<std::size_t, Dev, 1>(nz_count);
   auto out_ptr = result.data();
 
+  // No std::views::zip: MSVC rejects it with import std (C2382)
   std::size_t pos = 0;
-  const auto indices = std::views::iota(std::size_t{0}, condition.size());
-  std::ranges::for_each(std::views::zip(condition, indices),
-                        [out_ptr, pos](auto &&pair) mutable {
-                          const auto &[cond_val, idx] = pair;
-                          if (static_cast<bool>(cond_val)) {
-                            out_ptr[pos++] = idx;
-                          }
-                        });
+  std::size_t idx = 0;
+  for (const auto &cond_val : condition) {
+    if (static_cast<bool>(cond_val)) {
+      out_ptr[pos++] = idx;
+    }
+    ++idx;
+  }
 
   return result;
 }
@@ -706,9 +706,10 @@ auto sum_dim(const TTensor<Elem, Dev, Rank> &t) -> Tensor<Elem, Dev, Rank> {
   auto out_shape = Shape<Rank>(out_ext);
   auto result = Tensor<Elem, Dev, Rank>(out_shape);
 
-  for (auto [flat, val] :
-       std::views::zip(std::views::iota(std::size_t{0}, t.size()), t)) {
-    auto midx = in_shape.offsetToIdx(flat);
+  // No std::views::zip: MSVC rejects it with import std (C2382)
+  std::size_t flat = 0;
+  for (const auto &val : t) {
+    auto midx = in_shape.offsetToIdx(flat++);
     midx[Dim] = 0;
     result[midx] += val;
   }

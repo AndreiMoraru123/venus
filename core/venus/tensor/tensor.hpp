@@ -293,13 +293,14 @@ public:
     requires(!std::is_const_v<std::remove_reference_t<decltype(self)>>)
   {
     self.requireSoleOwner();
-    for (auto [flat, val] :
-         std::views::zip(std::views::iota(std::size_t{0}, self.size()), self)) {
+    // No std::views::zip: MSVC rejects it with import std (C2382)
+    auto *out = self.data();
+    for (std::size_t flat = 0; flat < self.size(); ++flat) {
       auto midx = self.m_shape.offsetToIdx(flat);
       if (midx[Rank - 2] == midx[Rank - 1]) {
-        val = 1;
+        out[flat] = 1;
       } else {
-        val = 0;
+        out[flat] = 0;
       }
     }
   }
