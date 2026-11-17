@@ -108,6 +108,7 @@ public:
   }
 };
 
+namespace detail {
 // Offset of the element at position flat in row-major order over extents
 template <std::size_t Rank>
 constexpr auto strided_offset(std::size_t flat,
@@ -121,9 +122,10 @@ constexpr auto strided_offset(std::size_t flat,
   }
   return offset;
 }
+} // namespace detail
 
-// Walks a tensor view in logical order. It holds the view's layout, not the
-// view, so it stays valid while any owner keeps the memory alive
+// Walks a tensor view in logical order. It copies the view's layout, so it
+// stays valid while any owner keeps the memory alive
 template <typename TElem, std::size_t Rank> class TensorViewIterator {
 public:
   using iterator_concept = std::random_access_iterator_tag;
@@ -147,7 +149,7 @@ public:
       : m_base(base), m_extents(extents), m_strides(strides), m_index(index) {}
 
   constexpr auto operator*() const -> reference {
-    return m_base[strided_offset(m_index, m_extents, m_strides)];
+    return m_base[detail::strided_offset(m_index, m_extents, m_strides)];
   }
 
   constexpr auto operator->() const -> pointer { return &**this; }

@@ -63,15 +63,6 @@ namespace venus::eager {
 // Details =====================================================
 namespace detail {
 
-// A Tensor is contiguous. A view says at run time
-template <typename T> auto is_contiguous(const T &t) -> bool {
-  if constexpr (requires { t.isContiguous(); }) {
-    return t.isContiguous();
-  } else {
-    return true;
-  }
-}
-
 template <typename Op,
           template <typename, typename, std::size_t> class TTensor1,
           typename Elem1, typename Dev1, std::size_t Rank1,
@@ -93,7 +84,7 @@ auto binary_elementwise_op(Op op, const TTensor1<Elem1, Dev1, Rank1> &t1,
 
     // Does not need broadcasting or strides
     if constexpr (Rank1 == Rank2) {
-      if (t1.shape() == t2.shape() && is_contiguous(t1) && is_contiguous(t2)) {
+      if (t1.shape() == t2.shape() && t1.isContiguous() && t2.isContiguous()) {
         const auto *t1_ptr = t1.data();
         const auto *t2_ptr = t2.data();
         for (std::size_t flat = 0; flat < result.size(); ++flat) {
@@ -143,7 +134,7 @@ auto ternary_elementwise_op(Op op, const TTensor1<Elem1, Dev1, Rank1> &t1,
     // Does not need broadcasting or strides
     if constexpr (Rank1 == Rank2 && Rank2 == Rank3) {
       if (t1.shape() == t2.shape() && t2.shape() == t3.shape() &&
-          is_contiguous(t1) && is_contiguous(t2) && is_contiguous(t3)) {
+          t1.isContiguous() && t2.isContiguous() && t3.isContiguous()) {
         const auto *t1_ptr = t1.data();
         const auto *t2_ptr = t2.data();
         const auto *t3_ptr = t3.data();
@@ -515,7 +506,7 @@ namespace detail {
 // A matrix that mm reads from row-major memory. transposed means the memory
 // holds the matrix's transpose
 template <typename Elem, typename Dev> struct GemmOperand {
-  TensorView<Elem, Dev, 2> rows;
+  TensorView<Elem, Dev, 2> matrix;
   bool transposed;
 };
 
@@ -578,7 +569,7 @@ auto mm(const TTensor1<Elem1, Dev, 2> &t1, const TTensor2<Elem2, Dev, 2> &t2) {
   const auto a = detail::gemm_operand(t1);
   const auto b = detail::gemm_operand(t2);
   auto t3 = Tensor<ResultElementType, Dev, 2>(I, J);
-  detail::gemm(t3.data(), a.rows.data(), a.transposed, b.rows.data(),
+  detail::gemm(t3.data(), a.matrix.data(), a.transposed, b.matrix.data(),
                b.transposed, I, K, J);
   return t3;
 }

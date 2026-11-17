@@ -227,7 +227,6 @@ public:
     return reshape(Shape(dims...));
   }
 
-  // Shares the memory when the view is contiguous and copies it otherwise
   template <std::size_t NewRank>
   auto reshape(Shape<NewRank> new_shape) const
       -> TensorView<TElem, TDevice, NewRank> {
@@ -424,7 +423,7 @@ private:
     auto *base = this->m_mem.ptr();
     const auto ext = detail::extents(this->m_shape);
     for (std::size_t i = 0; i < this->size(); ++i) {
-      base[strided_offset(i, ext, this->m_strides)] = element(i);
+      base[detail::strided_offset(i, ext, this->m_strides)] = element(i);
     }
   }
 };

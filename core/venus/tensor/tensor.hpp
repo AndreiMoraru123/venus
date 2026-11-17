@@ -159,6 +159,9 @@ public:
 
   [[nodiscard]] auto unique() const -> bool { return not m_mem.isShared(); }
 
+  // Ops ask this of every operand. A view answers at run time
+  [[nodiscard]] static constexpr auto isContiguous() -> bool { return true; }
+
   auto clone() const -> Tensor { return Tensor(*this); }
 
   auto asScalar() const -> Tensor<TElem, TDevice, 0> {
@@ -416,12 +419,16 @@ public:
   }
 #endif
 
-  // Slicing. A const tensor gives a view and any other tensor a selection
+  // Slicing. A named tensor that may be written gives a selection and any
+  // other tensor a view. A selection of a temporary would outlive its tensor,
+  // and its write check would then pass while a copy of it reads the memory
   template <Selector... Selectors>
     requires(sizeof...(Selectors) == Rank) && Slicing<Selectors...>
   auto operator[](this auto &&self, Selectors... selectors) {
+    using Self = decltype(self);
     auto view = std::as_const(self).view()[selectors...];
-    if constexpr (std::is_const_v<std::remove_reference_t<decltype(self)>>) {
+    if constexpr (!std::is_lvalue_reference_v<Self> ||
+                  std::is_const_v<std::remove_reference_t<Self>>) {
       return view;
     } else {
       return Selection<TElem, TDevice, decltype(view)::rank>(std::move(view));
@@ -477,7 +484,6 @@ public:
 
   template <typename... Dimensions>
     requires SizeTLike<Dimensions...>
-
   auto reshape(this auto &&self, Dimensions... dims) {
     return std::forward<decltype(self)>(self).reshape(Shape(dims...));
   }
@@ -575,6 +581,8 @@ public:
   }
 
   [[nodiscard]] auto unique() const -> bool { return not m_mem.isShared(); }
+
+  [[nodiscard]] static constexpr auto isContiguous() -> bool { return true; }
 
   void assign(ElementType value) const = delete;
 

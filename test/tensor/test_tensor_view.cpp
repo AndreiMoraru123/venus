@@ -85,10 +85,11 @@ TEST_CASE("Tensor slicing", "[tensor][view][slice]") {
   }
 
   SECTION("Const tensor") {
-    auto slice = c[1, all, 1];
-    STATIC_REQUIRE(std::same_as<std::ranges::range_reference_t<decltype(slice)>,
-                                const int &>);
-    REQUIRE(collect(slice) == std::vector{7, 10});
+    auto column = c[1, all, 1];
+    STATIC_REQUIRE(
+        std::same_as<std::ranges::range_reference_t<decltype(column)>,
+                     const int &>);
+    REQUIRE(collect(column) == std::vector{7, 10});
   }
 
   SECTION("Out of bounds selectors throw") {
@@ -116,8 +117,10 @@ TEST_CASE("Tensor slicing", "[tensor][view][slice]") {
     STATIC_REQUIRE_FALSE(Sliceable<T &, int, all_t, all_t, all_t>);
   }
 
-  SECTION("Slicing a temporary keeps its memory alive") {
+  SECTION("Slicing a temporary gives a view that keeps the memory alive") {
     auto row = Ints2{{1, 2}, {3, 4}}[1, all];
+    STATIC_REQUIRE(
+        std::same_as<decltype(row), TensorView<int, Device::CPU, 1>>);
     REQUIRE(row.unique());
     REQUIRE(collect(row) == std::vector{3, 4});
   }
@@ -376,6 +379,13 @@ TEST_CASE("Selection assignment", "[tensor][view][selection]") {
     REQUIRE(collect(cache) == std::vector{1, 2, 1, 2, 0, 0});
   }
 
+  SECTION("A copy of a selection counts as a view") {
+    auto row = cache[0, all];
+    const TensorView<int, Device::CPU, 1> copy = row;
+    REQUIRE_THROWS_AS((std::move(row) = 1), std::runtime_error);
+    REQUIRE(collect(copy) == std::vector{0, 0});
+  }
+
   SECTION("Only a temporary selection can be assigned to") {
     using Sel = decltype(cache[0, all]);
     STATIC_REQUIRE(Assignable<Sel, Ints1>);
@@ -386,6 +396,7 @@ TEST_CASE("Selection assignment", "[tensor][view][selection]") {
     STATIC_REQUIRE_FALSE(Assignable<Sel &, Sel>);
     STATIC_REQUIRE_FALSE(Assignable<TensorView<int, Device::CPU, 1>, Ints1>);
     STATIC_REQUIRE_FALSE(Assignable<TensorView<int, Device::CPU, 1>, int>);
+    STATIC_REQUIRE_FALSE(Assignable<decltype(Ints2(3, 2)[0, all]), int>);
   }
 }
 
